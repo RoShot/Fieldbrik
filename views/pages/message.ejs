@@ -63,6 +63,11 @@
       <p class="fb-admin__note">
         Deleting removes your copy only. The other person's copy is theirs to keep or delete.
       </p>
+      <% if (!isSent) { %>
+        <p class="fb-panel__more">
+          <a href="/reports/new?kind=message&amp;id=<%= message.id %>">Report this message</a>
+        </p>
+      <% } %>
     </div>
   </section>
 
