@@ -8,6 +8,7 @@
 const path = require('path');
 const express = require('express');
 
+const authRoutes = require('./routes/auth');
 const pageRoutes = require('./routes/pages');
 
 const app = express();
@@ -34,6 +35,10 @@ app.use(
 // Form bodies. No multipart uploads yet; those arrive with the avatar/catalog work.
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+
+// Account routes first: they answer POST /login, /register and /logout. On
+// this server there is no database, so they reply 503 rather than half-working.
+app.use('/', authRoutes);
 
 app.use('/', pageRoutes);
 

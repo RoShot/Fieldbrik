@@ -50,6 +50,15 @@ const DISCOVER = [
   { from: '/forum', pattern: /\/forum\/([a-z0-9-]+)/gi, max: 2 },
 ];
 
+/**
+ * Pages that require a session. This harness has none, so the correct answer
+ * for them is a redirect to the form rather than a rendered page; anything else
+ * that renders nothing is still a failure.
+ */
+const GUARDED_PATHS = new Set([
+  '/my-page', '/character', '/inventory', '/friends', '/messages', '/messages/1', '/settings',
+]);
+
 async function fetchText(base, pathname) {
   const res = await fetch(base + pathname);
   return { status: res.status, body: await res.text() };
@@ -100,6 +109,7 @@ async function main() {
     const { status } = await fetchText(base, pathname);
     const rendered = records.slice(before);
     if (rendered.length === 0) {
+      if (GUARDED_PATHS.has(pathname) && status >= 300 && status < 400) continue;
       failures.push(`${pathname}: rendered nothing (status ${status})`);
       continue;
     }
