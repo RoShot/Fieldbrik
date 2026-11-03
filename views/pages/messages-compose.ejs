@@ -1,0 +1,48 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <p class="fb-crumbs"><a href="/messages">Messages</a> &raquo; New message</p>
+
+  <% if (failure) { %>
+    <div class="fb-notice"><p><strong><%= failure %></strong></p></div>
+  <% } %>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title">New Message</h1>
+  </div>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Write to a member</h2>
+    <div class="fb-panel__body">
+      <form class="fb-auth" method="post" action="/messages">
+        <div class="fb-auth__row">
+          <label for="msg-to">To</label>
+          <input id="msg-to" name="to" type="text" value="<%= to %>" placeholder="Username"
+                 maxlength="20" required autofocus>
+        </div>
+        <div class="fb-auth__row">
+          <label for="msg-subject">Subject</label>
+          <input id="msg-subject" name="subject" type="text" value="<%= subject %>" maxlength="120">
+        </div>
+        <div class="fb-auth__row fb-auth__row--top">
+          <label for="msg-body">Message</label>
+          <textarea id="msg-body" name="body" rows="7" maxlength="5000" required></textarea>
+        </div>
+        <div class="fb-auth__actions">
+          <button class="fb-btn fb-btn--primary" type="submit">Send</button>
+        </div>
+      </form>
+    </div>
+    <p class="fb-panel__strip">
+      Up to 5000 characters. The name is matched on the server, so a member who has blocked you
+      cannot be written to.
+    </p>
+  </section>
+
+  <p class="fb-panel__more"><a href="/messages">Back to the inbox</a></p>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

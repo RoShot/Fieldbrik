@@ -1,0 +1,57 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title">Sent Messages</h1>
+    <span class="fb-pagecount"><%= messages.length %> sent</span>
+  </div>
+
+  <p class="fb-panel__more">
+    <a href="/messages">Inbox</a> &middot;
+    <strong>Sent</strong> &middot;
+    <a href="/messages/compose">Write a message</a>
+  </p>
+
+  <table class="fb-table">
+    <thead>
+      <tr>
+        <th scope="col">To</th>
+        <th scope="col">Subject</th>
+        <th scope="col">Sent</th>
+        <th scope="col">Opened</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (messages.length === 0) { %>
+        <tr>
+          <td colspan="4" class="fb-table__last">You have not sent a message yet.</td>
+        </tr>
+      <% } %>
+      <% messages.forEach(function (message) { %>
+        <tr>
+          <td><a class="fb-table__name" href="/people/<%= encodeURIComponent(message.to) %>"><%= message.to %></a></td>
+          <td><a href="/messages/sent/<%= message.id %>"><%= message.subject %></a></td>
+          <td><%= message.date %></td>
+          <td class="fb-table__last"><%= message.read ? 'opened' : 'not yet' %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <p class="fb-pagination">Showing up to 100, newest first.</p>
+
+  <div class="fb-notice">
+    <p><strong>Only the recipient can read what you sent.</strong></p>
+    <p>Deleting a message here removes your copy; theirs stays where it is. "Opened" is set the
+       moment they open it, not when it is delivered.</p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>
