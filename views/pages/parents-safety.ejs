@@ -17,16 +17,19 @@
       <p>A sign-up step for members under the age of majority, involving a parent or guardian, is still being designed. It is not drawn on the registration page as a checkbox that does nothing.</p>
 
       <h2>Who can contact a member</h2>
-      <p>Private messages exist between members. A message can be reported, and reporting puts it in front of a moderator. Blocking a member, and the rule that a member cannot be messaged by somebody they have blocked, belong to the social service and are not built yet.</p>
+      <p>Members can send each other private messages. A message is shown only to the account that sent it and the account it was addressed to, and it is marked unread until it is opened. Blocking a member is built: a blocked member cannot send a message to the account that blocked them, and the block stops friend requests between the two as well.</p>
 
       <h2>Reporting</h2>
-      <p>Every profile and message carries a Report Abuse link. Reports land in one moderation queue rather than being sent to an inbox where they might sit unread.</p>
+      <p>There is no report button yet. The report queue is the next part of the build, and until it
+         exists no profile or message carries a Report Abuse link, because a link that goes nowhere
+         is worse than no link. A report about a member or a message currently goes through the
+         <a href="/support">Support</a> page.</p>
 
       <h2>How moderation works</h2>
       <p>A moderator can warn an account or restrict it. Restrictions are recorded against the account and checked on every request, so a restricted account cannot avoid them by finding a page that forgot to check. A temporary restriction stops applying when its end date passes and stays in the account's history. Every administrative action is written to a log with the reason and the staff member, and that log cannot be edited from the admin panel.</p>
 
       <h2>About this page</h2>
-      <p>This page describes what the site is built to do. FieldBrik 0.3 is still under construction: accounts, messaging and moderation are the next stage. Where a feature is described in the future tense, it does not exist yet and is not being pretended.</p>
+      <p>This page describes what the site is built to do. FieldBrik 0.3 is still under construction: accounts, profiles, friends, private messages, the forum, the catalog and the admin panel are in place, while the report queue and the building client are not. Where a feature is described in the future tense, it does not exist yet and is not being pretended.</p>
     </div>
 
     <%- include('../partials/parents-nav') %>
