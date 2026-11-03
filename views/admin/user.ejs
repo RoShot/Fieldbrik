@@ -44,6 +44,9 @@
 
           <div class="fb-admin__actions">
             <a class="fb-btn" href="/people/<%= account.username %>">Visit Profile</a>
+            <% if (canModerate) { %>
+              <a class="fb-btn" href="/admin/users/<%= account.id %>/moderate">Moderate User</a>
+            <% } %>
             <a class="fb-btn" href="/admin/users">Back to search</a>
           </div>
 
@@ -172,9 +175,9 @@
           </table>
 
           <p class="fb-admin__note">
-            Moderation actions - warn, ban, scrub, notices - arrive in the next pass and
-            are not drawn here yet, so there is nothing on this page that looks like a
-            button but does nothing.
+            Moderation actions are on the Moderate User page. Warn, ban, scrub and
+            poison all write a restriction and an audit entry; nothing here is a
+            shortcut around that.
           </p>
         </div>
       </div>

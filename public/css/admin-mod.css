@@ -1,0 +1,65 @@
+/* ==========================================================================
+   FieldBrik admin: moderation pages
+   Loaded only by the moderation page and the ban notice.
+   ========================================================================== */
+
+.fb-mod__actions {
+  margin: 0 0 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-soft);
+  background: #fbfaf3;
+}
+
+.fb-mod__choice {
+  display: inline-block;
+  margin: 2px 10px 2px 0;
+  font-size: 11px;
+}
+
+.fb-mod__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin: 0 0 10px;
+}
+
+.fb-btn--preset {
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.fb-mod__field {
+  margin: 0 0 8px;
+}
+
+.fb-mod__field label {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.fb-mod__field input[type="text"],
+.fb-mod__field textarea {
+  width: 100%;
+  max-width: 520px;
+  padding: 2px 4px;
+  border: 1px solid #9a9a9a;
+  font: 11px Arial, Helvetica, sans-serif;
+}
+
+.fb-mod__check {
+  display: block;
+  margin: 0 0 10px;
+  font-size: 11px;
+}
+
+.fb-ban__facts {
+  margin: 10px 0;
+}
+
+.fb-ban__evidence img {
+  max-width: 100%;
+  border: 1px solid var(--line);
+}

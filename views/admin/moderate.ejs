@@ -1,0 +1,165 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Moderate: <%= account.username %></h1>
+        <div class="fb-panel__body">
+          <p class="fb-admin__muted">
+            Account <strong><%= account.id %></strong> &middot; <%= account.roleName %> (rank <%= account.roleRank %>)
+            &middot; <%= account.status %> &middot; joined <%= account.joined %>
+          </p>
+
+          <% if (scrubbedFrom) { %>
+            <p class="fb-admin__muted">
+              Original username: <strong><%= scrubbedFrom %></strong> (scrubbed; staff only)
+            </p>
+          <% } %>
+
+          <% if (!canAct) { %>
+            <p><strong>This account cannot be actioned from here.</strong>
+              It is either your own account or at or above your rank.</p>
+          <% } else { %>
+            <form method="post" action="/admin/users/<%= account.id %>/action" enctype="multipart/form-data">
+              <fieldset class="fb-mod__actions">
+                <legend class="fb-admin__subheading">Action</legend>
+                <% actions.forEach(function (action, index) { %>
+                  <label class="fb-mod__choice">
+                    <input type="radio" name="action" value="<%= action.key %>"<%= index === 0 ? ' checked' : '' %>
+                    ><%= action.label %>
+                  </label>
+                <% }); %>
+              </fieldset>
+
+              <div class="fb-mod__presets">
+                <span class="fb-admin__muted">Fill the reason:</span>
+                <% presets.forEach(function (preset) { %>
+                  <button class="fb-btn fb-btn--preset" type="button" data-reason="<%= preset %>"><%= preset %></button>
+                <% }); %>
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-reason">Reason (shown to the member on the ban page)</label>
+                <input id="fb-reason" type="text" name="reason" maxlength="500" autocomplete="off">
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-note">Internal note (staff only, never shown to the member)</label>
+                <textarea id="fb-note" name="note" rows="3" maxlength="500"></textarea>
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-evidence">Evidence image (optional, 128 KB max, png/jpeg/webp)</label>
+                <input id="fb-evidence" type="file" name="evidence" accept="image/png,image/jpeg,image/webp">
+              </div>
+
+              <label class="fb-mod__check">
+                <input type="checkbox" name="scrub" value="1">
+                Also scrub the username to CONTENT_DELETED_&lt;id&gt; (locks the account out)
+              </label>
+
+              <button class="fb-btn fb-btn--primary" type="submit">Apply</button>
+            </form>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Restrictions and warnings</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Kind</th>
+                <th scope="col">Reason</th>
+                <th scope="col">By</th>
+                <th scope="col">Issued</th>
+                <th scope="col">Ends</th>
+                <th scope="col">Lifted</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (restrictions.length === 0) { %>
+                <tr><td colspan="6" class="fb-table__last">Nothing on record.</td></tr>
+              <% } %>
+              <% restrictions.forEach(function (entry) { %>
+                <tr>
+                  <td><%= entry.kind %></td>
+                  <td class="fb-table__note"><%= entry.reason %></td>
+                  <td><%= entry.actor %></td>
+                  <td><%= entry.issued %></td>
+                  <td><%= entry.expires %></td>
+                  <td><%= entry.lifted ? entry.lifted : '-' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Internal notes</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">By</th>
+                <th scope="col">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (notes.length === 0) { %>
+                <tr><td colspan="3" class="fb-table__last">No notes yet.</td></tr>
+              <% } %>
+              <% notes.forEach(function (entry) { %>
+                <tr>
+                  <td><%= entry.when %></td>
+                  <td><%= entry.author %></td>
+                  <td class="fb-table__note"><%= entry.body %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        Warnings and bans are enforced on every request, not just at sign-in, so an
+        action applies immediately. A ban keeps the account's session alive on purpose:
+        the ban page needs to know who is asking in order to tell them why.
+      </p>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('[data-reason]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var field = document.getElementById('fb-reason');
+      if (field) field.value = button.getAttribute('data-reason');
+    });
+  });
+</script>
+</body>
+</html>

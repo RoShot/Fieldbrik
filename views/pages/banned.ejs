@@ -1,0 +1,45 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-content">
+    <h1 class="fb-title"><%= banned.kind === 'ban' ? 'This account is banned' : 'This account is restricted' %></h1>
+
+    <table class="fb-table fb-table--kv fb-ban__facts">
+      <tbody>
+        <tr><th scope="row">Account</th><td><%= banned.username %></td></tr>
+        <tr><th scope="row">Reason</th><td><%= banned.reason %></td></tr>
+        <tr><th scope="row"><%= banned.kind === 'ban' ? 'Banned until' : 'Restricted until' %></th><td><%= banned.permanent ? 'No end date' : banned.until %></td></tr>
+        <tr><th scope="row">Issued</th><td><%= banned.issued %></td></tr>
+      </tbody>
+    </table>
+
+    <% if (banned.evidenceToken) { %>
+      <h2 class="fb-subtitle">The content this was for</h2>
+      <p class="fb-ban__evidence">
+        <img src="/evidence/<%= banned.evidenceToken %>" alt="The content the action was taken for">
+      </p>
+    <% } %>
+
+    <div class="fb-prose">
+      <p>
+        Every page on FieldBrik shows this notice until the <%= banned.kind === 'ban' ? 'ban is lifted' : 'restriction ends' %>,
+        so there is nothing to try by refreshing or signing in on another device.
+      </p>
+      <% if (banned.scrubbedFrom) { %>
+        <p>
+          This account's name has been changed, and the original is kept only for staff.
+        </p>
+      <% } %>
+      <p>
+        If you think this is wrong, reply to the message in your inbox, or contact support
+        from another account and quote account <strong><%= banned.username %></strong>.
+      </p>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

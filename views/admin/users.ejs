@@ -17,6 +17,10 @@
     <%- include('sidebar', { adminNav: adminNav }) %>
 
     <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
       <div class="fb-panel">
         <h1 class="fb-panel__title fb-panel__title--blue"><%= staffOnly ? 'User Admins' : 'Search Users' %></h1>
 
