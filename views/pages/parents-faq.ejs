@@ -1,0 +1,59 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Parents</h1>
+  </div>
+
+  <%- include('../partials/parents-nav') %>
+
+  <div class="fb-content">
+    <h2 class="fb-title fb-title--small">FAQs</h2>
+
+    <p class="fb-muted">Written from the decisions already made about this build. The wording will be reviewed before the site takes real registrations.</p>
+
+    <div class="fb-prose">
+      <dl class="fb-faq">
+        <dt>Is FieldBrik free?</dt>
+        <dd>Yes. Building, publishing, playing and using the forum are free. Carpenters Club is an optional paid membership that adds recognition; nothing required to use the site sits behind it.</dd>
+
+        <dt>What does Carpenters Club cost?</dt>
+        <dd>Three tiers, each available monthly, quarterly, yearly or as a one-off permanent payment. Prices are listed on the <a href="/carpenters-club">Carpenters Club</a> page. Payment is not open yet.</dd>
+
+        <dt>What is asked for when my child signs up?</dt>
+        <dd>A username, an email address and a password. No real name, address, phone number or date of birth. The email is never shown to other members.</dd>
+
+        <dt>Can my child spend money on the site?</dt>
+        <dd>Not at present. There is no checkout and no payment page anywhere on FieldBrik, so nothing can be bought. When a checkout exists, card details will be handled by a payment provider and never stored on this site.</dd>
+
+        <dt>What is a Buck and what is a Ticket?</dt>
+        <dd>Tickets are earned by using the site. Bucks are the premium currency. They are linked at one Buck to ten Tickets, so an item priced at thirty Bucks also displays as three hundred Tickets.</dd>
+
+        <dt>Can strangers message my child?</dt>
+        <dd>Private messages are part of the site, and any message can be reported. Blocking a member is planned and is not built yet; messaging itself arrives with the social service after accounts.</dd>
+
+        <dt>What happens if someone breaks the rules?</dt>
+        <dd>A moderator can warn or restrict the account. Restrictions apply across the whole site, not one page at a time, and temporary ones expire on their own. Every action is logged with a reason.</dd>
+
+        <dt>What information is kept about my child?</dt>
+        <dd>The <a href="/privacy">privacy policy</a> lists it in full: account details, the places and items they create, messages, and sign-in records. No advertising or tracking networks are embedded.</dd>
+
+        <dt>Can I close the account?</dt>
+        <dd>Yes. Account deletion is a request on the account settings page: profile content is removed and identifying details are cleared, while moderation and transaction records are kept without identifying the member.</dd>
+
+        <dt>Are there time limits or parental controls?</dt>
+        <dd>Not yet, and this page will not pretend otherwise. Per-account time limits are a feature we have not built. For now the control is the same as any other site: when the device is used, and for how long.</dd>
+
+        <dt>How do I contact someone?</dt>
+        <dd>Through the <a href="/support">support page</a>.</dd>
+      </dl>
+    </div>
+
+    <%- include('../partials/parents-nav') %>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

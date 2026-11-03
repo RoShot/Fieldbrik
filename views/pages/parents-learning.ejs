@@ -1,0 +1,41 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Parents</h1>
+  </div>
+
+  <%- include('../partials/parents-nav') %>
+
+  <div class="fb-content">
+    <h2 class="fb-title fb-title--small">FieldBrik and Learning</h2>
+
+    <div class="fb-prose">
+      <p>Building in FieldBrik is quiet engineering. A member decides what a place should do, assembles it out of parts that each have a size and a position, tests it, watches it fail, and changes it. That loop is the same one used to build anything physical, and it is the part that transfers.</p>
+
+      <h2>Design and engineering</h2>
+      <ul class="fb-list">
+        <li>Working within constraints: a brick palette, a budget, and parts that only fit together in certain ways.</li>
+        <li>Thinking in three dimensions: a staircase that looks right from the front still has to be climbable from the side.</li>
+        <li>Iteration: the first version is rarely the one that works, and finding out why is the exercise.</li>
+        <li>Explaining a build to other members, in the forum or in a place description.</li>
+      </ul>
+
+      <h2>Simple programming</h2>
+      <p>A place can be given behaviour: a door that opens, a lift that moves, a trap that resets. That is a sequence of steps with a condition attached, which is the same idea as a program, expressed in something a member can see working in front of them.</p>
+
+      <h2>Reading and writing</h2>
+      <p>Place descriptions, forum posts and messages are all writing that other people read. The forum sections exist partly for that reason: describing what you built, and answering a question about it clearly, is a skill worth practising in a place where the audience is interested.</p>
+
+      <h2>What it is not</h2>
+      <p>FieldBrik is not a curriculum and does not claim to teach a subject. There are no lessons, no tests and no progress reports. It is a building toy that happens to reward the same habits as the subjects above.</p>
+    </div>
+
+    <%- include('../partials/parents-nav') %>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

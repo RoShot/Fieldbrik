@@ -1,0 +1,45 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Parents</h1>
+  </div>
+
+  <%- include('../partials/parents-nav') %>
+
+  <div class="fb-content">
+    <h2 class="fb-title fb-title--small">What Parents are Saying</h2>
+
+    <div class="fb-prose">
+      <p>A guestbook for parents and guardians: comments from people whose children use FieldBrik.</p>
+    </div>
+
+    <table class="fb-table">
+      <thead>
+        <tr>
+          <th scope="col">From</th>
+          <th scope="col">Comment</th>
+          <th scope="col">Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="3" class="fb-table__last">No comments yet.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="fb-notice">
+      <p><strong>This page is empty on purpose.</strong></p>
+      <p>A guestbook with invented quotes on it would be worse than an empty one: the whole point of the page is that real parents said these things. The table fills as comments are left.</p>
+      <p>Leaving a comment needs an account and a moderation queue, so it opens with the social service after accounts. Every entry is reviewed before it appears, and comments cannot be posted anonymously.</p>
+    </div>
+
+    <%- include('../partials/parents-nav') %>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

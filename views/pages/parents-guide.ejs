@@ -1,0 +1,53 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Parents</h1>
+  </div>
+
+  <%- include('../partials/parents-nav') %>
+
+  <div class="fb-content">
+    <h2 class="fb-title fb-title--small">FieldBrik Guide</h2>
+
+    <div class="fb-prose">
+      <p>FieldBrik is an online building toy. Members assemble a character, build places out of virtual bricks, publish them, and visit each other's creations. There is also a forum, private messaging and a catalog of items for the character.</p>
+
+      <h2>What a member does</h2>
+      <ul class="fb-list">
+        <li><strong>Builds</strong> a place from a brick palette inside a place editor.</li>
+        <li><strong>Publishes</strong> it so other members can visit and play it.</li>
+        <li><strong>Visits</strong> other members' places, alone or with others.</li>
+        <li><strong>Trades ideas</strong> in the forum, and messages friends directly.</li>
+      </ul>
+
+      <h2>Parts of the site</h2>
+      <dl class="fb-faq">
+        <dt>Games</dt>
+        <dd>Browse published places by popularity, visits or creator.</dd>
+        <dt>Catalog</dt>
+        <dd>Hats, shirts, trousers and accessories for a character. Each item has a Tickets price, a Bucks price, or both.</dd>
+        <dt>People</dt>
+        <dd>Find a member and see their public profile, badges and creations.</dd>
+        <dt>Forum</dt>
+        <dd>Discussion sections for announcements, help, building and scripting.</dd>
+        <dt>Carpenters Club</dt>
+        <dd>An optional paid membership. Nothing needed to build, publish or play is behind it.</dd>
+      </dl>
+
+      <h2>Badges</h2>
+      <p>A badge is a small marker on a profile. Some are granted automatically because of a role on the site, such as Moderator or Administrator. Others are awarded by staff. A badge is stored on the account and is granted by the server, so it cannot be added by editing anything in a browser.</p>
+
+      <h2>Bucks and Tickets</h2>
+      <p><strong>Tickets</strong> are earned by using the site, and carry the catalog economy. <strong>Bucks</strong> are the premium currency. The two are linked at one Buck to ten Tickets.</p>
+      <p>Carpenters Club is the only thing on FieldBrik that costs money. Prices are listed on the <a href="/carpenters-club">Carpenters Club</a> page, and payment is not open yet.</p>
+    </div>
+
+    <%- include('../partials/parents-nav') %>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>
