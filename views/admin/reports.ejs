@@ -1,0 +1,129 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Abuse Reports</h1>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Reported</th>
+                <th scope="col">About</th>
+                <th scope="col">Reported by</th>
+                <th scope="col">What they said</th>
+                <th scope="col">Received</th>
+                <th scope="col">Close it</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (queue.length === 0) { %>
+                <tr><td colspan="7" class="fb-table__last">Nothing in the queue. That is a real zero: every report filed has been closed.</td></tr>
+              <% } %>
+              <% queue.forEach(function (report) { %>
+                <tr>
+                  <td><%= report.id %></td>
+                  <td>
+                    <a href="/admin/users/<%= report.targetId %>"><%= report.target %></a>
+                    <br><a class="fb-muted" href="/people/<%= encodeURIComponent(report.target) %>">profile</a>
+                  </td>
+                  <td>
+                    <%= report.kindLabel %>
+                    <% if (report.messageId) { %>
+                      <br><span class="fb-muted">&ldquo;<%= report.messageSubject || '(no subject)' %>&rdquo;</span>
+                    <% } %>
+                  </td>
+                  <td><a href="/admin/users/<%= report.reporterId %>"><%= report.reporter %></a></td>
+                  <td class="fb-table__note">
+                    <strong><%= report.reasonLabel %></strong>
+                    <% if (report.detail) { %><br><%= report.detail %><% } else { %><br><span class="fb-muted">no explanation given</span><% } %>
+                  </td>
+                  <td><%= report.when %></td>
+                  <td>
+                    <form method="post" action="/admin/reports/<%= report.id %>/close">
+                      <input type="text" name="note" maxlength="2000" placeholder="Note (optional)">
+                      <div class="fb-inline">
+                        <button class="fb-btn fb-btn--primary" type="submit" name="action" value="handled">Handled</button>
+                        <button class="fb-btn" type="submit" name="action" value="dismissed">Dismiss</button>
+                      </div>
+                    </form>
+                    <a class="fb-btn" href="/admin/users/<%= report.targetId %>/moderate">Moderate</a>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+        <p class="fb-panel__strip">
+          <%= queue.length %> open. Closing a report does not act on the account: use Moderate for a
+          warning, restriction or ban, and the report note records what you decided.
+        </p>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Already closed</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Reported</th>
+                <th scope="col">Reason</th>
+                <th scope="col">Outcome</th>
+                <th scope="col">By</th>
+                <th scope="col">When</th>
+                <th scope="col">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (closed.length === 0) { %>
+                <tr><td colspan="7" class="fb-table__last">No report has been closed yet.</td></tr>
+              <% } %>
+              <% closed.forEach(function (report) { %>
+                <tr>
+                  <td><%= report.id %></td>
+                  <td><a href="/admin/users/<%= report.targetId %>"><%= report.target %></a></td>
+                  <td><%= report.reasonLabel %></td>
+                  <td><%= report.status === 'handled' ? 'Handled' : 'Dismissed' %></td>
+                  <td><%= report.handler || 'unknown' %></td>
+                  <td><%= report.handled %></td>
+                  <td class="fb-table__note"><%= report.note || '-' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        Every report filed by a member lands here and nowhere else: there is one queue rather than an
+        inbox per team. Closing one writes a line to the audit log with your name on it, so who
+        decided what, and when, can be read back later.
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>
