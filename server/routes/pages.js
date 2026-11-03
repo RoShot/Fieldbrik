@@ -343,19 +343,9 @@ const PEOPLE_SORTS = {
   friends: (a, b) => b.stats.friends - a.stats.friends,
 };
 
-router.get('/people', (req, res) => {
+router.get('/people', async (req, res) => {
   const query = String(req.query.q || '').trim();
   const sort = String(req.query.sort || '');
-
-  let people = fixtures.users.slice();
-
-  if (query) {
-    const needle = query.toLowerCase();
-    people = people.filter((user) => user.username.toLowerCase().includes(needle));
-  }
-  if (PEOPLE_SORTS[sort]) {
-    people = people.sort(PEOPLE_SORTS[sort]);
-  }
 
   const current = { q: query, sort };
 
@@ -369,6 +359,23 @@ router.get('/people', (req, res) => {
     active: sort === facet.value || (!sort && facet.value === ''),
     href: facetHref('/people', current, { sort: facet.value }),
   }));
+
+  // No database means the Express development server: fixtures, as before.
+  let people;
+
+  if (req.db) {
+    people = await peopleDirectory.list(req.db, { query, sort });
+  } else {
+    people = fixtures.users.slice();
+
+    if (query) {
+      const needle = query.toLowerCase();
+      people = people.filter((user) => user.username.toLowerCase().includes(needle));
+    }
+    if (PEOPLE_SORTS[sort]) {
+      people = people.sort(PEOPLE_SORTS[sort]);
+    }
+  }
 
   res.render('pages/people', {
     pageTitle: `People - ${site.name}`,
@@ -412,30 +419,53 @@ function slugify(value) {
     .replace(/^-+|-+$/g, '');
 }
 
-router.get('/people/:username', (req, res) => {
-  const wanted = req.params.username.toLowerCase();
-  const person = fixtures.users.find((user) => user.username.toLowerCase() === wanted);
+router.get('/people/:username', async (req, res) => {
+  const wanted = req.params.username;
 
-  if (!person) {
-    return res.status(404).render('pages/error', {
+  // Profiles are browsed from inside a signed-in session, so they keep the
+  // member header.
+  signedIn(res);
+
+  const notFound = () =>
+    res.status(404).render('pages/error', {
       pageTitle: `Member not found - ${site.name}`,
       statusCode: 404,
-      message: `There is no member called ${req.params.username}.`,
+      message: `There is no member called ${wanted}.`,
+    });
+
+  if (!req.db) {
+    const person = fixtures.users.find(
+      (user) => user.username.toLowerCase() === wanted.toLowerCase()
+    );
+
+    if (!person) return notFound();
+
+    const roleBadge = fixtures.badges.find((badge) => badge.key === person.role);
+
+    return res.render('pages/profile', {
+      pageTitle: `${person.username} - ${site.name}`,
+      person,
+      heldBadges: roleBadge ? [roleBadge] : [],
+      friends: fixtures.users.filter((user) => user.id !== person.id).slice(0, 6),
+      created: fixtures.games.filter((game) => game.creator === person.username),
     });
   }
 
-  // Profiles are browsed from inside a signed-in session, so they keep the
-  // member header. Owner-only controls appear once accounts exist (phase 2).
-  signedIn(res);
+  const person = await peopleDirectory.findOne(req.db, wanted);
+  if (!person) return notFound();
 
-  const roleBadge = fixtures.badges.find((badge) => badge.key === person.role);
+  const [heldBadges, friends, created] = await Promise.all([
+    peopleDirectory.badgesFor(req.db, person.id),
+    peopleDirectory.friendsOf(req.db, person.id),
+    peopleDirectory.gamesFor(req.db, person.id),
+  ]);
 
   res.render('pages/profile', {
     pageTitle: `${person.username} - ${site.name}`,
     person,
-    heldBadges: roleBadge ? [roleBadge] : [],
-    friends: fixtures.users.filter((user) => user.id !== person.id).slice(0, 6),
-    created: fixtures.games.filter((game) => game.creator === person.username),
+    heldBadges,
+    friends: friends.slice(0, 6),
+    created,
   });
 });
 
@@ -576,7 +606,8 @@ router.get('/register', (req, res) => {
 // ---------- Account and social pages ----------
 // Markup complete, behaviour deliberately disabled until the services exist.
 
-const avatarStore = require('../services/avatarStore');
+const avatarRepository = require('../services/avatarRepository');
+const peopleDirectory = require('../services/people');
 
 // Six independent colours, matching both the renderer and the schema (D19).
 const AVATAR_PARTS = [
@@ -608,13 +639,18 @@ router.get('/character', (req, res) => {
 // Appearance save. Returns JSON rather than redirecting: the Character page
 // updates the live preview in place and only needs to know whether the write
 // was accepted.
-router.post('/character/avatar', (req, res, next) => {
+router.post('/character/avatar', async (req, res, next) => {
+  if (!req.db) {
+    res.status(503).json({ ok: false, error: 'Saving an appearance needs the database.' });
+    return;
+  }
+
   try {
-    const saved = avatarStore.save(viewerFor(req).id, req.body);
+    const saved = await avatarRepository.save(req.db, req.viewer.id, req.body);
 
     res.json({ ok: true, avatar: saved });
   } catch (error) {
-    if (error instanceof avatarStore.AvatarError) {
+    if (error instanceof avatarRepository.AvatarError) {
       res.status(400).json({ ok: false, error: error.message });
       return;
     }
@@ -636,16 +672,33 @@ router.get('/inventory', (req, res) => {
   });
 });
 
-router.get('/friends', (req, res) => {
+router.get('/friends', async (req, res) => {
   signedIn(res);
+
+  if (!req.db) {
+    return res.render('pages/friends', {
+      pageTitle: `Friends - ${site.name}`,
+      friends: fixtures.users.filter((user) => user.id !== viewerFor(req).id),
+      total: viewerFor(req).stats.friends,
+      incoming: [],
+      outgoing: [],
+      viewerName: viewerFor(req).username,
+    });
+  }
+
+  const [friends, incoming, outgoing] = await Promise.all([
+    peopleDirectory.friendsOf(req.db, req.viewer.id),
+    peopleDirectory.pending(req.db, req.viewer.id, 'incoming'),
+    peopleDirectory.pending(req.db, req.viewer.id, 'outgoing'),
+  ]);
 
   res.render('pages/friends', {
     pageTitle: `Friends - ${site.name}`,
-    friends: fixtures.users.filter((user) => user.id !== viewerFor(req).id),
-    total: viewerFor(req).stats.friends,
-    incoming: [],
-    outgoing: [],
-    viewerName: viewerFor(req).username,
+    friends,
+    total: friends.length,
+    incoming,
+    outgoing,
+    viewerName: req.viewer.username,
   });
 });
 
