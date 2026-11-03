@@ -1,0 +1,94 @@
+/* =========================================================
+   FIELDBRIK AVATAR RENDERER
+   Presentation for the staged client renderer.
+
+   These class names are the client's, not the website's. The site has its
+   own .fb-avatar 2D figure in public/css/fieldbrik.css and does not use
+   anything in this file.
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   Container
+   --------------------------------------------------------- */
+
+.fieldbrik-avatar {
+    position: relative;
+
+    width: 220px;
+    height: 280px;
+
+    margin: 0 auto;
+
+    overflow: hidden;
+
+    background: #ffffff;
+}
+
+/* ---------------------------------------------------------
+   Canvas
+
+   The renderer sets the drawing-buffer size itself from the container.
+   CSS must not stretch it, or the aspect ratio comes apart.
+   --------------------------------------------------------- */
+
+.fieldbrik-avatar canvas {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    margin: 0;
+    padding: 0;
+
+    image-rendering: pixelated;
+
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ---------------------------------------------------------
+   Loading message
+   --------------------------------------------------------- */
+
+.fieldbrik-avatar-loading {
+    position: absolute;
+
+    top: 50%;
+    left: 0;
+
+    width: 100%;
+
+    transform: translateY(-50%);
+
+    text-align: center;
+
+    font-family: "Times New Roman", Times, serif;
+
+    font-size: 13px;
+
+    color: #000000;
+
+    pointer-events: none;
+}
+
+/* ---------------------------------------------------------
+   No-WebGL fallback
+
+   Swap in the site's existing CSS avatar rather than an empty box.
+   --------------------------------------------------------- */
+
+.fieldbrik-avatar-fallback {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 100%;
+
+    font-family: "Times New Roman", Times, serif;
+
+    font-size: 13px;
+
+    color: #444444;
+}
