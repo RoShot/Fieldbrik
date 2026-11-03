@@ -1,0 +1,59 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title">My Reports</h1>
+    <span class="fb-pagecount"><%= open %> open</span>
+  </div>
+
+  <table class="fb-table">
+    <thead>
+      <tr>
+        <th scope="col">Member</th>
+        <th scope="col">About</th>
+        <th scope="col">Reason</th>
+        <th scope="col">Sent</th>
+        <th scope="col">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (entries.length === 0) { %>
+        <tr>
+          <td colspan="5" class="fb-table__last">
+            You have not reported anybody. The report link is on a member's profile and on a message.
+          </td>
+        </tr>
+      <% } %>
+      <% entries.forEach(function (entry) { %>
+        <tr>
+          <td><a class="fb-table__name" href="/people/<%= encodeURIComponent(entry.target) %>"><%= entry.target %></a></td>
+          <td><%= entry.kindLabel %></td>
+          <td><%= entry.reasonLabel %></td>
+          <td><%= entry.created %></td>
+          <td class="fb-table__last">
+            <% if (entry.status === 'open') { %>Open
+            <% } else if (entry.status === 'handled') { %>Handled
+            <% } else { %>Closed, no action<% } %>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <div class="fb-notice">
+    <p><strong>A report is not a ban.</strong></p>
+    <p>It puts the member in front of a moderator, who decides whether anything should happen.
+       You are not told what was decided, and the member is not told who reported them.</p>
+  </div>
+
+  <p class="fb-panel__more"><a href="/people">Find a member</a></p>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>
