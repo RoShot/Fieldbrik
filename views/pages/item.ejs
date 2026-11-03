@@ -1,0 +1,86 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <p class="fb-crumbs"><a href="/catalog">Catalog</a> &raquo; <%= item.name %></p>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title"><%= item.name %></h1>
+    <span class="fb-pagecount"><%= item.category %></span>
+  </div>
+
+  <div class="fb-cols">
+    <div class="fb-col-main">
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Item details</h2>
+        <div class="fb-panel__body">
+          <div class="fb-item">
+            <span class="fb-item__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true"></span>
+
+            <div class="fb-item__body">
+              <p class="fb-item__prices">
+                <% if (item.tickets !== null) { %>
+                  <span class="fb-price--tickets">Tx: <%= item.tickets %></span>
+                <% } %>
+                <% if (item.bucks !== null) { %>
+                  <span class="fb-price--bucks">R$: <%= item.bucks %></span>
+                <% } %>
+                <% if (item.tickets === null && item.bucks === null) { %>
+                  <span class="fb-muted">Free</span>
+                <% } %>
+              </p>
+
+              <table class="fb-table fb-table--kv">
+                <tbody>
+                  <tr>
+                    <th scope="row">Category</th>
+                    <td><a href="/catalog?category=<%= encodeURIComponent(item.category) %>"><%= item.category %></a></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Creator</th>
+                    <td><a href="/people/<%= item.creator %>"><%= item.creator %></a></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Availability</th>
+                    <td><%= item.tickets !== null ? 'Tickets' : '' %><%= item.tickets !== null && item.bucks !== null ? ' and ' : '' %><%= item.bucks !== null ? 'Bucks' : '' %></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Your account</th>
+                    <td><%= item.owned ? (item.equipped ? 'Owned, currently worn' : 'Owned') : 'Not owned' %></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="fb-notice">
+        <p><strong>Buying is not live.</strong></p>
+        <p>Prices on this page are real catalog figures. There is no checkout, no balance change and no ownership record behind them yet: the catalog and economy services arrive in phases 2 and 3, so nothing here can take money or grant an item.</p>
+      </div>
+    </div>
+
+    <aside class="fb-col-side">
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">By this creator</h2>
+        <div class="fb-panel__body">
+          <% if (moreByCreator.length === 0) { %>
+            <p class="fb-muted">Nothing else listed.</p>
+          <% } else { %>
+            <ul class="fb-facets__list">
+              <% moreByCreator.forEach(function (entry) { %>
+                <li><a href="/catalog/<%= entry.id %>"><%= entry.name %></a></li>
+              <% }); %>
+            </ul>
+          <% } %>
+          <p class="fb-panel__more"><a href="/catalog?creator=<%= encodeURIComponent(item.creator) %>">See all</a></p>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

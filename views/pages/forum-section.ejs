@@ -1,0 +1,42 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <p class="fb-crumbs"><a href="/forum">Forum</a> &raquo; <%= section.name %></p>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title"><%= section.name %></h1>
+    <span class="fb-pagecount"><%= section.threads %> threads</span>
+  </div>
+
+  <p class="fb-muted"><%= section.description %></p>
+
+  <table class="fb-table">
+    <thead>
+      <tr>
+        <th scope="col">Thread</th>
+        <th scope="col">Replies</th>
+        <th scope="col">Views</th>
+        <th scope="col">Last Post</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="4" class="fb-table__last">No threads yet.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="fb-pagination">Page 1 of 1</p>
+
+  <div class="fb-notice">
+    <p><strong>Nothing can be posted here yet.</strong></p>
+    <p>There is no New Thread button on purpose. Starting a thread needs an account, a post record and the moderation queue that reviews it; accounts arrive in phase 2 and the forum service in phase 5. The section itself is real, so the address will keep working when posting opens.</p>
+  </div>
+
+  <p class="fb-panel__more"><a href="/forum">Back to the forum index</a></p>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

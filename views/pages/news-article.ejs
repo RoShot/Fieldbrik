@@ -1,0 +1,29 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <p class="fb-crumbs"><a href="/news">News</a> &raquo; <%= article.title %></p>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title"><%= article.title %></h1>
+  </div>
+
+  <p class="fb-newsitem__meta">
+    By <%= article.author %> &middot; <%= article.date %> &middot;
+    <a href="/news?category=<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
+  </p>
+
+  <div class="fb-content">
+    <div class="fb-prose">
+      <% article.body.forEach(function (paragraph) { %>
+        <p><%= paragraph %></p>
+      <% }); %>
+    </div>
+  </div>
+
+  <p class="fb-panel__more"><a href="/news">Back to all news</a></p>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

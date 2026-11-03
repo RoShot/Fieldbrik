@@ -1,0 +1,62 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Forum</h1>
+    <span class="fb-pagecount"><%= totalThreads %> threads</span>
+  </div>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title fb-panel__title--blue">Search the Forums</h2>
+    <div class="fb-panel__body">
+      <form class="fb-toolbar fb-forum__search" method="get" action="/forum">
+        <input type="search" name="q" value="<%= query %>" placeholder="Search forum sections">
+        <button class="fb-btn" type="submit">Search</button>
+        <% if (query) { %><a class="fb-muted" href="/forum">Clear</a><% } %>
+      </form>
+    </div>
+  </section>
+
+  <table class="fb-table">
+    <thead>
+      <tr>
+        <th scope="col">Forum</th>
+        <th scope="col">Threads</th>
+        <th scope="col">Posts</th>
+        <th scope="col">Last Post</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% sections.forEach(function (section) { %>
+        <tr>
+          <td>
+            <span class="fb-table__name"><%= section.name %></span>
+            <span class="fb-table__desc"><%= section.description %></span>
+          </td>
+          <td><%= section.threads %></td>
+          <td><%= section.posts %></td>
+          <td class="fb-table__last"><%= section.lastPost || 'No posts yet' %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <% if (sections.length === 0) { %>
+    <div class="fb-notice">
+      <p><strong>No section matches that search.</strong></p>
+      <p><a href="/forum">Show every section</a>.</p>
+    </div>
+  <% } %>
+
+  <p class="fb-pagination">Page 1 of 1</p>
+
+  <div class="fb-notice">
+    <p><strong>The forum opens with accounts.</strong></p>
+    <p>The sections above are the real structure of the FieldBrik forum, and the search filters them. Every thread and post count reads zero because there is no forum database yet: accounts and moderation arrive in phase 2, and posting needs both. Threads, replies, quoting and reporting all hang off that, so none of it is drawn in early as a pretend discussion.</p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

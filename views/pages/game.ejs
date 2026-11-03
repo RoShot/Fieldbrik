@@ -1,0 +1,83 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <p class="fb-crumbs"><a href="/games">Games</a> &raquo; <%= game.name %></p>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title"><%= game.name %></h1>
+    <span class="fb-pagecount"><span class="fb-card-game__players"><%= game.players %> playing now</span></span>
+  </div>
+
+  <div class="fb-cols">
+    <div class="fb-col-main">
+      <span class="fb-hero" style="--thumb: <%= game.thumb %>;" aria-hidden="true"></span>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">About this game</h2>
+        <div class="fb-panel__body fb-prose">
+          <p><%= game.description %></p>
+        </div>
+      </section>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Details</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--kv">
+            <tbody>
+              <tr>
+                <th scope="row">Creator</th>
+                <td><a href="/people/<%= game.creator %>"><%= game.creator %></a></td>
+              </tr>
+              <tr>
+                <th scope="row">Created</th>
+                <td><%= game.created %></td>
+              </tr>
+              <tr>
+                <th scope="row">Last updated</th>
+                <td><%= game.updated %></td>
+              </tr>
+              <tr>
+                <th scope="row">Visits</th>
+                <td><%= game.visits.toLocaleString('en-US') %></td>
+              </tr>
+              <tr>
+                <th scope="row">Players online</th>
+                <td><%= game.players %></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="fb-notice">
+        <p><strong>This game cannot be played yet.</strong></p>
+        <p>There is no Play button on this page on purpose. Playing a place needs the FieldBrik client, which is not built: there is no renderer, no physics and no game session to join. The figures above describe the listing, and the listing is real data.</p>
+      </div>
+    </div>
+
+    <aside class="fb-col-side">
+      <div class="fb-creator">
+        <% if (creator) { %>
+          <%- include('../partials/avatar', { avatar: creator.avatar, size: 'md' }) %>
+          <a class="fb-creator__name" href="/people/<%= creator.username %>"><%= creator.username %></a>
+          <p class="fb-creator__meta"><%= creator.online ? 'Online now' : 'Offline' %></p>
+        <% } else { %>
+          <a class="fb-creator__name" href="/people/<%= game.creator %>"><%= game.creator %></a>
+          <p class="fb-creator__meta">Creator</p>
+        <% } %>
+      </div>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">More games</h2>
+        <div class="fb-panel__body">
+          <p class="fb-muted"><a href="/games">Browse every game</a>, or filter by creator from the Games page.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

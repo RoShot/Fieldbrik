@@ -1,0 +1,53 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">News</h1>
+    <span class="fb-pagecount"><%= articles.length %> <%= articles.length === 1 ? 'article' : 'articles' %></span>
+  </div>
+
+  <div class="fb-cols">
+    <aside class="fb-col-side">
+      <h2 class="fb-facets__heading">Category</h2>
+      <ul class="fb-facets__list">
+        <% categoryFacets.forEach(function (facet) { %>
+          <li class="<%= facet.active ? 'is-active' : '' %>"><a href="<%= facet.href %>"><%= facet.label %></a></li>
+        <% }); %>
+      </ul>
+    </aside>
+
+    <div class="fb-col-main">
+      <% if (articles.length === 0) { %>
+        <div class="fb-notice">
+          <p><strong>Nothing published in that category yet.</strong></p>
+          <p><a href="/news">Show every article</a>.</p>
+        </div>
+      <% } else { %>
+        <ul class="fb-newslist">
+          <% articles.forEach(function (article) { %>
+            <li class="fb-newsitem">
+              <a class="fb-newsitem__title" href="/news/<%= article.slug %>"><%= article.title %></a>
+              <p class="fb-newsitem__meta">
+                By <%= article.author %> &middot; <%= article.date %> &middot;
+                <a href="/news?category=<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
+              </p>
+              <p class="fb-newsitem__summary"><%= article.summary %></p>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
+
+      <p class="fb-pagination">Page 1 of 1</p>
+
+      <div class="fb-notice">
+        <p><strong>These are the platform's own announcements.</strong></p>
+        <p>Everything listed here was written by the FieldBrik team about FieldBrik. Posting and editing news is an admin function and arrives with the news service in phase 5.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>
