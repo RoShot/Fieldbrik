@@ -18,6 +18,7 @@ const site = require('../config/site');
 const pageContext = require('../services/pageContext');
 const permissions = require('../services/permissions');
 const adminService = require('../services/admin');
+const moderation = require('../services/moderation');
 
 const router = Router();
 
@@ -113,17 +114,33 @@ router.get(
   })
 );
 
-/** Result of a role change, looked up from a fixed code rather than the URL. */
+/** Result of an action or a role change, looked up from a fixed code. */
 const DONE = {
   role: 'Role changed.',
+  remind: 'Reminder sent.',
+  warn: 'Warning issued.',
+  ban_1d: 'Banned for 1 day.',
+  ban_3d: 'Banned for 3 days.',
+  ban_7d: 'Banned for 7 days.',
+  ban_14d: 'Banned for 14 days.',
+  ban_permanent: 'Banned permanently.',
+  delete: 'Account deleted.',
+  poison: 'Poison ban applied: banned, scrubbed, email blacklisted, content removed.',
+  note: 'Note saved.',
+  unban: 'Restriction lifted.',
 };
 
 const FAILED = {
   self: 'You cannot change your own role.',
   rank: 'That account is at or above your own rank, so you cannot act on it.',
   grant: 'Your role cannot grant that role.',
-  unknown: 'That is not a role in the ladder.',
+  unknown: 'That is not an action or role the panel knows.',
   nobody: 'No account has that ID.',
+  cap: 'Your role cannot do that.',
+  noreason: 'A reason is required for that action.',
+  nonote: 'A note is required to save a note.',
+  badimage: 'Evidence must be a png, jpeg, webp or gif image.',
+  toobig: 'That image is larger than 128 KB.',
 };
 
 function noticeFor(query) {
@@ -201,6 +218,10 @@ router.get(
           record,
           notice: noticeFor(req.query),
           canChangeRole,
+          // Warnings are the lowest moderation action, so any role that can warn
+          // can open the page; the page itself only draws the actions that rank
+          // is allowed to use.
+          canModerate: permissions.can(req.admin.role, 'users.warn'),
           roleReason,
           roleOptions: roles.filter((role) => permissions.mayGrant(req.admin.role, role)),
         })
@@ -229,6 +250,79 @@ router.post(
       }
 
       return res.redirect(`/admin/users/${targetId}?done=role`);
+    })();
+  })
+);
+
+router.get(
+  '/admin/users/:id/moderate',
+  staff('users.view', (req, res) => {
+    return (async () => {
+      const account = await adminService.findAccount(req.db, req.params.id);
+
+      if (!account) {
+        return notAllowed(req, res, 404, 'No account has that ID.');
+      }
+
+      const [overview, restrictions, noteList, scrubbedFrom] = await Promise.all([
+        adminService.overview(req.db),
+        moderation.history(req.db, account.id),
+        moderation.notes(req.db, account.id),
+        moderation.originalUsernameFor(req.db, account.id),
+      ]);
+
+      // The same two rules the server checks on the action itself. Drawn this
+      // way so the page cannot invite an action that will be refused.
+      const canAct =
+        String(account.id) !== String(req.viewer.id) && account.roleRank < req.admin.role.rank;
+
+      return res.render(
+        'admin/moderate',
+        view(req, {
+          adminStatus: overview.status,
+          account,
+          restrictions,
+          notes: noteList,
+          actions: moderation.available(req.admin.role),
+          presets: moderation.PRESETS,
+          notice: noticeFor(req.query),
+          scrubbedFrom,
+          canAct,
+        })
+      );
+    })();
+  })
+);
+
+router.post(
+  '/admin/users/:id/action',
+  staff('users.view', (req, res) => {
+    return (async () => {
+      const body = req.body || {};
+      const targetId = Number(req.params.id) || 0;
+
+      const result = await moderation.apply(req.db, {
+        actor: { id: req.viewer.id, rank: req.admin.role.rank },
+        targetId,
+        action: body.action,
+        reason: body.reason,
+        note: body.note,
+        scrub: Boolean(body.scrub),
+        evidence: body.evidence || null,
+      });
+
+      if (!result.ok) {
+        return res.redirect(
+          `/admin/users/${targetId}/moderate?failed=${encodeURIComponent(result.code)}`
+        );
+      }
+
+      // A closed account has no page of its own left to return to.
+      if (result.code === 'delete') {
+        return res.redirect('/admin/users?done=delete');
+      }
+
+      return res.redirect(`/admin/users/${targetId}/moderate?done=${encodeURIComponent(result.code)}`);
     })();
   })
 );

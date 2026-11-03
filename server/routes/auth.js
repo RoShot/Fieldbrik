@@ -117,7 +117,29 @@ async function handleSignIn(req, res) {
   }
 
   try {
-    const created = await accounts.register(req.db, { username, password });
+    const email = String(body.email || '').trim();
+
+    // A poisoned account's address is blacklisted, so the same email cannot be
+    // used to register again. Checked here, before anything is created, so a
+    // refused address never leaves a row behind.
+    if (email) {
+      const blockedEmail = await req.db
+        .prepare('SELECT email_lower FROM blacklisted_emails WHERE email_lower = ?')
+        .bind(email.toLowerCase())
+        .first();
+
+      if (blockedEmail) {
+        return renderForm(
+          req,
+          res,
+          400,
+          'That email address cannot be used for a new account.',
+          { username }
+        );
+      }
+    }
+
+    const created = await accounts.register(req.db, { username, password, email });
     return await signIn(req.db, req, res, created);
   } catch (error) {
     if (error instanceof accounts.AccountError) {
