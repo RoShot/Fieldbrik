@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS users (
   email_lower     TEXT    UNIQUE,
   password_hash   TEXT    NOT NULL,
   password_salt   TEXT    NOT NULL,
-  password_iterations INTEGER NOT NULL DEFAULT 120000,
+  -- 100,000 is the highest count Cloudflare's PBKDF2 accepts, and each row
+  -- stores its own, so a lower or higher value here only affects new accounts.
+  password_iterations INTEGER NOT NULL DEFAULT 100000,
   role            TEXT    NOT NULL DEFAULT 'user'
                   CHECK (role IN ('user', 'support_staff', 'moderator', 'administrator', 'super_administrator')),
   created_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -71,6 +73,19 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user    ON sessions (user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions (expires_at);
+
+-- Failed sign-ins, counted rather than kept: rows older than a day are swept
+-- when a new failure is written. This has to live in the database rather than in
+-- the process, or every Worker isolate would get its own allowance.
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  username_lower TEXT    NOT NULL DEFAULT '',
+  ip             TEXT    NOT NULL DEFAULT '',
+  attempted_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_name ON login_attempts (username_lower, attempted_at);
+CREATE INDEX IF NOT EXISTS idx_login_attempts_ip   ON login_attempts (ip, attempted_at);
 
 -- ---------------------------------------------------------------------------
 -- Moderation

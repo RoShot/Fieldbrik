@@ -13,6 +13,7 @@
 
 const { Router } = require('../lib/router');
 const accounts = require('../services/accounts');
+const loginThrottle = require('../services/loginThrottle');
 const pageContext = require('../services/pageContext');
 
 const router = Router();
@@ -53,6 +54,19 @@ function setSessionCookie(req, res, session) {
   });
 }
 
+/**
+ * The client address, for the per-address half of the rate limit.
+ *
+ * Cloudflare sets cf-connecting-ip; a forwarded header is the fallback for a
+ * local run. An empty string just means the address check is skipped, because
+ * the per-name check is the one that matters.
+ */
+function clientAddress(req) {
+  const headers = (req && req.headers) || {};
+  const raw = headers['cf-connecting-ip'] || headers['x-forwarded-for'] || '';
+  return String(raw).split(',')[0].trim();
+}
+
 async function signIn(db, req, res, user) {
   const session = await accounts.createSession(db, user.id, {
     userAgent: (req.headers && req.headers['user-agent']) || '',
@@ -68,17 +82,41 @@ async function handleSignIn(req, res) {
   const body = req.body || {};
   const username = String(body.username || '').trim();
   const password = String(body.password || '');
+  const ip = clientAddress(req);
 
-  try {
-    const existing = await accounts.findByUsername(req.db, username);
+  const existing = await accounts.findByUsername(req.db, username);
 
-    if (existing) {
-      // The name is taken, so this is a log-in: only the password is checked,
-      // and a wrong one is refused. It never falls through to registering.
-      const user = await accounts.authenticate(req.db, { username, password });
-      return await signIn(req.db, req, res, user);
+  if (existing) {
+    // The name is taken, so this is a log-in: only the password is checked, and
+    // a wrong one is refused. It never falls through to registering.
+    //
+    // The limit is tested before the password, so a locked name is refused
+    // without spending a PBKDF2 derivation on it.
+    const blocked = await loginThrottle.check(req.db, { username, ip });
+
+    if (blocked) {
+      return renderForm(
+        req,
+        res,
+        429,
+        `Too many failed attempts with that name. Try again in ${blocked.minutes} minutes.`,
+        { username }
+      );
     }
 
+    try {
+      const user = await accounts.authenticate(req.db, { username, password });
+      await loginThrottle.clear(req.db, { username });
+      return await signIn(req.db, req, res, user);
+    } catch (error) {
+      if (!(error instanceof accounts.AccountError)) throw error;
+
+      await loginThrottle.record(req.db, { username, ip });
+      return renderForm(req, res, 400, error.message, { username });
+    }
+  }
+
+  try {
     const created = await accounts.register(req.db, { username, password });
     return await signIn(req.db, req, res, created);
   } catch (error) {
