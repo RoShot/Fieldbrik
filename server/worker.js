@@ -25,6 +25,7 @@ import views from './views.generated.js';
 import pagesModule from './routes/pages.js';
 import authModule from './routes/auth.js';
 import adminModule from './routes/admin.js';
+import adminContentModule from './routes/adminContent.js';
 import earningsModule from './routes/earnings.js';
 import site from './config/site.js';
 import accounts from './services/accounts.js';
@@ -37,6 +38,7 @@ import earnings from './services/earnings.js';
 const pageRoutes = pagesModule.default || pagesModule;
 const authRoutes = authModule.default || authModule;
 const adminRoutes = adminModule.default || adminModule;
+const adminContentRoutes = adminContentModule.default || adminContentModule;
 const earningsRoutes = earningsModule.default || earningsModule;
 
 const COOKIE = 'fb_session';
@@ -320,6 +322,12 @@ async function handlePage(request, url, env) {
   // router rather than being one more page inside it.
   if (!failure && !state.answered) {
     failure = await runRouter(adminRoutes, req, res);
+  }
+
+  // Catalog and rate pages: their own router, mounted after the main panel
+  // router and before the public pages.
+  if (!failure && !state.answered) {
+    failure = await runRouter(adminContentRoutes, req, res);
   }
 
   if (!failure && !state.answered) {
