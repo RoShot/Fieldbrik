@@ -40,6 +40,10 @@ const CAPABILITIES = {
   'club.grant': 220,
   'users.referral': 220,
   'billing.issue': 220,
+  // Reading the abuse report queue and closing a report. Support Admin and up:
+  // a report is a member's complaint, so somebody has to be able to answer it
+  // without waiting for a moderator.
+  'reports.review': 160,
   'content.review': 170,
   'forum.moderate': 180,
   'settings.write': 240,
