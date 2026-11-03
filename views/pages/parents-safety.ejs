@@ -20,16 +20,17 @@
       <p>Members can send each other private messages. A message is shown only to the account that sent it and the account it was addressed to, and it is marked unread until it is opened. Blocking a member is built: a blocked member cannot send a message to the account that blocked them, and the block stops friend requests between the two as well.</p>
 
       <h2>Reporting</h2>
-      <p>There is no report button yet. The report queue is the next part of the build, and until it
-         exists no profile or message carries a Report Abuse link, because a link that goes nowhere
-         is worse than no link. A report about a member or a message currently goes through the
-         <a href="/support">Support</a> page.</p>
+      <p>Every profile and every private message carries a Report Abuse link. A report asks for a
+         reason from a fixed list and an optional explanation, and it lands in one moderation queue
+         rather than an inbox where it might sit unread. The member it is about is not told who
+         reported them, and filing a report does not itself ban anybody: a member of staff reads it
+         and decides whether a warning or a restriction is warranted.</p>
 
       <h2>How moderation works</h2>
       <p>A moderator can warn an account or restrict it. Restrictions are recorded against the account and checked on every request, so a restricted account cannot avoid them by finding a page that forgot to check. A temporary restriction stops applying when its end date passes and stays in the account's history. Every administrative action is written to a log with the reason and the staff member, and that log cannot be edited from the admin panel.</p>
 
       <h2>About this page</h2>
-      <p>This page describes what the site is built to do. FieldBrik 0.3 is still under construction: accounts, profiles, friends, private messages, the forum, the catalog and the admin panel are in place, while the report queue and the building client are not. Where a feature is described in the future tense, it does not exist yet and is not being pretended.</p>
+      <p>This page describes what the site is built to do. FieldBrik 0.3 is still under construction: accounts, profiles, friends, private messages, reporting, the forum, the catalog and the admin panel are in place, while the building client is not. Where a feature is described in the future tense, it does not exist yet and is not being pretended.</p>
     </div>
 
     <%- include('../partials/parents-nav') %>
