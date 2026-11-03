@@ -4,6 +4,10 @@
 <main class="fb-container fb-main">
   <p class="fb-crumbs"><a href="/catalog">Catalog</a> &raquo; <%= item.name %></p>
 
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
   <div class="fb-title-row">
     <h1 class="fb-title"><%= item.name %></h1>
     <span class="fb-pagecount"><%= item.category %></span>
@@ -15,7 +19,9 @@
         <h2 class="fb-panel__title">Item details</h2>
         <div class="fb-panel__body">
           <div class="fb-item">
-            <span class="fb-item__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true"></span>
+            <span class="fb-item__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true">
+              <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } %>
+            </span>
 
             <div class="fb-item__body">
               <p class="fb-item__prices">
@@ -30,6 +36,10 @@
                 <% } %>
               </p>
 
+              <% if (item.description) { %>
+                <p class="fb-prose"><%= item.description %></p>
+              <% } %>
+
               <table class="fb-table fb-table--kv">
                 <tbody>
                   <tr>
@@ -42,7 +52,7 @@
                   </tr>
                   <tr>
                     <th scope="row">Availability</th>
-                    <td><%= item.tickets !== null ? 'Tickets' : '' %><%= item.tickets !== null && item.bucks !== null ? ' and ' : '' %><%= item.bucks !== null ? 'Bucks' : '' %></td>
+                    <td><%= item.tickets !== null ? 'Tickets' : '' %><%= item.tickets !== null && item.bucks !== null ? ' and ' : '' %><%= item.bucks !== null ? 'Bucks' : '' %><%= item.tickets === null && item.bucks === null ? 'Free' : '' %></td>
                   </tr>
                   <tr>
                     <th scope="row">Your account</th>
@@ -55,10 +65,38 @@
         </div>
       </section>
 
-      <div class="fb-notice">
-        <p><strong>Buying is not live.</strong></p>
-        <p>Prices on this page are real catalog figures. There is no checkout, no balance change and no ownership record behind them yet: the catalog and economy services arrive in phases 2 and 3, so nothing here can take money or grant an item.</p>
-      </div>
+      <section class="fb-panel">
+        <h2 class="fb-panel__title"><%= item.owned ? 'Wear it' : 'Buy it' %></h2>
+        <div class="fb-panel__body">
+          <% if (item.owned) { %>
+            <p>This item is on your account.</p>
+            <form method="post" action="/inventory/<%= item.id %>/<%= item.equipped ? 'remove' : 'wear' %>">
+              <button class="fb-btn fb-btn--primary" type="submit"><%= item.equipped ? 'Take it off' : 'Wear it' %></button>
+            </form>
+            <p class="fb-panel__more"><a href="/inventory">Your inventory</a></p>
+          <% } else if (!signedIn) { %>
+            <p><a href="/login">Sign in</a> to buy this item. Prices are per account, so nothing can be bought from a signed-out page.</p>
+          <% } else { %>
+            <p class="fb-muted">You have <%= balance.tickets %> Tickets and <%= balance.bucks %> Bucks.</p>
+            <form class="fb-buyform" method="post" action="/catalog/<%= item.id %>/buy">
+              <% if (item.tickets !== null) { %>
+                <label class="fb-buyform__option">
+                  <input type="radio" name="currency" value="tickets" checked>
+                  <%= item.tickets %> Tickets
+                </label>
+              <% } %>
+              <% if (item.bucks !== null) { %>
+                <label class="fb-buyform__option">
+                  <input type="radio" name="currency" value="bucks"<%= item.tickets === null ? ' checked' : '' %>>
+                  <%= item.bucks %> Bucks
+                </label>
+              <% } %>
+              <button class="fb-btn fb-btn--primary" type="submit">Buy</button>
+            </form>
+            <p class="fb-admin__note">The price is read from the item on the server, so the form cannot send a different one.</p>
+          <% } %>
+        </div>
+      </section>
     </div>
 
     <aside class="fb-col-side">

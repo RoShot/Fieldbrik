@@ -2,6 +2,10 @@
 <%- include('../partials/header') %>
 
 <main class="fb-container fb-main">
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
   <div class="fb-title-row">
     <h1 class="fb-title">Inventory</h1>
     <span class="fb-pagecount"><%= owned.length %> <%= owned.length === 1 ? 'item' : 'items' %></span>
@@ -16,7 +20,9 @@
         <ul class="fb-wearing">
           <% wearing.forEach(function (item) { %>
             <li class="fb-wearing__item">
-              <span class="fb-wearing__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true"></span>
+              <span class="fb-wearing__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true">
+                <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } %>
+              </span>
               <span>
                 <a href="/catalog/<%= item.id %>"><%= item.name %></a><br>
                 <span class="fb-muted"><%= item.category %></span>
@@ -32,12 +38,14 @@
     <h2 class="fb-panel__title"><%= viewerName %>'s Items</h2>
     <div class="fb-panel__body">
       <% if (owned.length === 0) { %>
-        <p class="fb-muted">You do not own any items yet.</p>
+        <p class="fb-muted">You do not own any items yet. <a href="/catalog">Look through the catalog</a>.</p>
       <% } else { %>
         <ul class="fb-grid--items">
           <% owned.forEach(function (item) { %>
             <li class="fb-card-item">
-              <span class="fb-card-item__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true"></span>
+              <span class="fb-card-item__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true">
+                <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } %>
+              </span>
               <a class="fb-card-item__name" href="/catalog/<%= item.id %>"><%= item.name %></a>
               <p class="fb-card-item__meta">
                 <%= item.category %><br>
@@ -47,6 +55,11 @@
                   <span class="fb-muted">Not worn</span>
                 <% } %>
               </p>
+              <% if (canManage) { %>
+                <form method="post" action="/inventory/<%= item.id %>/<%= item.equipped ? 'remove' : 'wear' %>">
+                  <button class="fb-btn" type="submit"><%= item.equipped ? 'Take off' : 'Wear' %></button>
+                </form>
+              <% } %>
             </li>
           <% }); %>
         </ul>
@@ -55,8 +68,8 @@
   </section>
 
   <div class="fb-notice">
-    <p><strong>Every item here belongs to the account.</strong></p>
-    <p>Ownership and equipped status are real fixture data for <strong><%= viewerName %></strong>, and each item opens its catalog page. Wearing and removing items is disabled until the catalog and economy services exist in phases 2 and 3, so nothing on this page can change what your avatar is wearing.</p>
+    <p><strong>Owning and wearing are stored on the account.</strong></p>
+    <p>An item enters this list when it is bought, and the equipped flag lives on the ownership row, so taking a hat off here is the same fact the server would read when drawing your avatar. One item per category is worn at a time: a second hat replaces the first.</p>
   </div>
 </main>
 

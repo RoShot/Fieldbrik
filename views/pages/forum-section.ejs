@@ -4,35 +4,73 @@
 <main class="fb-container fb-main">
   <p class="fb-crumbs"><a href="/forum">Forum</a> &raquo; <%= section.name %></p>
 
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
   <div class="fb-title-row">
     <h1 class="fb-title"><%= section.name %></h1>
-    <span class="fb-pagecount"><%= section.threads %> threads</span>
+    <span class="fb-pagecount"><%= section.threads %> <%= section.threads === 1 ? 'thread' : 'threads' %></span>
   </div>
 
-  <p class="fb-muted"><%= section.description %></p>
+  <p class="fb-muted"><%= section.description %><% if (section.staffOnly) { %> <strong>Staff only.</strong><% } %></p>
+
+  <% if (canPost) { %>
+    <section class="fb-panel">
+      <h2 class="fb-panel__title">Start a thread</h2>
+      <div class="fb-panel__body">
+        <form class="fb-form" method="post" action="/forum/<%= section.slug %>/threads">
+          <label for="fb-thread-title">Title</label>
+          <input id="fb-thread-title" name="title" type="text" maxlength="120" required>
+
+          <label for="fb-thread-body">First post</label>
+          <textarea id="fb-thread-body" name="body" rows="6" required></textarea>
+
+          <button class="fb-btn fb-btn--primary" type="submit">Post thread</button>
+        </form>
+      </div>
+    </section>
+  <% } else if (!signedIn) { %>
+    <div class="fb-notice">
+      <p><strong><a href="/login">Sign in</a> to post.</strong></p>
+      <p>Reading is open to everyone; starting a thread needs an account.</p>
+    </div>
+  <% } else if (section.staffOnly) { %>
+    <div class="fb-notice">
+      <p><strong>Staff only.</strong></p>
+      <p>You can read this section, but only staff can start a thread in it.</p>
+    </div>
+  <% } %>
 
   <table class="fb-table">
     <thead>
       <tr>
         <th scope="col">Thread</th>
+        <th scope="col">Author</th>
         <th scope="col">Replies</th>
-        <th scope="col">Views</th>
         <th scope="col">Last Post</th>
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td colspan="4" class="fb-table__last">No threads yet.</td>
-      </tr>
+      <% if (threads.length === 0) { %>
+        <tr>
+          <td colspan="4" class="fb-table__last">No threads yet.</td>
+        </tr>
+      <% } %>
+      <% threads.forEach(function (entry) { %>
+        <tr>
+          <td>
+            <% if (entry.pinned) { %><span class="fb-muted">[Pinned] </span><% } %>
+            <% if (entry.locked) { %><span class="fb-muted">[Locked] </span><% } %>
+            <a class="fb-table__name" href="/forum/<%= section.slug %>/<%= entry.id %>"><%= entry.title %></a>
+          </td>
+          <td><a href="/people/<%= entry.author %>"><%= entry.author %></a></td>
+          <td><%= entry.replies %></td>
+          <td class="fb-table__last"><%= entry.lastPost %></td>
+        </tr>
+      <% }); %>
     </tbody>
   </table>
-
-  <p class="fb-pagination">Page 1 of 1</p>
-
-  <div class="fb-notice">
-    <p><strong>Nothing can be posted here yet.</strong></p>
-    <p>This section is a row in the forum tables, and its thread count is counted from real threads - which is why it reads zero. There is no New Thread button on purpose: starting a thread needs the forum service and its moderation queue, which come after the admin panel.</p>
-  </div>
 
   <p class="fb-panel__more"><a href="/forum">Back to the forum index</a></p>
 </main>

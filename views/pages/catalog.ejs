@@ -7,6 +7,10 @@
     <span class="fb-pagecount"><%= items.length %> <%= items.length === 1 ? 'item' : 'items' %></span>
   </div>
 
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
   <div class="fb-cols">
     <aside class="fb-col-side">
       <h2 class="fb-facets__heading">Category</h2>
@@ -23,12 +27,14 @@
         <% }); %>
       </ul>
 
-      <h2 class="fb-facets__heading">Creator</h2>
-      <ul class="fb-facets__list">
-        <% creatorFacets.forEach(function (facet) { %>
-          <li class="<%= facet.active ? 'is-active' : '' %>"><a href="<%= facet.href %>"><%= facet.label %></a></li>
-        <% }); %>
-      </ul>
+      <% if (creatorFacets.length > 0) { %>
+        <h2 class="fb-facets__heading">Creator</h2>
+        <ul class="fb-facets__list">
+          <% creatorFacets.forEach(function (facet) { %>
+            <li class="<%= facet.active ? 'is-active' : '' %>"><a href="<%= facet.href %>"><%= facet.label %></a></li>
+          <% }); %>
+        </ul>
+      <% } %>
     </aside>
 
     <div class="fb-col-main">
@@ -40,22 +46,22 @@
 
       <% if (items.length === 0) { %>
         <div class="fb-notice">
-          <p><strong>No items match that selection.</strong></p>
-          <p><a href="/catalog">Show every item</a> to start again.</p>
+          <p><strong>Nothing is on sale here yet.</strong></p>
+          <p>Items come from creators' catalog rows. If a filter is on, <a href="/catalog">show every item</a> to start again.</p>
         </div>
       <% } else { %>
         <ul class="fb-grid--items">
           <% items.forEach(function (item) { %>
             <li class="fb-card-item">
-              <span class="fb-card-item__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true"></span>
-              <a class="fb-card-item__name" href="/catalog"><%= item.name %></a>
+              <span class="fb-card-item__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true">
+                <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } %>
+              </span>
+              <a class="fb-card-item__name" href="/catalog/<%= item.id %>"><%= item.name %></a>
               <p class="fb-card-item__meta">
                 <% if (item.tickets !== null) { %>
                   <span class="fb-price--tickets">Tx: <%= item.tickets %></span>
                 <% } %>
-                <% if (item.tickets !== null && item.bucks !== null) { %>
-                  <br>
-                <% } %>
+                <% if (item.tickets !== null && item.bucks !== null) { %><br><% } %>
                 <% if (item.bucks !== null) { %>
                   <span class="fb-price--bucks">R$: <%= item.bucks %></span>
                 <% } %>
@@ -73,8 +79,8 @@
       <% } %>
 
       <div class="fb-notice">
-        <p><strong>Browsing works. Buying does not yet.</strong></p>
-        <p>Creators set a Tickets price, a Bucks price, or both. When both are set the rate is 1 Buck to 10 Tickets, so a 30 Buck shirt also reads 300 Tickets. Checkout arrives with the accounts and catalog services in phase 2, so nothing on this page can take money.</p>
+        <p><strong>Prices are real. Buying spends real balances.</strong></p>
+        <p>An item with both prices can be bought with either: the creator set a Tickets price and a Bucks price, and the rate between them is theirs to choose. Buying writes a ledger entry and adds the item to your inventory, and the balance on your account goes down by exactly the price shown here.</p>
       </div>
     </div>
   </div>
