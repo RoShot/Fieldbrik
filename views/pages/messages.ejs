@@ -61,8 +61,13 @@
   </section>
 
   <div class="fb-notice">
-    <p><strong>Sending is not live.</strong></p>
-    <p>The inbox above is phase 1 display data between the demo members, so the table can be reviewed with real rows in it. Sending, read state, deletion and reporting all belong to the messaging service in phase 4; the form is disabled rather than silently discarding what you type.</p>
+    <% if (live) { %>
+      <p><strong>Sending to other members is not live.</strong></p>
+      <p>Messages from FieldBrik staff arrive here, and the inbox above is your own. Writing to other members, deletion and reporting belong to the messaging service in phase 4; the form is disabled rather than silently discarding what you type.</p>
+    <% } else { %>
+      <p><strong>Sending is not live.</strong></p>
+      <p>The inbox above is display data between the demo members, so the table can be reviewed with real rows in it. It is what the development server shows, which runs without a database.</p>
+    <% } %>
   </div>
 </main>
 

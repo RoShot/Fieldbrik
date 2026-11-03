@@ -52,6 +52,24 @@
     </aside>
 
     <div class="fb-col-main">
+      <% if (warnings.length > 0) { %>
+        <div class="fb-notice">
+          <p><strong><%= warnings.length %> warning<%= warnings.length === 1 ? '' : 's' %> on your account</strong></p>
+          <ul class="fb-list">
+            <% warnings.forEach(function (warning) { %>
+              <li>
+                <strong><%= warning.when %></strong> &mdash; <%= warning.reason %>
+                <span class="fb-panel__strip">from <%= warning.actor %></span>
+                <form method="post" action="/warnings/<%= warning.id %>/dismiss">
+                  <button class="fb-btn" type="submit">Dismiss</button>
+                </form>
+              </li>
+            <% }); %>
+          </ul>
+          <p>Dismissing says you have read it. The warning stays on your account's record.</p>
+        </div>
+      <% } %>
+
       <section class="fb-panel">
         <h2 class="fb-panel__title">Showcase</h2>
         <div class="fb-panel__body fb-prose">
