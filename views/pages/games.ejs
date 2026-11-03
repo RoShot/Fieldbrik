@@ -1,0 +1,61 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Games</h1>
+    <span class="fb-pagecount">Page 1 of 1 - <%= totalPlayers %> players online</span>
+  </div>
+
+  <div class="fb-cols">
+    <aside class="fb-col-side">
+      <h2 class="fb-facets__heading">Browse</h2>
+      <ul class="fb-facets__list">
+        <% browseFacets.forEach(function (facet) { %>
+          <li class="<%= facet.active ? 'is-active' : '' %>"><a href="<%= facet.href %>"><%= facet.label %></a></li>
+        <% }); %>
+      </ul>
+
+      <h2 class="fb-facets__heading">Creator</h2>
+      <ul class="fb-facets__list">
+        <% creatorFacets.forEach(function (facet) { %>
+          <li class="<%= facet.active ? 'is-active' : '' %>"><a href="<%= facet.href %>"><%= facet.label %></a></li>
+        <% }); %>
+      </ul>
+    </aside>
+
+    <div class="fb-col-main">
+      <form class="fb-toolbar" method="get" action="/games">
+        <input type="search" name="q" value="<%= query %>" placeholder="Search games and creators">
+        <button class="fb-btn" type="submit">Search</button>
+        <% if (query) { %><a class="fb-muted" href="/games">Clear</a><% } %>
+      </form>
+
+      <% if (games.length === 0) { %>
+        <div class="fb-notice">
+          <p><strong>No games match that selection.</strong></p>
+          <p><a href="/games">Show all games</a> to start again.</p>
+        </div>
+      <% } else { %>
+        <ul class="fb-grid--games">
+          <% games.forEach(function (game) { %>
+            <li>
+              <a class="fb-card-game__thumb" href="/games/<%= game.id %>" style="--thumb: <%= game.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+              <a class="fb-card-game__title" href="/games/<%= game.id %>"><%= game.name %></a>
+              <p class="fb-card-game__meta">
+                By <a href="/people/<%= game.creator %>"><%= game.creator %></a><br>
+                Played: <%= game.visits.toLocaleString('en-US') %> times<br>
+                <span class="fb-card-game__players"><%= game.players %> playing now</span>
+              </p>
+            </li>
+          <% }); %>
+        </ul>
+        <p class="fb-pagination">Page 1 of 1 - <%= games.length %> <%= games.length === 1 ? 'game' : 'games' %></p>
+      <% } %>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <p class="fb-crumbs"><a href="/people">People</a> &raquo; <%= person.username %></p>
+
+  <div class="fb-cols">
+
+    <aside class="fb-col-profile">
+      <div class="fb-profile">
+        <%- include('../partials/avatar', { avatar: person.avatar, size: 'md' }) %>
+        <h1 class="fb-profile__greeting"><%= person.username %></h1>
+        <p class="fb-profile__sub">
+          <%= person.online ? 'Online now' : 'Last online ' + person.lastOnline.slice(0, 10) %>
+        </p>
+        <p class="fb-profile__url"><%= site.domain %>/user/<%= person.id %></p>
+        <p class="fb-profile__foot"><a href="/support">Report Abuse</a></p>
+      </div>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Badges</h2>
+        <div class="fb-panel__body">
+          <% if (heldBadges.length === 0) { %>
+            <p class="fb-muted">No badges yet.</p>
+          <% } else { %>
+            <ul class="fb-grid--badges">
+              <% heldBadges.forEach(function (badge) { %>
+                <li class="fb-badge" title="<%= badge.description %>">
+                  <span class="fb-badge__pip" style="--badge: <%= badge.color %>;" aria-hidden="true"></span>
+                  <%= badge.name %>
+                </li>
+              <% }); %>
+            </ul>
+          <% } %>
+        </div>
+      </section>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Statistics</h2>
+        <div class="fb-panel__body">
+          <ul class="fb-statlines">
+            <li>Joined: <strong><%= person.joined %></strong></li>
+            <li>Friends: <strong><%= person.stats.friends %></strong></li>
+            <li>Badges: <strong><%= person.stats.badges %></strong></li>
+            <li>Games created: <strong><%= person.stats.games %></strong></li>
+            <li>Items owned: <strong><%= person.stats.items %></strong></li>
+          </ul>
+        </div>
+      </section>
+    </aside>
+
+    <div class="fb-col-main">
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Showcase</h2>
+        <div class="fb-panel__body fb-prose">
+          <p><%= person.description %></p>
+        </div>
+        <p class="fb-panel__strip">Visited 0 times</p>
+      </section>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">
+          <span class="fb-panel__title-row">
+            <span><%= person.username %>'s Friends</span>
+            <span class="fb-muted"><%= person.stats.friends %> total</span>
+          </span>
+        </h2>
+        <div class="fb-panel__body">
+          <ul class="fb-grid--people">
+            <% friends.forEach(function (friend) { %>
+              <li class="fb-card-person">
+                <%- include('../partials/avatar', { avatar: friend.avatar, size: 'sm' }) %>
+                <a class="fb-card-person__name" href="/people/<%= friend.username %>"><%= friend.username %></a>
+                <span class="fb-card-person__status"><%= friend.online ? 'Online' : 'Offline' %></span>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+      </section>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title"><%= person.username %>'s Games</h2>
+        <div class="fb-panel__body">
+          <% if (created.length === 0) { %>
+            <p class="fb-muted">No published games yet.</p>
+          <% } else { %>
+            <ul class="fb-grid--games">
+              <% created.forEach(function (game) { %>
+                <li>
+                  <a class="fb-card-game__thumb" href="/games/<%= game.id %>" style="--thumb: <%= game.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                  <a class="fb-card-game__title" href="/games/<%= game.id %>"><%= game.name %></a>
+                  <p class="fb-card-game__meta">
+                    Played: <%= game.visits.toLocaleString('en-US') %> times
+                  </p>
+                </li>
+              <% }); %>
+            </ul>
+          <% } %>
+        </div>
+      </section>
+
+      <div class="fb-notice">
+        <p><strong>Read only for now.</strong></p>
+        <p>There are no Add Friend or Send Message buttons on this page on purpose: neither exists yet. Friends and messaging arrive with the social service in phase 4, and until then this page shows what is real - the profile, the badge, the statistics and the games this member made.</p>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

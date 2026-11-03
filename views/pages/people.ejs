@@ -1,0 +1,65 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">People</h1>
+    <span class="fb-pagecount"><%= people.length %> <%= people.length === 1 ? 'member' : 'members' %></span>
+  </div>
+
+  <div class="fb-cols">
+    <aside class="fb-col-side">
+      <h2 class="fb-facets__heading">Sort by</h2>
+      <ul class="fb-facets__list">
+        <% sortFacets.forEach(function (facet) { %>
+          <li class="<%= facet.active ? 'is-active' : '' %>"><a href="<%= facet.href %>"><%= facet.label %></a></li>
+        <% }); %>
+      </ul>
+    </aside>
+
+    <div class="fb-col-main">
+      <form class="fb-toolbar" method="get" action="/people">
+        <input type="search" name="q" value="<%= query %>" placeholder="Search usernames">
+        <button class="fb-btn" type="submit">Search</button>
+        <% if (query) { %><a class="fb-muted" href="/people">Clear</a><% } %>
+      </form>
+
+      <% if (people.length === 0) { %>
+        <div class="fb-notice">
+          <p><strong>No member uses that name.</strong></p>
+          <p>Usernames are unique, so check the spelling. <a href="/people">See every member</a>.</p>
+        </div>
+      <% } else { %>
+        <table class="fb-table">
+          <thead>
+            <tr>
+              <th scope="col">Avatar</th>
+              <th scope="col">Name</th>
+              <th scope="col">Status</th>
+              <th scope="col">Friends</th>
+              <th scope="col">Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% people.forEach(function (user) { %>
+              <tr>
+                <td class="fb-table__avatar">
+                  <%- include('../partials/avatar', { avatar: user.avatar, size: 'xs' }) %>
+                </td>
+                <td><a class="fb-table__name" href="/people/<%= user.username %>"><%= user.username %></a></td>
+                <td><%= user.online ? 'Online' : 'Offline' %></td>
+                <td><%= user.stats.friends %></td>
+                <td><%= user.joined %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+        <p class="fb-pagination">Page 1 of 1</p>
+      <% } %>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

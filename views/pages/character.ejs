@@ -1,0 +1,221 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Character</h1>
+    <span class="fb-pagecount"><%= viewerName %></span>
+  </div>
+
+  <div class="fb-char">
+    <div class="fb-char__preview">
+      <%- include('../partials/avatar', { avatar: avatar, size: 'lg', live: true }) %>
+      <p class="fb-char__name"><%= viewerName %></p>
+      <p class="fb-char__status" id="charStatus" role="status" aria-live="polite">Click a colour or a face.</p>
+    </div>
+
+    <div class="fb-char__body">
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Body colours</h2>
+        <div class="fb-panel__body">
+          <% parts.forEach(function (part) { %>
+            <div class="fb-part">
+              <span class="fb-part__label"><%= part.label %></span>
+              <span class="fb-swatches" data-part="<%= part.source %>">
+                <% palette.forEach(function (colour) { %>
+                  <button
+                    type="button"
+                    class="fb-swatch<%= colour.hex.toLowerCase() === part.current.toLowerCase() ? ' is-current' : '' %>"
+                    style="--swatch: <%= colour.hex %>;"
+                    title="<%= colour.name %>"
+                    aria-label="<%= colour.name %><%= colour.hex.toLowerCase() === part.current.toLowerCase() ? ' (current)' : '' %>"
+                    data-hex="<%= colour.hex %>"
+                    data-part="<%= part.source %>"></button>
+                <% }); %>
+              </span>
+            </div>
+          <% }); %>
+        </div>
+      </section>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Face</h2>
+        <div class="fb-panel__body">
+          <ul class="fb-faces">
+            <% faces.forEach(function (face) { %>
+              <li class="fb-face<%= face.key === avatar.face ? ' is-current' : '' %>" data-face-item="<%= face.key %>">
+                <button type="button" class="fb-face__pick" data-face="<%= face.key %>" aria-label="<%= face.label %>">
+                  <span class="fb-face__head">
+                    <img src="/avatar/assets/<%= face.file %>" alt="" width="128" height="128">
+                  </span>
+                  <span class="fb-face__label"><%= face.label %></span>
+                </button>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+      </section>
+
+      <div class="fb-notice">
+        <p><strong>Changes save to this server process.</strong></p>
+        <p>Your colours and face are stored by the server and follow you across every page — the header, My Page, your profile and the member list all read the same record. There are no accounts yet, so the record is a single shared one that resets when the server restarts. Accounts and the database replace this in phase 2.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+  import { initializeAvatar } from '/avatar/avatar.js';
+
+  const stage = document.querySelector('[data-avatar-live]');
+  const status = document.getElementById('charStatus');
+
+  const state = {
+    headColor: stage.dataset.head,
+    torsoColor: stage.dataset.torso,
+    leftArmColor: stage.dataset.leftArm,
+    rightArmColor: stage.dataset.rightArm,
+    leftLegColor: stage.dataset.leftLeg,
+    rightLegColor: stage.dataset.rightLeg,
+    face: stage.dataset.face
+  };
+
+  // Field name in the data attributes <-> key the renderer wants.
+  const FIELD = {
+    head: 'headColor',
+    torso: 'torsoColor',
+    leftArm: 'leftArmColor',
+    rightArm: 'rightArmColor',
+    leftLeg: 'leftLegColor',
+    rightLeg: 'rightLegColor'
+  };
+
+  let view = null;
+
+  try {
+    view = await initializeAvatar(stage, state, { antialias: false });
+    stage.classList.add('is-3d');
+
+    // Inline as well as the class: the canvas is transparent around the figure,
+    // so anything left underneath shows through it.
+    const fallback = stage.querySelector('.fb-avatar__fallback');
+
+    if (fallback) {
+      fallback.style.display = 'none';
+    }
+  } catch (error) {
+    status.textContent = 'Live preview unavailable - showing the flat avatar.';
+  }
+
+  function markPart(part, hex) {
+    document
+      .querySelectorAll(`.fb-swatch[data-part="${part}"]`)
+      .forEach((swatch) => {
+        const on = swatch.dataset.hex.toLowerCase() === hex.toLowerCase();
+        swatch.classList.toggle('is-current', on);
+        swatch.setAttribute(
+          'aria-label',
+          (swatch.title || 'Colour') + (on ? ' (current)' : '')
+        );
+      });
+  }
+
+  function markFace(face) {
+    document.querySelectorAll('[data-face-item]').forEach((item) => {
+      item.classList.toggle('is-current', item.dataset.faceItem === face);
+    });
+  }
+
+  // Keep the flat figure correct too, in case the renderer is unavailable.
+  function syncFallback() {
+    stage.style.setProperty('--av-head', state.headColor);
+    stage.style.setProperty('--av-torso', state.torsoColor);
+    stage.style.setProperty('--av-arms', state.leftArmColor);
+    stage.style.setProperty('--av-legs', state.leftLegColor);
+  }
+
+  async function save(patch) {
+    status.textContent = 'Saving...';
+
+    try {
+      const response = await fetch('/character/avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        status.textContent = result.error || 'Could not save that.';
+        return false;
+      }
+
+      status.textContent = 'Saved.';
+      return true;
+    } catch (error) {
+      status.textContent = 'Could not reach the server - not saved.';
+      return false;
+    }
+  }
+
+  document.querySelectorAll('.fb-swatch[data-part]').forEach((swatch) => {
+    swatch.addEventListener('click', async () => {
+      const part = swatch.dataset.part;
+      const hex = swatch.dataset.hex;
+      const field = FIELD[part];
+
+      const previous = state[field];
+      state[field] = hex;
+
+      markPart(part, hex);
+      syncFallback();
+
+      if (view) {
+        await view.update(state);
+      }
+
+      const ok = await save({ [part]: hex });
+
+      if (!ok) {
+        // Put the avatar back the way the server still has it.
+        state[field] = previous;
+        markPart(part, previous);
+        syncFallback();
+
+        if (view) {
+          await view.update(state);
+        }
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-face]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const face = button.dataset.face;
+      const previous = state.face;
+
+      state.face = face;
+      markFace(face);
+
+      if (view) {
+        await view.update(state);
+      }
+
+      const ok = await save({ face });
+
+      if (!ok) {
+        state.face = previous;
+        markFace(previous);
+
+        if (view) {
+          await view.update(state);
+        }
+      }
+    });
+  });
+</script>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

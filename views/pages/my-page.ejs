@@ -1,0 +1,108 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-cols">
+
+    <aside class="fb-col-profile">
+      <div class="fb-profile">
+        <h1 class="fb-profile__greeting">Hi, <%= viewer.username %>!</h1>
+        <p class="fb-profile__sub">Your Profile:</p>
+        <p class="fb-profile__url"><a href="/people/<%= viewer.username %>"><%= site.domain %>/user/<%= viewer.id %></a></p>
+
+        <div class="fb-profile__body">
+          <%- include('../partials/avatar', { avatar: viewer.avatar, size: 'md' }) %>
+          <ul class="fb-profile__links">
+            <% profileLinks.forEach(function (link) { %>
+              <li><a href="<%= link.href %>"><%= link.label %></a></li>
+            <% }); %>
+          </ul>
+        </div>
+
+        <p class="fb-profile__foot"><a href="/support">Report Abuse</a></p>
+      </div>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Badges</h2>
+        <div class="fb-panel__body">
+          <ul class="fb-grid--badges">
+            <% heldBadges.forEach(function (badge) { %>
+              <li class="fb-badge" title="<%= badge.description %>">
+                <span class="fb-badge__pip" style="--badge: <%= badge.color %>;" aria-hidden="true"></span>
+                <%= badge.name %>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+      </section>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Statistics</h2>
+        <div class="fb-panel__body">
+          <ul class="fb-statlines">
+            <li>Joined: <strong><%= viewer.joined %></strong></li>
+            <li>Friends: <strong><%= viewer.stats.friends %></strong></li>
+            <li>Badges: <strong><%= viewer.stats.badges %></strong></li>
+            <li>Games created: <strong><%= viewer.stats.games %></strong></li>
+            <li>Items owned: <strong><%= viewer.stats.items %></strong></li>
+            <li>Last online: <strong><%= viewer.online ? 'Online now' : viewer.lastOnline.slice(0, 10) %></strong></li>
+          </ul>
+        </div>
+      </section>
+    </aside>
+
+    <div class="fb-col-main">
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Showcase</h2>
+        <div class="fb-panel__body fb-prose">
+          <p><%= viewer.description %></p>
+        </div>
+        <p class="fb-panel__strip">Visited 0 times</p>
+      </section>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">
+          <span class="fb-panel__title-row">
+            <span><%= viewer.username %>'s Friends</span>
+            <a href="/friends">See all <%= friendTotal %></a>
+          </span>
+        </h2>
+        <div class="fb-panel__body">
+          <ul class="fb-grid--people">
+            <% friends.forEach(function (friend) { %>
+              <li class="fb-card-person">
+                <%- include('../partials/avatar', { avatar: friend.avatar, size: 'sm' }) %>
+                <a class="fb-card-person__name" href="/people/<%= friend.username %>"><%= friend.username %></a>
+                <span class="fb-card-person__status"><%= friend.online ? 'Online' : 'Offline' %></span>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+      </section>
+
+      <section class="fb-panel">
+        <h2 class="fb-panel__title">Favorites</h2>
+        <div class="fb-panel__body">
+          <ul class="fb-grid--games">
+            <% favouriteGames.forEach(function (game) { %>
+              <li>
+                <a class="fb-card-game__thumb" href="/games/<%= game.id %>" style="--thumb: <%= game.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                <a class="fb-card-game__title" href="/games/<%= game.id %>"><%= game.name %></a>
+                <p class="fb-card-game__meta">
+                  Creator: <%= game.creator %><br>
+                  Played: <%= game.visits.toLocaleString('en-US') %> times
+                </p>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+        <p class="fb-pagination">Page 1 of 1</p>
+      </section>
+    </div>
+
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>
