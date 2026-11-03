@@ -38,7 +38,10 @@ const NAV = [
       { label: 'Badge Catalogue', href: '/admin/badges', cap: 'users.badge' },
     ],
   },
-  { label: 'Moderation', items: [] },
+  {
+    label: 'Moderation',
+    items: [{ label: 'Abuse Reports', href: '/admin/reports', cap: 'reports.review' }],
+  },
   { label: 'System', items: [{ label: 'Audit Log', href: '/admin/logs', cap: 'log.view' }] },
   {
     label: 'Billing',
@@ -84,7 +87,7 @@ async function count(db, sql, ...args) {
  * something that exists.
  */
 async function overview(db) {
-  const [accounts, staff, places, live, threads, posts, bans] = await Promise.all([
+  const [accounts, staff, places, live, threads, posts, bans, openReports] = await Promise.all([
     count(db, 'SELECT COUNT(*) AS n FROM users WHERE closed_at IS NULL'),
     count(
       db,
@@ -100,18 +103,19 @@ async function overview(db) {
       "SELECT COUNT(*) AS n FROM restrictions WHERE kind = 'ban' AND lifted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)",
       isoNow()
     ),
+    count(db, "SELECT COUNT(*) AS n FROM reports WHERE status = 'open'"),
   ]);
 
   return {
-    counts: { accounts, staff, places, live, threads, posts, bans },
+    counts: { accounts, staff, places, live, threads, posts, bans, openReports },
     status: [
       'configs: ticket rates are editable; no other site settings exist yet',
       `${accounts} account${accounts === 1 ? '' : 's'}, ${staff} staff`,
       `${live} published place${live === 1 ? '' : 's'} of ${places}`,
       `${threads} forum thread${threads === 1 ? '' : 's'}, ${posts} post${posts === 1 ? '' : 's'}`,
       `${bans} active ban${bans === 1 ? '' : 's'}`,
+      `${openReports} open abuse report${openReports === 1 ? '' : 's'}`,
       'players in games: no game servers are connected',
-      'abuse reports: no report queue is built yet',
     ],
   };
 }
