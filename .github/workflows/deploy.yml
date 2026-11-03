@@ -1,0 +1,70 @@
+name: Deploy
+
+# Every push to main publishes the site. No dashboard, no dragging files
+# around: merge, and it is live a minute later.
+#
+# Requirements, once (see docs/DEPLOY.md):
+#   - a D1 database, with its id in wrangler.toml
+#   - CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as repository secrets
+#
+# Until the Worker entry exists the deploy step skips itself, so a push while
+# the site still runs on Express does not produce a red build.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # No lockfile is committed yet, so npm install rather than npm ci, and no
+      # setup-node cache (it fails without a lockfile). Once a package-lock.json
+      # is committed, switch to npm ci and restore cache: npm.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Check the site still renders
+        run: node --check server/app.js
+
+      # The Worker cannot compile EJS, so the views are compiled here. Doing it
+      # in CI means a stale views.generated.js can never be deployed.
+      - name: Compile the views
+        run: npm run build:views
+
+      # Compares every rendered page against real EJS, byte for byte.
+      - name: Check the compiled views match EJS
+        run: npm run verify:views
+
+      - name: Is the deploy configured?
+        id: worker
+        run: |
+          if [ ! -f server/worker.js ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "server/worker.js does not exist yet - this build skips the deploy."
+          elif grep -q "REPLACE_WITH_YOUR_DATABASE_ID" wrangler.toml; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "wrangler.toml still has the placeholder database id."
+            echo "Add the real one from the Cloudflare dashboard - this build skips the deploy."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to Cloudflare
+        if: steps.worker.outputs.ready == 'true'
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
