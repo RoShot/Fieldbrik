@@ -11,6 +11,7 @@
  */
 
 const accounts = require('./accounts');
+const badgeArt = require('./badges');
 
 const PERSON_COLUMNS = `
   u.id, u.username, u.role, u.created_at, u.last_seen_at, u.description, u.tickets, u.bucks,
@@ -95,7 +96,7 @@ async function friendsOf(db, userId) {
     .prepare(
       `SELECT ${PERSON_COLUMNS}
          FROM friendships f
-         JOIN users u ON u.id = CASE WHEN f.user_a = ? THEN f.user_b ELSE f.user_a END
+         JOIN users u ON u.id = CASE WHEN f.status = 'accepted' THEN f.user_b ELSE f.user_a END
          LEFT JOIN avatars a ON a.user_id = u.id
         WHERE f.status = 'accepted' AND (f.user_a = ? OR f.user_b = ?)
         ORDER BY u.username_lower ASC`
@@ -118,7 +119,7 @@ async function pending(db, userId, direction) {
     .prepare(
       `SELECT ${PERSON_COLUMNS}
          FROM friendships f
-         JOIN users u ON u.id = CASE WHEN f.user_a = ? THEN f.user_b ELSE f.user_a END
+         JOIN users u ON u.id = CASE WHEN f.user_id = ? THEN f.user_b ELSE f.user_a END
          LEFT JOIN avatars a ON a.user_id = u.id
         WHERE f.status = 'pending'
           AND (f.user_a = ? OR f.user_b = ?)
@@ -135,7 +136,7 @@ async function pending(db, userId, direction) {
 async function badgesFor(db, userId) {
   const result = await db
     .prepare(
-      `SELECT b.name, b.description, b.color
+      `SELECT b.key, b.name, b.description, b.color
          FROM user_badges ub
          JOIN badges b ON b.key = ub.badge_key
         WHERE ub.user_id = ?
@@ -144,7 +145,13 @@ async function badgesFor(db, userId) {
     .bind(userId)
     .all();
 
-  return result.results || [];
+  return (result.results || []).map((row) => ({
+    key: row.key,
+    name: row.name,
+    description: row.description,
+    color: row.color,
+    art: badgeArt.artFor(row.key),
+  }));
 }
 
 /** Published places this account made, for the profile panel. */

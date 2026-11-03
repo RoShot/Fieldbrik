@@ -81,7 +81,8 @@ async function list(db, userId) {
     cancelled: row.cancelled_at ? formatDate(row.cancelled_at) : '',
     grantedBy: row.granted_by || 'staff',
     note: row.note || '',
-    active: !row.cancelled_at && (!row.expires_at || String(row.expires_at) > now),
+    active:
+      !row.cancelled_at && (!row.expires_at || String(row.expires_at) > now),
   }));
 }
 
@@ -120,6 +121,22 @@ async function grant(db, options) {
       .run();
   }
 
+  // The tier badge goes with the membership and stays after it ends: a member
+  // who held Carpenters Club in 2026 keeps the badge in 2027. Only granted when
+  // the badge is defined, so a missing key cannot fail the grant.
+  const badge = await db.prepare('SELECT key FROM badges WHERE key = ?').bind(tier.key).first();
+
+  if (badge) {
+    await db
+      .prepare(
+        `INSERT INTO user_badges (user_id, badge_key, granted_by)
+         VALUES (?, ?, ?)
+         ON CONFLICT (user_id, badge_key) DO NOTHING`
+      )
+      .bind(opts.userId, tier.key, opts.actor.id)
+      .run();
+  }
+
   await db
     .prepare(
       `INSERT INTO moderation_log (actor_id, target_id, action, detail, created_at)
@@ -143,7 +160,10 @@ async function end(db, options) {
   if (!row) return { ok: false, code: 'club' };
   if (row.cancelled_at) return { ok: true, code: 'club_ended' };
 
-  await db.prepare('UPDATE memberships SET cancelled_at = ? WHERE id = ?').bind(now, row.id).run();
+  await db
+    .prepare('UPDATE memberships SET cancelled_at = ? WHERE id = ?')
+    .bind(now, row.id)
+    .run();
 
   await db
     .prepare(
