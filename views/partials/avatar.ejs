@@ -1,0 +1,38 @@
+<%#
+  Avatar.
+
+  Renders a real 3D avatar (public/avatar/avatar.js) into this box. The flat
+  CSS figure inside .fb-avatar__fallback is only ever seen when WebGL is
+  unavailable or the model fails to load - public/js/avatar-stage.js adds
+  is-3d to hide it once a canvas is mounted.
+
+  Locals:
+    avatar - { head, torso, leftArm, rightArm, leftLeg, rightLeg, face }
+    size   - xs | sm | md | lg
+    live   - optional; true means the page drives this one itself
+             (the Character editor), so the stage leaves it alone.
+%>
+<div
+  class="fb-avatar fb-avatar--<%= size %>"
+  data-avatar
+  data-head="<%= avatar.head %>"
+  data-torso="<%= avatar.torso %>"
+  data-left-arm="<%= avatar.leftArm %>"
+  data-right-arm="<%= avatar.rightArm %>"
+  data-left-leg="<%= avatar.leftLeg %>"
+  data-right-leg="<%= avatar.rightLeg %>"
+  data-face="<%= avatar.face %>"
+  style="--av-head: <%= avatar.head %>; --av-torso: <%= avatar.torso %>; --av-arms: <%= avatar.leftArm %>; --av-legs: <%= avatar.leftLeg %>;"
+  <% if (typeof live !== 'undefined' && live) { %>data-avatar-live<% } %>
+>
+  <span class="fb-avatar__fallback" aria-hidden="true">
+    <span class="fb-avatar__head">
+      <span class="fb-avatar__face fb-avatar__face--<%= avatar.face %>"></span>
+    </span>
+    <span class="fb-avatar__torso"></span>
+    <span class="fb-avatar__arm fb-avatar__arm--left"></span>
+    <span class="fb-avatar__arm fb-avatar__arm--right"></span>
+    <span class="fb-avatar__leg fb-avatar__leg--left"></span>
+    <span class="fb-avatar__leg fb-avatar__leg--right"></span>
+  </span>
+</div>

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= pageTitle %></title>
+  <meta name="description" content="<%= site.name %> - <%= site.tagline %>">
+  <%# The ?v= is a cache buster: the stylesheet changes often during the build,
+      and a stale copy shows the old avatar figure through the 3D canvas. %>
+  <link rel="stylesheet" href="/css/fieldbrik.css?v=4">
+</head>
+<body>

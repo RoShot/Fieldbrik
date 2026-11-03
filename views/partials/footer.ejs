@@ -1,0 +1,18 @@
+<footer class="fb-footer">
+  <div class="fb-container">
+    <% site.footer.lines.forEach(function (line) { %>
+      <p><%= line %></p>
+    <% }); %>
+    <p class="fb-footer__links">
+      <% site.footer.links.forEach(function (link, index) { %>
+        <% if (index > 0) { %><span class="fb-footer__sep" aria-hidden="true">|</span><% } %>
+        <a href="<%= link.href %>"><%= link.label %></a>
+      <% }); %>
+    </p>
+    <p class="fb-footer__links"><%= site.disclaimer %></p>
+  </div>
+</footer>
+
+<%# Upgrades every avatar box on the page to the 3D renderer. Deferred, so it
+    runs after the markup exists; pages without avatars do nothing here. %>
+<script type="module" src="/js/avatar-stage.js"></script>

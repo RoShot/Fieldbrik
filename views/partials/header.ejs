@@ -1,0 +1,51 @@
+<%#
+  Shared header.
+  Two variants, as per the references:
+    guest  - maroon band with the inline login block and the PLAY NOW button
+    member - banner band with the currency box
+  The blue nav strip is identical in both.
+%>
+<header class="fb-header fb-header--<%= authState %>">
+  <!-- Header background placeholder: pure CSS, no image files. -->
+  <div class="fb-header__pattern" aria-hidden="true"></div>
+
+  <div class="fb-container fb-header__row">
+    <% if (authState === 'guest') { %>
+      <form class="fb-login" method="get" action="/login">
+        <label class="fb-login__title" for="fb-login-name">Login</label>
+        <input id="fb-login-name" name="username" type="text" placeholder="Character Name" autocomplete="username">
+        <input name="password" type="password" placeholder="Password" autocomplete="current-password">
+        <button class="fb-login__btn" type="submit">Login</button>
+      </form>
+    <% } %>
+
+    <a class="fb-logo" href="/">
+      <span class="fb-logo__text">FIELDBRIK</span>
+      <span class="fb-logo__tag"><%= site.tagline[0] %><br><%= site.tagline[1] %></span>
+    </a>
+
+    <% if (authState === 'member') { %>
+      <div class="fb-currency">
+        <span class="fb-currency__row">
+          <%- include('currency-icon', { kind: 'bucks' }) %>
+          <strong><%= viewer.currency.bucks.toLocaleString('en-US') %></strong> <%= site.currency.premium %>
+        </span>
+        <span class="fb-currency__row">
+          <%- include('currency-icon', { kind: 'tickets' }) %>
+          <strong><%= viewer.currency.tickets.toLocaleString('en-US') %></strong> <%= site.currency.earned %>
+        </span>
+      </div>
+    <% } else { %>
+      <a class="fb-play" href="/games" title="Browse games. The FieldBrik client is still in development.">PLAY NOW</a>
+    <% } %>
+  </div>
+</header>
+
+<nav class="fb-nav" aria-label="Main navigation">
+  <div class="fb-container fb-nav__inner">
+    <% nav.primary.forEach(function (link, index) { %>
+      <% if (index > 0) { %><span class="fb-tab__sep" aria-hidden="true">|</span><% } %>
+      <a class="fb-tab<%= link.active ? ' is-active' : '' %>" href="<%= link.href %>"<%= link.active ? ' aria-current="page"' : '' %>><%= link.label %></a>
+    <% }); %>
+  </div>
+</nav>

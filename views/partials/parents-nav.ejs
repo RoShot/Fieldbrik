@@ -1,0 +1,6 @@
+<%# Sub-tabs for the Parents section. Driven by the same list the routes use. %>
+<nav class="fb-subtabs" aria-label="Parents section">
+  <% tabs.forEach(function (tab) { %>
+    <a class="fb-subtab<%= tab.key === activeTab ? ' is-active' : '' %>" href="/parents/<%= tab.key %>"<%= tab.key === activeTab ? ' aria-current="page"' : '' %>><%= tab.label %></a>
+  <% }); %>
+</nav>
