@@ -16,6 +16,9 @@ const buildNavigation = require('../services/navigation');
 const pageContext = require('../services/pageContext');
 const fixtures = require('../services/fixtures');
 const notices = require('../services/notices');
+const catalogDirectory = require('../services/catalog');
+const economy = require('../services/economy');
+const permissions = require('../services/permissions');
 
 /*
  * Identity comes from the session; content still comes from fixtures.
@@ -110,7 +113,7 @@ const PENDING = {
 const GUARDED = [
   /^\/my-page$/,
   /^\/character(\/.*)?$/,
-  /^\/inventory$/,
+  /^\/inventory(\/.*)?$/,
   /^\/friends(\/.*)?$/,
   /^\/messages(\/.*)?$/,
   /^\/settings(\/.*)?$/,
@@ -291,30 +294,22 @@ const PRICE_BANDS = [
   { key: 'over200', label: 'Over 200 Tx', test: (item) => item.tickets !== null && item.tickets > 200 },
 ];
 
-router.get('/catalog', (req, res) => {
+router.get('/catalog', async (req, res) => {
   const query = String(req.query.q || '').trim();
   const category = String(req.query.category || '').trim();
   const creator = String(req.query.creator || '').trim();
   const priceKey = String(req.query.price || '').trim();
   const band = PRICE_BANDS.find((entry) => entry.key === priceKey) || PRICE_BANDS[0];
 
-  let items = fixtures.catalogItems.slice();
+  const viewerId = req.viewer ? req.viewer.id : null;
 
-  if (category) {
-    items = items.filter((item) => item.category === category);
-  }
-  if (creator) {
-    items = items.filter((item) => item.creator === creator);
-  }
-  items = items.filter((item) => band.test(item));
-  if (query) {
-    const needle = query.toLowerCase();
-    items = items.filter(
-      (item) =>
-        item.name.toLowerCase().includes(needle) ||
-        item.creator.toLowerCase().includes(needle)
-    );
-  }
+  // The database is the catalog; the fixture list is only what the Express
+  // development server shows, which runs without one.
+  const source = req.db
+    ? await catalogDirectory.list(req.db, { query, category, creator, viewerId })
+    : fixtures.catalogItems.slice();
+
+  const items = source.filter((item) => band.test(item));
 
   const current = { q: query, category, creator, price: priceKey };
 
@@ -333,7 +328,10 @@ router.get('/catalog', (req, res) => {
     href: facetHref('/catalog', current, { price: entry.key }),
   }));
 
-  const creatorNames = [...new Set(fixtures.catalogItems.map((item) => item.creator))].sort();
+  const creatorNames = req.db
+    ? await catalogDirectory.creators(req.db)
+    : [...new Set(fixtures.catalogItems.map((item) => item.creator))].sort();
+
   const creatorFacets = creatorNames.map((name) => ({
     label: name,
     active: creator === name,
@@ -347,6 +345,7 @@ router.get('/catalog', (req, res) => {
     categoryFacets,
     priceFacets,
     creatorFacets,
+    notice: noticeFromQuery(req),
   });
 });
 
@@ -397,6 +396,18 @@ router.get('/people', async (req, res) => {
     sortFacets,
   });
 });
+
+/**
+ * The staff role behind this request, or null.
+ *
+ * Used by the forum: a staff-only section and the lock/pin/delete controls both
+ * ask what rank the viewer holds, and the answer is read from the database on
+ * every request rather than trusted from the session.
+ */
+async function roleOfViewer(req) {
+  if (!req.db || !req.viewer) return null;
+  return permissions.roleOf(req.db, req.viewer.id);
+}
 
 router.get('/forum', async (req, res) => {
   const query = String(req.query.q || '').trim();
@@ -517,27 +528,70 @@ router.get('/games/:slug', (req, res) => {
   });
 });
 
-router.get('/catalog/:slug', (req, res) => {
-  const param = req.params.slug;
-  const item = fixtures.catalogItems.find(
-    (entry) => String(entry.id) === param || slugify(entry.name) === param
-  );
+router.get('/catalog/:slug', async (req, res, next) => {
+  return (async () => {
+    const param = req.params.slug;
+    const viewerId = req.viewer ? req.viewer.id : null;
 
-  if (!item) {
-    return res.status(404).render('pages/error', {
-      pageTitle: `Item not found - ${site.name}`,
-      statusCode: 404,
-      message: 'That item is not listed in the catalog.',
+    let item = null;
+    let moreByCreator = [];
+
+    if (req.db) {
+      item = await catalogDirectory.findOne(req.db, param, viewerId);
+      if (item) moreByCreator = await catalogDirectory.moreByCreator(req.db, item, viewerId);
+    } else {
+      item =
+        fixtures.catalogItems.find(
+          (entry) => String(entry.id) === param || slugify(entry.name) === param
+        ) || null;
+
+      if (item) {
+        moreByCreator = fixtures.catalogItems
+          .filter((entry) => entry.creator === item.creator && entry.id !== item.id)
+          .slice(0, 5);
+      }
+    }
+
+    if (!item) {
+      return res.status(404).render('pages/error', {
+        pageTitle: `Item not found - ${site.name}`,
+        statusCode: 404,
+        message: 'That item is not listed in the catalog.',
+      });
+    }
+
+    const balance =
+      req.db && req.viewer ? await economy.balance(req.db, req.viewer.id) : null;
+
+    return res.render('pages/item', {
+      pageTitle: `${item.name} - ${site.name}`,
+      item,
+      moreByCreator,
+      balance,
+      signedIn: Boolean(req.viewer),
+      notice: noticeFromQuery(req),
     });
-  }
+  })().catch(next);
+});
 
-  res.render('pages/item', {
-    pageTitle: `${item.name} - ${site.name}`,
-    item,
-    moreByCreator: fixtures.catalogItems
-      .filter((entry) => entry.creator === item.creator && entry.id !== item.id)
-      .slice(0, 5),
-  });
+// Buying. The price is read from the item row on the server, so the form only
+// ever sends which currency to spend.
+router.post('/catalog/:id/buy', (req, res, next) => {
+  return (async () => {
+    if (!req.viewer) return res.redirect('/login');
+    if (!req.db) return res.redirect(`/catalog/${encodeURIComponent(req.params.id)}?failed=refused`);
+
+    const result = await economy.buy(req.db, {
+      userId: req.viewer.id,
+      itemId: Number(req.params.id) || 0,
+      currency: String((req.body || {}).currency || ''),
+    });
+
+    const key = result.ok ? 'done' : 'failed';
+    const code = result.ok ? 'bought' : result.code;
+
+    return res.redirect(`/catalog/${encodeURIComponent(req.params.id)}?${key}=${encodeURIComponent(code)}`);
+  })().catch(next);
 });
 
 const NEWS_CATEGORIES = [...new Set(fixtures.news.map((article) => article.category))].sort();
@@ -585,24 +639,155 @@ router.get('/news/:slug', (req, res) => {
   });
 });
 
-router.get('/forum/:section', async (req, res) => {
-  const wanted = req.params.section.toLowerCase();
-  const section = req.db
-    ? await forumDirectory.findOne(req.db, wanted)
-    : fixtures.forumSections.find((entry) => entry.slug === wanted);
+router.get('/forum/:section', async (req, res, next) => {
+  return (async () => {
+    const wanted = req.params.section.toLowerCase();
 
-  if (!section) {
-    return res.status(404).render('pages/error', {
-      pageTitle: `Section not found - ${site.name}`,
-      statusCode: 404,
-      message: 'That forum section does not exist.',
+    let section;
+    let threads = [];
+    let role = null;
+
+    if (req.db) {
+      section = await forumDirectory.findOne(req.db, wanted);
+      if (section) {
+        threads = await forumDirectory.listThreads(req.db, section.slug);
+        role = await roleOfViewer(req);
+      }
+    } else {
+      section = fixtures.forumSections.find((entry) => entry.slug === wanted);
+    }
+
+    if (!section) {
+      return res.status(404).render('pages/error', {
+        pageTitle: `Section not found - ${site.name}`,
+        statusCode: 404,
+        message: 'That forum section does not exist.',
+      });
+    }
+
+    const isStaff = Boolean(role && role.rank >= permissions.MIN_STAFF);
+
+    return res.render('pages/forum-section', {
+      pageTitle: `${section.name} - ${site.name}`,
+      section,
+      threads,
+      signedIn: Boolean(req.viewer),
+      canPost: Boolean(req.db && req.viewer) && (!section.staffOnly || isStaff),
+      notice: noticeFromQuery(req),
     });
-  }
+  })().catch(next);
+});
 
-  res.render('pages/forum-section', {
-    pageTitle: `${section.name} - ${site.name}`,
-    section,
-  });
+router.get('/forum/:section/:thread', async (req, res, next) => {
+  return (async () => {
+    if (!req.db) {
+      return res.status(404).render('pages/error', {
+        pageTitle: `Thread not found - ${site.name}`,
+        statusCode: 404,
+        message: 'That thread does not exist.',
+      });
+    }
+
+    const record = await forumDirectory.thread(
+      req.db,
+      req.params.section,
+      Number(req.params.thread) || 0
+    );
+
+    if (!record) {
+      return res.status(404).render('pages/error', {
+        pageTitle: `Thread not found - ${site.name}`,
+        statusCode: 404,
+        message: 'That thread does not exist.',
+      });
+    }
+
+    const role = await roleOfViewer(req);
+    const isStaff = Boolean(role && role.rank >= permissions.MIN_STAFF);
+
+    return res.render('pages/forum-thread', {
+      pageTitle: `${record.thread.title} - ${site.name}`,
+      thread: record.thread,
+      posts: record.posts,
+      signedIn: Boolean(req.viewer),
+      canPost:
+        Boolean(req.viewer) &&
+        !record.thread.locked &&
+        (!record.thread.staffOnly || isStaff),
+      canModerate: Boolean(role && role.rank >= forumDirectory.FORUM_MODERATE_RANK),
+      notice: noticeFromQuery(req),
+    });
+  })().catch(next);
+});
+
+router.post('/forum/:section/threads', (req, res, next) => {
+  return (async () => {
+    const back = `/forum/${encodeURIComponent(req.params.section)}`;
+    if (!req.viewer) return res.redirect('/login');
+    if (!req.db) return res.redirect(`${back}?failed=refused`);
+
+    const body = req.body || {};
+    const result = await forumDirectory.createThread(req.db, {
+      userId: req.viewer.id,
+      sectionSlug: req.params.section,
+      title: body.title,
+      body: body.body,
+    });
+
+    if (!result.ok) return res.redirect(`${back}?failed=${encodeURIComponent(result.code)}`);
+
+    return res.redirect(
+      `/forum/${encodeURIComponent(result.sectionSlug)}/${result.threadId}?done=thread`
+    );
+  })().catch(next);
+});
+
+router.post('/forum/:section/:thread/reply', (req, res, next) => {
+  return (async () => {
+    const back = `/forum/${encodeURIComponent(req.params.section)}/${Number(req.params.thread) || 0}`;
+    if (!req.viewer) return res.redirect('/login');
+    if (!req.db) return res.redirect(`${back}?failed=refused`);
+
+    const result = await forumDirectory.addPost(req.db, {
+      userId: req.viewer.id,
+      sectionSlug: req.params.section,
+      threadId: Number(req.params.thread) || 0,
+      body: (req.body || {}).body,
+    });
+
+    if (!result.ok) return res.redirect(`${back}?failed=${encodeURIComponent(result.code)}`);
+
+    return res.redirect(`${back}?done=posted`);
+  })().catch(next);
+});
+
+router.post('/forum/:section/:thread/moderate', (req, res, next) => {
+  return (async () => {
+    const back = `/forum/${encodeURIComponent(req.params.section)}/${Number(req.params.thread) || 0}`;
+    if (!req.viewer) return res.redirect('/login');
+    if (!req.db) return res.redirect(`${back}?failed=refused`);
+
+    const role = await roleOfViewer(req);
+
+    const result = await forumDirectory.moderate(req.db, {
+      threadId: Number(req.params.thread) || 0,
+      sectionSlug: req.params.section,
+      action: (req.body || {}).action,
+      actor: { id: req.viewer.id, rank: role ? role.rank : 0 },
+    });
+
+    if (!result.ok) {
+      // A deleted thread has no page left to return to.
+      if (result.code === 'thread_deleted') return res.redirect(`/forum/${encodeURIComponent(req.params.section)}`);
+      return res.redirect(`${back}?failed=${encodeURIComponent(result.code)}`);
+    }
+
+    if (result.code === 'thread_deleted') {
+      return res.redirect(`/forum/${encodeURIComponent(result.sectionSlug)}?done=thread_deleted`);
+    }
+
+    return res.redirect(`${back}?done=${encodeURIComponent(result.code)}`);
+  })().catch(next);
 });
 
 // Written pages that need no stored data.
@@ -693,17 +878,59 @@ router.post('/character/avatar', async (req, res, next) => {
   }
 });
 
-router.get('/inventory', (req, res) => {
-  signedIn(res);
+router.get('/inventory', (req, res, next) => {
+  return (async () => {
+    signedIn(res);
 
-  const owned = fixtures.catalogItems.filter((item) => item.owned);
+    const owned = req.db
+      ? await catalogDirectory.owned(req.db, req.viewer.id)
+      : fixtures.catalogItems.filter((entry) => entry.owned);
 
-  res.render('pages/inventory', {
-    pageTitle: `Inventory - ${site.name}`,
-    owned,
-    wearing: owned.filter((item) => item.equipped),
-    viewerName: viewerFor(req).username,
-  });
+    return res.render('pages/inventory', {
+      pageTitle: `Inventory - ${site.name}`,
+      owned,
+      wearing: owned.filter((entry) => entry.equipped),
+      viewerName: viewerFor(req).username,
+      notice: noticeFromQuery(req),
+      canManage: Boolean(req.db),
+    });
+  })().catch(next);
+});
+
+// Wearing is a server-side fact on user_items, so the avatar pages and the
+// inventory read the same row.
+router.post('/inventory/:id/wear', (req, res, next) => {
+  return (async () => {
+    if (!req.db) return res.redirect('/inventory?failed=refused');
+
+    const result = await economy.equip(req.db, {
+      userId: req.viewer.id,
+      itemId: Number(req.params.id) || 0,
+      on: true,
+    });
+
+    const key = result.ok ? 'done' : 'failed';
+    const code = result.ok ? 'wearing' : result.code;
+
+    return res.redirect(`/inventory?${key}=${encodeURIComponent(code)}`);
+  })().catch(next);
+});
+
+router.post('/inventory/:id/remove', (req, res, next) => {
+  return (async () => {
+    if (!req.db) return res.redirect('/inventory?failed=refused');
+
+    const result = await economy.equip(req.db, {
+      userId: req.viewer.id,
+      itemId: Number(req.params.id) || 0,
+      on: false,
+    });
+
+    const key = result.ok ? 'done' : 'failed';
+    const code = result.ok ? 'taken_off' : result.code;
+
+    return res.redirect(`/inventory?${key}=${encodeURIComponent(code)}`);
+  })().catch(next);
 });
 
 router.get('/friends', (req, res, next) => renderFriends(req, res, 200, null).catch(next));
@@ -831,6 +1058,16 @@ const DONE_MESSAGES = {
   blocked: 'That member is blocked.',
   password: 'Your password has been changed. Every other device was signed out.',
   sessions: 'Every other device has been signed out.',
+  bought: 'Bought. It is in your inventory.',
+  wearing: 'Wearing it.',
+  taken_off: 'Taken off.',
+  thread: 'Thread posted.',
+  posted: 'Reply posted.',
+  locked: 'Thread locked.',
+  unlocked: 'Thread unlocked.',
+  pinned: 'Thread pinned.',
+  unpinned: 'Thread unpinned.',
+  thread_deleted: 'Thread deleted.',
 };
 
 /** Fixed wording for the conditions the friendship service refuses. */
@@ -845,6 +1082,19 @@ const FAILED_MESSAGES = {
   not_yours: 'That request is not yours to cancel.',
   blocked: 'That action is not available for that member.',
   refused: 'That did not work.',
+  funds: 'You do not have enough for that.',
+  owned: 'You already own that item.',
+  currency: 'That price is not set in that currency.',
+  gone: 'That item is not for sale.',
+  notowned: 'You do not own that item.',
+  nosection: 'That forum section does not exist.',
+  nothread: 'That thread does not exist.',
+  title: 'A title needs to be between 3 and 120 characters.',
+  empty: 'A post cannot be empty.',
+  long: 'That post is longer than a post can be.',
+  staffonly: 'That section is for staff only.',
+  locked: 'That thread is locked.',
+  rank: 'Your role cannot moderate the forum.',
 };
 
 function noticeFromQuery(req) {
