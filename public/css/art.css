@@ -1,0 +1,51 @@
+/* ==========================================================================
+   Real artwork. Loaded after fieldbrik.css so it replaces the CSS placeholders
+   the build started with, without rewriting the whole stylesheet each time art
+   arrives.
+   ========================================================================== */
+
+/* The maroon band (guest) and green band (member) stay underneath as the
+   fallback: if the banner fails to load, the page still has a coloured header
+   rather than a hole. The art sits on top at full opacity. */
+.fb-header__pattern {
+  opacity: 1;
+  background-image: url("/img/banner2.png");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+}
+
+/* Currency icons: the drawings replace the gradient pips, keeping the same box
+   so the header and the currency boxes do not move by a pixel. */
+.fb-ico--bucks,
+.fb-ico--tickets {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.fb-ico--tickets {
+  width: 16px;
+}
+
+.fb-ico img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Badge art. 34px is the size the profile grid draws; object-fit keeps the odd
+   shapes (600x600, 578x578, 300x297) inside the square instead of stretching
+   them. */
+.fb-badge__art {
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 3px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 3px;
+  background: #f4f0e3;
+  object-fit: contain;
+}
