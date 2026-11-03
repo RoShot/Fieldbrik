@@ -27,6 +27,7 @@ import authModule from './routes/auth.js';
 import adminModule from './routes/admin.js';
 import adminContentModule from './routes/adminContent.js';
 import earningsModule from './routes/earnings.js';
+import mailboxModule from './routes/mailbox.js';
 import site from './config/site.js';
 import accounts from './services/accounts.js';
 import pageContext from './services/pageContext.js';
@@ -40,6 +41,7 @@ const authRoutes = authModule.default || authModule;
 const adminRoutes = adminModule.default || adminModule;
 const adminContentRoutes = adminContentModule.default || adminContentModule;
 const earningsRoutes = earningsModule.default || earningsModule;
+const mailboxRoutes = mailboxModule.default || mailboxModule;
 
 const COOKIE = 'fb_session';
 
@@ -332,6 +334,12 @@ async function handlePage(request, url, env) {
 
   if (!failure && !state.answered) {
     failure = await runRouter(earningsRoutes, req, res);
+  }
+
+  // Messages own /messages, /messages/sent and /messages/compose, so they run
+  // before the page router, which still answers GET /messages/:id.
+  if (!failure && !state.answered) {
+    failure = await runRouter(mailboxRoutes, req, res);
   }
 
   if (!failure && !state.answered) {
