@@ -2,21 +2,37 @@
 <%- include('../partials/header') %>
 
 <main class="fb-container fb-main">
-  <p class="fb-crumbs"><a href="/games">Games</a> &raquo; <%= game.name %></p>
+  <p class="fb-crumbs"><a href="/games">Games</a> &raquo; <%= place.name %></p>
+
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
+  <% if (!place.published) { %>
+    <div class="fb-notice">
+      <p><strong>This place is a draft.</strong></p>
+      <p>Only you can see this page. Publish it from <a href="/places/<%= place.id %>/edit">Edit place</a>
+         when it is ready, and it appears in the Games list for everybody.</p>
+    </div>
+  <% } %>
 
   <div class="fb-title-row">
-    <h1 class="fb-title"><%= game.name %></h1>
-    <span class="fb-pagecount"><span class="fb-card-game__players"><%= game.players %> playing now</span></span>
+    <h1 class="fb-title"><%= place.name %></h1>
+    <span class="fb-pagecount"><%= place.published ? 'Published' : 'Draft' %></span>
   </div>
 
   <div class="fb-cols">
     <div class="fb-col-main">
-      <span class="fb-hero" style="--thumb: <%= game.thumb %>;" aria-hidden="true"></span>
+      <span class="fb-hero" style="--thumb: <%= place.thumb %>;" aria-hidden="true"></span>
 
       <section class="fb-panel">
-        <h2 class="fb-panel__title">About this game</h2>
+        <h2 class="fb-panel__title">About this place</h2>
         <div class="fb-panel__body fb-prose">
-          <p><%= game.description %></p>
+          <% if (place.description) { %>
+            <%= place.description %>
+          <% } else { %>
+            <p class="fb-muted"><%= place.creator %> has not written a description yet.</p>
+          <% } %>
         </div>
       </section>
 
@@ -27,23 +43,19 @@
             <tbody>
               <tr>
                 <th scope="row">Creator</th>
-                <td><a href="/people/<%= game.creator %>"><%= game.creator %></a></td>
+                <td><a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></td>
               </tr>
               <tr>
-                <th scope="row">Created</th>
-                <td><%= game.created %></td>
+                <th scope="row">Built</th>
+                <td><%= place.created %></td>
               </tr>
               <tr>
                 <th scope="row">Last updated</th>
-                <td><%= game.updated %></td>
+                <td><%= place.updated %></td>
               </tr>
               <tr>
                 <th scope="row">Visits</th>
-                <td><%= game.visits.toLocaleString('en-US') %></td>
-              </tr>
-              <tr>
-                <th scope="row">Players online</th>
-                <td><%= game.players %></td>
+                <td>Not counted yet</td>
               </tr>
             </tbody>
           </table>
@@ -51,8 +63,11 @@
       </section>
 
       <div class="fb-notice">
-        <p><strong>This game cannot be played yet.</strong></p>
-        <p>There is no Play button on this page on purpose. Playing a place needs the FieldBrik client, which is not built: there is no renderer, no physics and no game session to join. The figures above describe the listing, and the listing is real data.</p>
+        <p><strong>There is no Play button on this page.</strong></p>
+        <p>Playing a place needs the FieldBrik client, which is not built: there is no renderer and
+           no session to join. Because nothing can be visited, no visit is recorded and the
+           every-10-visits Ticket milestone stays unpaid. The listing above is real data about this
+           place on its owner's account.</p>
       </div>
     </div>
 
@@ -60,18 +75,37 @@
       <div class="fb-creator">
         <% if (creator) { %>
           <%- include('../partials/avatar', { avatar: creator.avatar, size: 'md' }) %>
-          <a class="fb-creator__name" href="/people/<%= creator.username %>"><%= creator.username %></a>
+          <a class="fb-creator__name" href="/people/<%= encodeURIComponent(creator.username) %>"><%= creator.username %></a>
           <p class="fb-creator__meta"><%= creator.online ? 'Online now' : 'Offline' %></p>
         <% } else { %>
-          <a class="fb-creator__name" href="/people/<%= game.creator %>"><%= game.creator %></a>
+          <a class="fb-creator__name" href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a>
           <p class="fb-creator__meta">Creator</p>
         <% } %>
       </div>
 
+      <% if (isOwner) { %>
+        <section class="fb-panel">
+          <h2 class="fb-panel__title">This is your place</h2>
+          <div class="fb-panel__body">
+            <p><a class="fb-btn" href="/places/<%= place.id %>/edit">Edit place</a></p>
+            <form method="post" action="/places/<%= place.id %>/status">
+              <input type="hidden" name="published" value="<%= place.published ? '0' : '1' %>">
+              <button class="fb-btn<%= place.published ? '' : ' fb-btn--primary' %>" type="submit">
+                <%= place.published ? 'Unpublish' : 'Publish' %>
+              </button>
+            </form>
+            <p class="fb-admin__note">
+              Unpublishing takes it out of the Games list and keeps the page, your draft and its
+              address. Nobody else can open an unpublished place.
+            </p>
+          </div>
+        </section>
+      <% } %>
+
       <section class="fb-panel">
-        <h2 class="fb-panel__title">More games</h2>
+        <h2 class="fb-panel__title">More places</h2>
         <div class="fb-panel__body">
-          <p class="fb-muted"><a href="/games">Browse every game</a>, or filter by creator from the Games page.</p>
+          <p class="fb-muted"><a href="/games">Browse every place</a>, or filter by creator from the Games page.</p>
         </div>
       </section>
     </aside>

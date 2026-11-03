@@ -1,0 +1,83 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <p class="fb-crumbs">
+    <a href="/games">Games</a> &raquo;
+    <% if (place) { %><a href="/games/<%= place.slug %>"><%= place.name %></a> &raquo; Edit<% } else { %>New place<% } %>
+  </p>
+
+  <% if (failure) { %>
+    <div class="fb-notice"><p><strong><%= failure %></strong></p></div>
+  <% } else if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title"><%= place ? 'Edit ' + place.name : 'New Place' %></h1>
+    <% if (place) { %><span class="fb-pagecount"><%= place.published ? 'Published' : 'Draft' %></span><% } %>
+  </div>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">The listing</h2>
+    <div class="fb-panel__body">
+      <form class="fb-form" method="post" action="<%= place ? '/places/' + place.id : '/places' %>">
+        <label for="fb-place-name">Name</label>
+        <input id="fb-place-name" name="name" type="text" maxlength="60" required
+               value="<%= place ? place.name : '' %>">
+
+        <label for="fb-place-description">Description</label>
+        <textarea id="fb-place-description" name="description" rows="8" maxlength="2000"><%= place ? place.description : '' %></textarea>
+
+        <% if (!place) { %>
+          <label for="fb-place-publish">Visibility</label>
+          <select id="fb-place-publish" name="published">
+            <option value="0">Draft - only I can see it</option>
+            <option value="1">Published - listed in Games</option>
+          </select>
+        <% } %>
+
+        <button class="fb-btn fb-btn--primary" type="submit"><%= place ? 'Save place' : 'Create place' %></button>
+      </form>
+    </div>
+    <p class="fb-panel__strip">
+      The address is made from the name when the place is created and does not change afterwards,
+      so a link somebody shared keeps working if you rename it later.
+    </p>
+  </section>
+
+  <% if (place) { %>
+    <section class="fb-panel">
+      <h2 class="fb-panel__title">Visibility</h2>
+      <div class="fb-panel__body">
+        <p>
+          This place is <strong><%= place.published ? 'published' : 'a draft' %></strong>.
+          <% if (place.published) { %>
+            Anybody can open <a href="/games/<%= place.slug %>">/games/<%= place.slug %></a> and it is listed in Games.
+          <% } else { %>
+            Only you can open it. Publishing puts it in the Games list.
+          <% } %>
+        </p>
+        <form method="post" action="/places/<%= place.id %>/status">
+          <input type="hidden" name="published" value="<%= place.published ? '0' : '1' %>">
+          <button class="fb-btn<%= place.published ? '' : ' fb-btn--primary' %>" type="submit">
+            <%= place.published ? 'Unpublish' : 'Publish' %>
+          </button>
+        </form>
+      </div>
+    </section>
+  <% } %>
+
+  <div class="fb-notice">
+    <p><strong>A place is a listing, not a world yet.</strong></p>
+    <p>There is no brick editor and no Play button: building and playing happen in the FieldBrik
+       client, which is the next project. What you can do here is give a place its name and
+       description, keep it as a draft, and publish it to the Games list.</p>
+  </div>
+
+  <p class="fb-panel__more"><a href="/places/mine">My places</a> &middot; <a href="/games">All places</a></p>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

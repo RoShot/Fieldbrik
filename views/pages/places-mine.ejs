@@ -1,0 +1,63 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title">My Places</h1>
+    <span class="fb-pagecount"><%= published %> of <%= places.length %> published</span>
+  </div>
+
+  <table class="fb-table">
+    <thead>
+      <tr>
+        <th scope="col">Place</th>
+        <th scope="col">Built</th>
+        <th scope="col">Updated</th>
+        <th scope="col">Status</th>
+        <th scope="col">Manage</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (places.length === 0) { %>
+        <tr>
+          <td colspan="5" class="fb-table__last">You have not made a place yet.</td>
+        </tr>
+      <% } %>
+      <% places.forEach(function (place) { %>
+        <tr>
+          <td>
+            <strong><a href="/games/<%= place.slug %>"><%= place.name %></a></strong>
+            <% if (place.description) { %><br><span class="fb-muted"><%= place.description.slice(0, 80) %><% if (place.description.length > 80) { %>&hellip;<% } %></span><% } %>
+          </td>
+          <td><%= place.created %></td>
+          <td><%= place.updated %></td>
+          <td><%= place.published ? 'Published' : 'Draft' %></td>
+          <td>
+            <a class="fb-btn" href="/places/<%= place.id %>/edit">Edit</a>
+            <form method="post" action="/places/<%= place.id %>/status">
+              <input type="hidden" name="published" value="<%= place.published ? '0' : '1' %>">
+              <button class="fb-btn" type="submit"><%= place.published ? 'Unpublish' : 'Publish' %></button>
+            </form>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <p class="fb-panel__more"><a class="fb-btn fb-btn--primary" href="/places/new">Create a place</a></p>
+
+  <div class="fb-notice">
+    <p><strong>Drafts are private.</strong></p>
+    <p>An unpublished place is not in the Games list and only you can open its page. Publishing is
+       reversible: unpublish it and it leaves the list without losing the page, the description or
+       its address.</p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>
