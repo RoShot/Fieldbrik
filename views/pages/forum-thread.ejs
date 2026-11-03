@@ -1,0 +1,92 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <p class="fb-crumbs">
+    <a href="/forum">Forum</a> &raquo;
+    <a href="/forum/<%= thread.sectionSlug %>"><%= thread.sectionName %></a> &raquo;
+    <%= thread.title %>
+  </p>
+
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title"><%= thread.title %></h1>
+    <span class="fb-pagecount">
+      <% if (thread.pinned) { %>Pinned<% } %>
+      <% if (thread.pinned && thread.locked) { %> &middot; <% } %>
+      <% if (thread.locked) { %>Locked<% } %>
+      <% if (!thread.pinned && !thread.locked) { %><%= posts.length %> posts<% } %>
+    </span>
+  </div>
+
+  <p class="fb-muted">Started by <a href="/people/<%= thread.author %>"><%= thread.author %></a> on <%= thread.created %></p>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Posts</h2>
+    <div class="fb-panel__body">
+      <% posts.forEach(function (post) { %>
+        <article class="fb-post">
+          <p class="fb-post__meta">
+            <strong><a href="/people/<%= post.author %>"><%= post.author %></a></strong>
+            &middot; #<%= post.number %> &middot; <%= post.when %>
+          </p>
+          <div class="fb-post__body">
+            <% post.body.split('\n').forEach(function (line) { %><%= line %><br><% }); %>
+          </div>
+        </article>
+      <% }); %>
+    </div>
+  </section>
+
+  <% if (canPost) { %>
+    <section class="fb-panel">
+      <h2 class="fb-panel__title">Reply</h2>
+      <div class="fb-panel__body">
+        <form class="fb-form" method="post" action="/forum/<%= thread.sectionSlug %>/<%= thread.id %>/reply">
+          <label for="fb-reply">Your reply</label>
+          <textarea id="fb-reply" name="body" rows="6" required></textarea>
+          <button class="fb-btn fb-btn--primary" type="submit">Post reply</button>
+        </form>
+      </div>
+    </section>
+  <% } else if (thread.locked) { %>
+    <div class="fb-notice">
+      <p><strong>This thread is locked.</strong></p>
+      <p>Nobody can reply while it is locked. Staff can unlock it.</p>
+    </div>
+  <% } else if (!signedIn) { %>
+    <div class="fb-notice">
+      <p><strong><a href="/login">Sign in</a> to reply.</strong></p>
+    </div>
+  <% } %>
+
+  <% if (canModerate) { %>
+    <section class="fb-panel">
+      <h2 class="fb-panel__title">Staff controls</h2>
+      <div class="fb-panel__body">
+        <form class="fb-inline" method="post" action="/forum/<%= thread.sectionSlug %>/<%= thread.id %>/moderate">
+          <input type="hidden" name="action" value="<%= thread.locked ? 'unlock' : 'lock' %>">
+          <button class="fb-btn" type="submit"><%= thread.locked ? 'Unlock thread' : 'Lock thread' %></button>
+        </form>
+        <form class="fb-inline" method="post" action="/forum/<%= thread.sectionSlug %>/<%= thread.id %>/moderate">
+          <input type="hidden" name="action" value="<%= thread.pinned ? 'unpin' : 'pin' %>">
+          <button class="fb-btn" type="submit"><%= thread.pinned ? 'Unpin thread' : 'Pin thread' %></button>
+        </form>
+        <form class="fb-inline" method="post" action="/forum/<%= thread.sectionSlug %>/<%= thread.id %>/moderate">
+          <input type="hidden" name="action" value="delete">
+          <button class="fb-btn" type="submit">Delete thread</button>
+        </form>
+        <p class="fb-admin__note">Locking stops replies. Deleting removes the thread and its posts; both are written to the audit log.</p>
+      </div>
+    </section>
+  <% } %>
+
+  <p class="fb-panel__more"><a href="/forum/<%= thread.sectionSlug %>">Back to <%= thread.sectionName %></a></p>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

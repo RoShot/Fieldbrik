@@ -49,3 +49,14 @@
   background: #f4f0e3;
   object-fit: contain;
 }
+
+/* Catalog thumbnails: the colour swatch stays behind, and an item with a real
+   image draws it over the swatch at the same size. */
+.fb-card-item__thumb img,
+.fb-item__thumb img,
+.fb-wearing__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
