@@ -53,6 +53,7 @@
             <% if (canReferral) { %>
               <a class="fb-btn" href="/admin/users/<%= account.id %>/referral">Referral Program</a>
             <% } %>
+            <a class="fb-btn" href="/admin/users/<%= account.id %>/badges">Badges<% if (canBadge) { %> and Awards<% } %></a>
             <a class="fb-btn" href="/admin/users">Back to search</a>
           </div>
 
@@ -95,7 +96,18 @@
                   <% if (record.badges.length === 0) { %>
                     none
                   <% } else { %>
-                    <% record.badges.forEach(function (badge, index) { %><%= index > 0 ? ', ' : '' %><%= badge.name %><% }); %>
+                    <ul class="fb-grid--badges">
+                      <% record.badges.forEach(function (badge) { %>
+                        <li class="fb-badge" title="<%= badge.name %> - granted <%= badge.when %>">
+                          <% if (badge.art) { %>
+                            <img class="fb-badge__art" src="<%= badge.art %>" alt="" width="34" height="34">
+                          <% } else { %>
+                            <span class="fb-badge__pip" style="--badge: <%= badge.color %>;" aria-hidden="true"></span>
+                          <% } %>
+                          <%= badge.name %>
+                        </li>
+                      <% }); %>
+                    </ul>
                   <% } %>
                 </td>
               </tr>
@@ -181,9 +193,9 @@
           </table>
 
           <p class="fb-admin__note">
-            Moderation actions are on the Moderate User page; memberships and referrals have their
-            own pages. Every one of them writes a restriction or an audit entry, so nothing here
-            is a shortcut around the record.
+            Moderation actions - warn, ban, scrub, notices - arrive in the next pass and
+            are not drawn here yet, so there is nothing on this page that looks like a
+            button but does nothing.
           </p>
         </div>
       </div>

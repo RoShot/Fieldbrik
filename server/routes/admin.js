@@ -22,6 +22,7 @@ const moderation = require('../services/moderation');
 const clubService = require('../services/club');
 const referralService = require('../services/referrals');
 const blacklistService = require('../services/blacklist');
+const badgeService = require('../services/badges');
 
 const router = Router();
 
@@ -145,6 +146,8 @@ const DONE = {
   club_granted: 'Membership granted.',
   club_ended: 'Membership ended.',
   referral_granted: 'Referral granted: 15 Bucks and the Referral badge.',
+  badge_granted: 'Badge granted.',
+  badge_revoked: 'Badge removed from the account.',
   blacklist_added: 'Email address blacklisted.',
   blacklist_removed: 'Email address removed from the blacklist.',
 };
@@ -168,6 +171,9 @@ const FAILED = {
   atcap: 'This account has already reached the referral cap of 10.',
   bademail: 'That does not look like an email address.',
   nobreaklist: 'That address is not on the blacklist.',
+  badge: 'That is not a badge the panel knows.',
+  held: 'That account already holds that badge.',
+  notheld: 'That account does not hold that badge.',
 };
 
 function noticeFor(query) {
@@ -251,6 +257,7 @@ router.get(
           canModerate: permissions.can(req.admin.role, 'users.warn'),
           canClub: permissions.can(req.admin.role, 'club.grant'),
           canReferral: permissions.can(req.admin.role, 'users.referral'),
+          canBadge: permissions.can(req.admin.role, 'users.badge'),
           roleReason,
           roleOptions: roles.filter((role) => permissions.mayGrant(req.admin.role, role)),
         })
@@ -514,6 +521,89 @@ router.post(
 
       const key = result.ok ? 'done' : 'failed';
       return res.redirect(`/admin/blacklist?${key}=${encodeURIComponent(result.code)}`);
+    })();
+  })
+);
+
+// ---------- Badges ----------
+//
+// A badge is cosmetic, so the gate is about who may hand one out, not about
+// protecting the target: Senior Moderator and above. Opening the page is part of
+// looking at an account, so it sits at users.view and the form is drawn only for
+// a role that can grant. The POST is gated at users.badge, because the form is
+// only a rendering of that rule.
+
+router.get(
+  '/admin/badges',
+  staff('users.badge', (req, res) => {
+    return (async () => {
+      const [overview, entries] = await Promise.all([
+        adminService.overview(req.db),
+        badgeService.catalogue(req.db),
+      ]);
+
+      return res.render(
+        'admin/badge-catalogue',
+        view(req, { adminStatus: overview.status, badges: entries })
+      );
+    })();
+  })
+);
+
+router.get(
+  '/admin/users/:id/badges',
+  staff('users.view', (req, res) => {
+    return (async () => {
+      const account = await adminService.findAccount(req.db, req.params.id);
+      if (!account) return notAllowed(req, res, 404, 'No account has that ID.');
+
+      const [overview, held, catalogue] = await Promise.all([
+        adminService.overview(req.db),
+        badgeService.held(req.db, account.id),
+        badgeService.catalogue(req.db),
+      ]);
+
+      const taken = new Set(held.map((entry) => entry.key));
+
+      return res.render(
+        'admin/badges',
+        view(req, {
+          adminStatus: overview.status,
+          account,
+          held,
+          available: catalogue.filter((entry) => !taken.has(entry.key)),
+          canGrant: mayTouch(req, account) && permissions.can(req.admin.role, 'users.badge'),
+          notice: noticeFor(req.query),
+        })
+      );
+    })();
+  })
+);
+
+router.post(
+  '/admin/users/:id/badges',
+  staff('users.badge', (req, res) => {
+    return (async () => {
+      const targetId = Number(req.params.id) || 0;
+      const account = await adminService.findAccount(req.db, targetId);
+      if (!account) return res.redirect('/admin/users?failed=nobody');
+      if (!mayTouch(req, account)) return res.redirect(`/admin/users/${targetId}/badges?failed=rank`);
+
+      const body = req.body || {};
+      const actor = { id: req.viewer.id, rank: req.admin.role.rank };
+
+      const result =
+        String(body.action) === 'remove'
+          ? await badgeService.revoke(req.db, { userId: targetId, key: body.key, actor })
+          : await badgeService.grant(req.db, {
+              userId: targetId,
+              key: body.key,
+              note: body.note,
+              actor,
+            });
+
+      const key = result.ok ? 'done' : 'failed';
+      return res.redirect(`/admin/users/${targetId}/badges?${key}=${encodeURIComponent(result.code)}`);
     })();
   })
 );
