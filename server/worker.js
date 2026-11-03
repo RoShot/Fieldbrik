@@ -28,6 +28,7 @@ import adminModule from './routes/admin.js';
 import adminContentModule from './routes/adminContent.js';
 import earningsModule from './routes/earnings.js';
 import mailboxModule from './routes/mailbox.js';
+import reportsModule from './routes/reports.js';
 import site from './config/site.js';
 import accounts from './services/accounts.js';
 import pageContext from './services/pageContext.js';
@@ -42,6 +43,7 @@ const adminRoutes = adminModule.default || adminModule;
 const adminContentRoutes = adminContentModule.default || adminContentModule;
 const earningsRoutes = earningsModule.default || earningsModule;
 const mailboxRoutes = mailboxModule.default || mailboxModule;
+const reportsRoutes = reportsModule.default || reportsModule;
 
 const COOKIE = 'fb_session';
 
@@ -318,6 +320,12 @@ async function handlePage(request, url, env) {
 
   if (!state.answered) {
     failure = await runRouter(authRoutes, req, res);
+  }
+
+  // Reports: the member's form and list, and the queue at /admin/reports. Ahead
+  // of the panel router because the panel does not know about reports.
+  if (!failure && !state.answered) {
+    failure = await runRouter(reportsRoutes, req, res);
   }
 
   // The admin panel gates itself over /admin, so it runs before the public
