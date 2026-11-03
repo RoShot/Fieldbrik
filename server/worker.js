@@ -25,16 +25,19 @@ import views from './views.generated.js';
 import pagesModule from './routes/pages.js';
 import authModule from './routes/auth.js';
 import adminModule from './routes/admin.js';
+import earningsModule from './routes/earnings.js';
 import site from './config/site.js';
 import accounts from './services/accounts.js';
 import pageContext from './services/pageContext.js';
 import moderation from './services/moderation.js';
+import earnings from './services/earnings.js';
 
 // esbuild's CommonJS interop: a router is module.exports, so it can arrive as
 // either the default or the namespace depending on how it was bundled.
 const pageRoutes = pagesModule.default || pagesModule;
 const authRoutes = authModule.default || authModule;
 const adminRoutes = adminModule.default || adminModule;
+const earningsRoutes = earningsModule.default || earningsModule;
 
 const COOKIE = 'fb_session';
 
@@ -275,6 +278,19 @@ async function handlePage(request, url, env) {
 
           req.viewer = await accounts.loadViewer(req.db, user);
           req.cookies.live = '1';
+
+          // Daily Tickets land on the first signed-in page of the day, wherever
+          // that is. The ledger row for today is the gate, so this can run on
+          // every request and still pay once. A failure here must never break
+          // the page the member asked for, so it is not allowed to escape.
+          try {
+            await earnings.claimDaily(req.db, user.id);
+          } catch (error) {
+            console.error(
+              '[fieldbrik] daily award failed:',
+              error && error.stack ? error.stack : error
+            );
+          }
         }
       }
     } catch (error) {
@@ -304,6 +320,10 @@ async function handlePage(request, url, env) {
   // router rather than being one more page inside it.
   if (!failure && !state.answered) {
     failure = await runRouter(adminRoutes, req, res);
+  }
+
+  if (!failure && !state.answered) {
+    failure = await runRouter(earningsRoutes, req, res);
   }
 
   if (!failure && !state.answered) {
