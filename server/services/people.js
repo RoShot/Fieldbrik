@@ -96,7 +96,7 @@ async function friendsOf(db, userId) {
     .prepare(
       `SELECT ${PERSON_COLUMNS}
          FROM friendships f
-         JOIN users u ON u.id = CASE WHEN f.status = 'accepted' THEN f.user_b ELSE f.user_a END
+         JOIN users u ON u.id = CASE WHEN f.user_a = ? THEN f.user_b ELSE f.user_a END
          LEFT JOIN avatars a ON a.user_id = u.id
         WHERE f.status = 'accepted' AND (f.user_a = ? OR f.user_b = ?)
         ORDER BY u.username_lower ASC`
@@ -119,7 +119,7 @@ async function pending(db, userId, direction) {
     .prepare(
       `SELECT ${PERSON_COLUMNS}
          FROM friendships f
-         JOIN users u ON u.id = CASE WHEN f.user_id = ? THEN f.user_b ELSE f.user_a END
+         JOIN users u ON u.id = CASE WHEN f.user_a = ? THEN f.user_b ELSE f.user_a END
          LEFT JOIN avatars a ON a.user_id = u.id
         WHERE f.status = 'pending'
           AND (f.user_a = ? OR f.user_b = ?)
