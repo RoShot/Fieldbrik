@@ -12,7 +12,8 @@ INSERT INTO badges (key, name, description, color) VALUES
   ('administrator',       'Administrator',       'Administers the platform.', '#a8471f'),
   ('moderator',           'Moderator',           'Keeps the community safe.', '#2f6fb5'),
   ('support_staff',       'Support Staff',       'Helps members with account issues.', '#3f8f5c'),
-  ('carpenters_club',     'Carpenters Club',     'Recognised for outstanding builds.', '#a9822f')
+  ('carpenters_club',     'Carpenters Club',     'Recognised for outstanding builds.', '#a9822f'),
+  ('referral',            'Referral',            'Invited a member who joined.', '#6f5fb5')
 ON CONFLICT (key) DO UPDATE SET
   name        = excluded.name,
   description = excluded.description,

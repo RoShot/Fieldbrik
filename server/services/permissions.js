@@ -35,6 +35,7 @@ const CAPABILITIES = {
   'users.role': 230,
   'users.blacklist_email': 230,
   'club.grant': 220,
+  'users.referral': 220,
   'billing.issue': 220,
   'content.review': 170,
   'forum.moderate': 180,
