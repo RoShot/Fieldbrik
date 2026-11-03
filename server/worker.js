@@ -29,6 +29,7 @@ import adminContentModule from './routes/adminContent.js';
 import earningsModule from './routes/earnings.js';
 import mailboxModule from './routes/mailbox.js';
 import reportsModule from './routes/reports.js';
+import placesModule from './routes/places.js';
 import site from './config/site.js';
 import accounts from './services/accounts.js';
 import pageContext from './services/pageContext.js';
@@ -44,6 +45,7 @@ const adminContentRoutes = adminContentModule.default || adminContentModule;
 const earningsRoutes = earningsModule.default || earningsModule;
 const mailboxRoutes = mailboxModule.default || mailboxModule;
 const reportsRoutes = reportsModule.default || reportsModule;
+const placesRoutes = placesModule.default || placesModule;
 
 const COOKIE = 'fb_session';
 
@@ -348,6 +350,14 @@ async function handlePage(request, url, env) {
   // before the page router, which still answers GET /messages/:id.
   if (!failure && !state.answered) {
     failure = await runRouter(mailboxRoutes, req, res);
+  }
+
+  // Places own /games, the place pages and the create/edit forms, plus GET /
+  // and GET /my-page, which both used to read the fixture place list. Mounted
+  // before the page router for the same reason as the rest: /routes/pages.js
+  // still answers those paths from fixtures.
+  if (!failure && !state.answered) {
+    failure = await runRouter(placesRoutes, req, res);
   }
 
   if (!failure && !state.answered) {

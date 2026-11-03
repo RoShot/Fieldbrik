@@ -103,22 +103,30 @@
       </section>
 
       <section class="fb-panel">
-        <h2 class="fb-panel__title">Favorites</h2>
+        <h2 class="fb-panel__title">
+          <span class="fb-panel__title-row">
+            <span>Newest Places</span>
+            <a href="/places/mine">My places</a>
+          </span>
+        </h2>
         <div class="fb-panel__body">
-          <ul class="fb-grid--games">
-            <% favouriteGames.forEach(function (game) { %>
-              <li>
-                <a class="fb-card-game__thumb" href="/games/<%= game.id %>" style="--thumb: <%= game.thumb %>;" aria-hidden="true" tabindex="-1"></a>
-                <a class="fb-card-game__title" href="/games/<%= game.id %>"><%= game.name %></a>
-                <p class="fb-card-game__meta">
-                  Creator: <%= game.creator %><br>
-                  Played: <%= game.visits.toLocaleString('en-US') %> times
-                </p>
-              </li>
-            <% }); %>
-          </ul>
+          <% if (newestPlaces.length === 0) { %>
+            <p class="fb-muted">Nobody has published a place yet. <a href="/places/new">Build the first one</a>.</p>
+          <% } else { %>
+            <ul class="fb-grid--games">
+              <% newestPlaces.forEach(function (place) { %>
+                <li>
+                  <a class="fb-card-game__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                  <a class="fb-card-game__title" href="/games/<%= place.slug %>"><%= place.name %></a>
+                  <p class="fb-card-game__meta">
+                    By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a>
+                  </p>
+                </li>
+              <% }); %>
+            </ul>
+          <% } %>
         </div>
-        <p class="fb-pagination">Page 1 of 1</p>
+        <p class="fb-pagination"><a href="/games">Every place</a></p>
       </section>
     </div>
 
