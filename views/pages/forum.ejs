@@ -31,7 +31,7 @@
       <% sections.forEach(function (section) { %>
         <tr>
           <td>
-            <span class="fb-table__name"><%= section.name %></span>
+            <a class="fb-table__name" href="/forum/<%= encodeURIComponent(section.slug) %>"><%= section.name %></a>
             <span class="fb-table__desc"><%= section.description %></span>
           </td>
           <td><%= section.threads %></td>
@@ -52,8 +52,11 @@
   <p class="fb-pagination">Page 1 of 1</p>
 
   <div class="fb-notice">
-    <p><strong>The sections are real. The conversations are not open yet.</strong></p>
-    <p>These sections come from the forum tables in the database, and the thread and post counts are counted from rows rather than stored, so they will be correct the moment there is something to count. Posting is not built: it needs the forum service, which arrives after the admin panel, so no New Thread button is drawn in the meantime.</p>
+    <p><strong>Every section and thread here is real.</strong></p>
+    <p>These sections, the threads in them and the replies are rows in the forum tables, and the
+       counts above are counted from those rows rather than stored. Posting is open: sign in, open
+       a section, then start a thread or reply to one that is not locked. A forum moderator can
+       lock, pin or delete a thread, and each of those goes into the audit log.</p>
   </div>
 </main>
 

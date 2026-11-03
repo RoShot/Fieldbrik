@@ -1,17 +1,30 @@
 <%- include('../partials/head', { pageTitle: pageTitle }) %>
+
+<%# Sent messages are drawn with outgoing set; the inbox is not. %>
+<% var isSent = (typeof outgoing !== 'undefined' && outgoing); %>
+<% var replyTo = isSent ? message.to : message.from; %>
+
 <%- include('../partials/header') %>
 
 <main class="fb-container fb-main">
-  <p class="fb-crumbs"><a href="/messages">Messages</a> &raquo; <%= message.subject %></p>
+  <p class="fb-crumbs">
+    <a href="<%= isSent ? '/messages/sent' : '/messages' %>"><%= isSent ? 'Sent Messages' : 'Messages' %></a>
+    &raquo; <%= message.subject %>
+  </p>
+
+  <% if (typeof notice !== 'undefined' && notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
 
   <div class="fb-title-row">
     <h1 class="fb-title"><%= message.subject %></h1>
+    <% if (isSent) { %><span class="fb-pagecount"><%= message.read ? 'Opened' : 'Not opened yet' %></span><% } %>
   </div>
 
   <section class="fb-panel">
     <h2 class="fb-panel__title">
       <span class="fb-panel__title-row">
-        <span>From <a href="/people/<%= message.from %>"><%= message.from %></a></span>
+        <span>From <a href="/people/<%= encodeURIComponent(message.from) %>"><%= message.from %></a></span>
         <span><%= message.date %></span>
       </span>
     </h2>
@@ -20,26 +33,42 @@
         <p><%= paragraph %></p>
       <% }); %>
     </div>
-    <p class="fb-panel__strip">To <%= message.to %></p>
+    <p class="fb-panel__strip">To <a href="/people/<%= encodeURIComponent(message.to) %>"><%= message.to %></a></p>
   </section>
 
   <section class="fb-panel">
-    <h2 class="fb-panel__title">Reply</h2>
+    <h2 class="fb-panel__title">Reply to <%= replyTo %></h2>
     <div class="fb-panel__body">
-      <form class="fb-auth" method="post" action="/messages">
-        <input type="hidden" name="to" value="<%= message.from %>">
+      <form class="fb-auth" method="post" action="/messages/<%= message.id %>/reply">
         <div class="fb-auth__row fb-auth__row--top">
           <label for="reply-body">Message</label>
-          <textarea id="reply-body" name="body" rows="4" disabled></textarea>
+          <textarea id="reply-body" name="body" rows="4" maxlength="5000" required></textarea>
         </div>
         <div class="fb-auth__actions">
-          <button class="fb-btn fb-btn--primary" type="submit" disabled>Send Reply</button>
+          <button class="fb-btn fb-btn--primary" type="submit">Send Reply</button>
         </div>
       </form>
     </div>
+    <p class="fb-panel__strip">
+      The reply goes back to <%= replyTo %>, because that is who this conversation is with.
+    </p>
   </section>
 
-  <p class="fb-panel__more"><a href="/messages">Back to the inbox</a></p>
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Delete</h2>
+    <div class="fb-panel__body">
+      <form method="post" action="/messages/<%= message.id %>/delete">
+        <button class="fb-btn" type="submit">Delete this message</button>
+      </form>
+      <p class="fb-admin__note">
+        Deleting removes your copy only. The other person's copy is theirs to keep or delete.
+      </p>
+    </div>
+  </section>
+
+  <p class="fb-panel__more">
+    <a href="<%= isSent ? '/messages/sent' : '/messages' %>">Back to <%= isSent ? 'sent messages' : 'the inbox' %></a>
+  </p>
 </main>
 
 <%- include('../partials/footer') %>
