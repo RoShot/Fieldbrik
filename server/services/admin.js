@@ -31,10 +31,19 @@ const NAV = [
       { label: 'Blacklist Email', href: '/admin/blacklist', cap: 'users.blacklist_email' },
     ],
   },
-  { label: 'Content', items: [{ label: 'Badge Catalogue', href: '/admin/badges', cap: 'users.badge' }] },
+  {
+    label: 'Content',
+    items: [
+      { label: 'Catalog Items', href: '/admin/catalog', cap: 'content.review', path: '/admin/catalog' },
+      { label: 'Badge Catalogue', href: '/admin/badges', cap: 'users.badge' },
+    ],
+  },
   { label: 'Moderation', items: [] },
   { label: 'System', items: [{ label: 'Audit Log', href: '/admin/logs', cap: 'log.view' }] },
-  { label: 'Billing', items: [] },
+  {
+    label: 'Billing',
+    items: [{ label: 'Ticket Rates', href: '/admin/earnings', cap: 'settings.write' }],
+  },
   { label: 'Other', items: [] },
 ];
 
