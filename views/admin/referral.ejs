@@ -1,0 +1,94 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Referral Program: <%= account.username %></h1>
+        <div class="fb-panel__body">
+          <p class="fb-admin__muted">
+            Account <strong><%= account.id %></strong> &middot; <%= used %> of <%= cap %> referrals used
+            &middot; each one pays <%= reward %> Bucks through the ledger
+          </p>
+
+          <% if (canGrant) { %>
+            <form method="post" action="/admin/users/<%= account.id %>/referral">
+              <h2 class="fb-admin__heading">Grant a referral</h2>
+              <p class="fb-admin__muted">
+                The account that was referred, by ID or username. An account can only be somebody's
+                referral once, and this account stops at <%= cap %>.
+              </p>
+              <div class="fb-mod__field">
+                <label for="fb-referred">Referred account</label>
+                <input id="fb-referred" type="text" name="referred" maxlength="60" autocomplete="off">
+              </div>
+              <button class="fb-btn fb-btn--primary" type="submit">Grant referral</button>
+            </form>
+          <% } else { %>
+            <p>
+              <strong>Your role cannot grant a referral.</strong>
+              Junior Administrator and above can; this account's referrals are still listed below.
+            </p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Referrals</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Referred account</th>
+                <th scope="col">Reward</th>
+                <th scope="col">Granted by</th>
+                <th scope="col">When</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (referrals.length === 0) { %>
+                <tr><td colspan="4" class="fb-table__last">No referral has been granted on this account.</td></tr>
+              <% } %>
+              <% referrals.forEach(function (entry) { %>
+                <tr>
+                  <td><a href="/admin/users?q=<%= encodeURIComponent(entry.referred) %>"><%= entry.referred %></a></td>
+                  <td><%= entry.reward %> Bucks</td>
+                  <td><%= entry.by %></td>
+                  <td><%= entry.when %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        The reward is a ledger entry, never a bare balance change, so the account's balance can
+        always be explained by the entries that produced it. The badge is granted with it and
+        nothing here is removed if the grant is regretted later: the record is the record.
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

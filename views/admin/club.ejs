@@ -1,0 +1,132 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Carpenters Club: <%= account.username %></h1>
+        <div class="fb-panel__body">
+          <p class="fb-admin__muted">
+            Account <strong><%= account.id %></strong> &middot; <%= account.roleName %> (rank <%= account.roleRank %>)
+            &middot; <%= account.status %>
+          </p>
+
+          <% if (canGrant) { %>
+            <form method="post" action="/admin/users/<%= account.id %>/club">
+              <h2 class="fb-admin__heading">Grant a membership</h2>
+              <p class="fb-admin__muted">
+                Payment is not live, so this records a grant, not a purchase: the amount is 0 and
+                your name and note are kept against it.
+              </p>
+
+              <div class="fb-mod__field">
+                <label for="fb-tier">Tier</label>
+                <select id="fb-tier" name="tier">
+                  <% tiers.forEach(function (tier) { %>
+                    <option value="<%= tier.key %>"><%= tier.name %> (<%= tier.shortName %>)</option>
+                  <% }); %>
+                </select>
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-term">Term</label>
+                <select id="fb-term" name="term">
+                  <% terms.forEach(function (term) { %>
+                    <option value="<%= term.key %>"><%= term.name %> - <%= term.note %></option>
+                  <% }); %>
+                </select>
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-club-note">Note (staff only, never shown to the member)</label>
+                <input id="fb-club-note" type="text" name="note" maxlength="300" autocomplete="off">
+              </div>
+
+              <button class="fb-btn fb-btn--primary" type="submit">Grant membership</button>
+            </form>
+          <% } else { %>
+            <p>
+              <strong>Your role cannot grant a membership.</strong>
+              Junior Administrator and above can; this account's memberships are still listed below.
+            </p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Memberships</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Tier</th>
+                <th scope="col">Term</th>
+                <th scope="col">Started</th>
+                <th scope="col">Ends</th>
+                <th scope="col">Granted by</th>
+                <th scope="col">Note</th>
+                <th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (memberships.length === 0) { %>
+                <tr><td colspan="7" class="fb-table__last">No membership has been granted on this account.</td></tr>
+              <% } %>
+              <% memberships.forEach(function (entry) { %>
+                <tr>
+                  <td><%= entry.tierName %></td>
+                  <td><%= entry.termName %></td>
+                  <td><%= entry.started %></td>
+                  <td><%= entry.cancelled ? 'ended ' + entry.cancelled : entry.expires %></td>
+                  <td><%= entry.grantedBy %></td>
+                  <td class="fb-table__note"><%= entry.note %></td>
+                  <td>
+                    <% if (entry.active && canGrant) { %>
+                      <form method="post" action="/admin/users/<%= account.id %>/club">
+                        <input type="hidden" name="action" value="end">
+                        <input type="hidden" name="membership" value="<%= entry.id %>">
+                        <button class="fb-btn" type="submit">End</button>
+                      </form>
+                    <% } else if (entry.active) { %>
+                      active
+                    <% } else { %>
+                      -
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        Ending a membership sets its end date now; the row stays, so the account's record still
+        shows what was held and when. Term lengths come from the Carpenters Club price list:
+        monthly 1 month, quarterly 6, yearly 12, permanent never expires.
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

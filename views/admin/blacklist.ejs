@@ -1,0 +1,93 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Blacklist Email</h1>
+        <div class="fb-panel__body">
+          <p class="fb-admin__muted">
+            A blacklisted address cannot be used to create an account. Poison bans add their
+            account's address here automatically; this page is for the rest.
+          </p>
+
+          <form method="post" action="/admin/blacklist">
+            <div class="fb-mod__field">
+              <label for="fb-email">Email address</label>
+              <input id="fb-email" type="text" name="email" maxlength="254" autocomplete="off">
+            </div>
+            <div class="fb-mod__field">
+              <label for="fb-email-reason">Reason</label>
+              <input id="fb-email-reason" type="text" name="reason" maxlength="300" autocomplete="off">
+            </div>
+            <button class="fb-btn fb-btn--primary" type="submit">Blacklist address</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Blacklisted addresses</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Address</th>
+                <th scope="col">Reason</th>
+                <th scope="col">Added by</th>
+                <th scope="col">Added</th>
+                <th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (entries.length === 0) { %>
+                <tr><td colspan="5" class="fb-table__last">No address is blacklisted.</td></tr>
+              <% } %>
+              <% entries.forEach(function (entry) { %>
+                <tr>
+                  <td><%= entry.email %></td>
+                  <td class="fb-table__note"><%= entry.reason %></td>
+                  <td><%= entry.by %></td>
+                  <td><%= entry.when %></td>
+                  <td>
+                    <form method="post" action="/admin/blacklist">
+                      <input type="hidden" name="action" value="remove">
+                      <input type="hidden" name="email" value="<%= entry.email %>">
+                      <button class="fb-btn" type="submit">Remove</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        Removing an address does not lift anything that ban did: the account itself is still
+        banned, and its name is still scrubbed. This only frees the address for a new account.
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>
