@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const adminContentRoutes = require('./routes/adminContent');
 const earningsRoutes = require('./routes/earnings');
+const mailboxRoutes = require('./routes/mailbox');
 const pageRoutes = require('./routes/pages');
 
 const app = express();
@@ -53,6 +54,10 @@ app.use('/', adminContentRoutes);
 // Tickets: the earning page and its claim. Mounted before the page router so
 // /earnings is not mistaken for a page that does not exist.
 app.use('/', earningsRoutes);
+
+// Messages: the inbox, the sent box and their forms. Mounted before the page
+// router so /messages/sent and /messages/compose are not read as a message id.
+app.use('/', mailboxRoutes);
 
 app.use('/', pageRoutes);
 
