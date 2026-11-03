@@ -27,6 +27,7 @@ const NAV = [
     items: [
       { label: 'Search Users', href: '/admin/users', cap: 'users.search', path: '/admin/users' },
       { label: 'User Admins', href: '/admin/users?staff=1', cap: 'users.role', path: '/admin/users', staff: true },
+      { label: 'Blacklist Email', href: '/admin/blacklist', cap: 'users.blacklist_email' },
     ],
   },
   { label: 'Content', items: [] },

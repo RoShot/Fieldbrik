@@ -47,6 +47,12 @@
             <% if (canModerate) { %>
               <a class="fb-btn" href="/admin/users/<%= account.id %>/moderate">Moderate User</a>
             <% } %>
+            <% if (canClub) { %>
+              <a class="fb-btn" href="/admin/users/<%= account.id %>/club">Carpenters Club</a>
+            <% } %>
+            <% if (canReferral) { %>
+              <a class="fb-btn" href="/admin/users/<%= account.id %>/referral">Referral Program</a>
+            <% } %>
             <a class="fb-btn" href="/admin/users">Back to search</a>
           </div>
 
@@ -175,9 +181,9 @@
           </table>
 
           <p class="fb-admin__note">
-            Moderation actions are on the Moderate User page. Warn, ban, scrub and
-            poison all write a restriction and an audit entry; nothing here is a
-            shortcut around that.
+            Moderation actions are on the Moderate User page; memberships and referrals have their
+            own pages. Every one of them writes a restriction or an audit entry, so nothing here
+            is a shortcut around the record.
           </p>
         </div>
       </div>
