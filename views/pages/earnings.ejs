@@ -1,0 +1,147 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Tickets</h1>
+    <span class="fb-pagecount"><%= site.currency.earned %>, earned by using the site</span>
+  </div>
+
+  <% if (notice) { %>
+    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
+  <% } %>
+
+  <% if (!state) { %>
+    <div class="fb-notice">
+      <p><strong><a href="/login">Sign in</a> to see your Tickets.</strong></p>
+      <p>Tickets are earned by an account, so the amounts below are what a signed-in member gets. The rates are the same for everybody.</p>
+    </div>
+
+    <section class="fb-panel">
+      <h2 class="fb-panel__title">What a day is worth</h2>
+      <div class="fb-panel__body fb-panel__body--flush">
+        <table class="fb-table fb-table--admin">
+          <thead>
+            <tr>
+              <th scope="col">Account</th>
+              <th scope="col">Tickets per day</th>
+              <th scope="col">Bucks per day</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Free account</td><td>100</td><td>-</td></tr>
+            <tr><td>Carpenters Club</td><td>150</td><td>-</td></tr>
+            <tr><td>Carpenters Club Senior</td><td>300</td><td>-</td></tr>
+            <tr><td>Outrageous Carpenters Club</td><td>500</td><td>25</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fb-panel__strip">A place you own also pays 500 Tickets for every 10 visits.</p>
+    </section>
+  <% } else { %>
+
+    <div class="fb-cols">
+      <div class="fb-col-main">
+        <section class="fb-panel">
+          <h2 class="fb-panel__title">
+            <span class="fb-panel__title-row">
+              <span>Today's Tickets</span>
+              <span class="fb-pagecount"><%= state.day %></span>
+            </span>
+          </h2>
+          <div class="fb-panel__body">
+            <% if (state.claimedToday) { %>
+              <p>
+                <strong>Collected: <%= state.claimedAmount %> Tickets today.</strong>
+                <% if (state.dailyBucks > 0) { %>Plus <%= state.dailyBucks %> Bucks.<% } %>
+              </p>
+              <p class="fb-muted">The next daily Tickets arrive after midnight UTC. You are on <%= state.tierName ? state.tierName : 'a free account' %>, which pays <%= state.dailyTickets %> a day.</p>
+            <% } else { %>
+              <p>
+                <strong><%= state.dailyTickets %> Tickets are waiting.</strong>
+                <% if (state.dailyBucks > 0) { %>Plus <%= state.dailyBucks %> Bucks.<% } %>
+              </p>
+              <form method="post" action="/earnings/claim">
+                <button class="fb-btn fb-btn--primary" type="submit">Collect today's Tickets</button>
+              </form>
+            <% } %>
+            <% if (state.tierName) { %>
+              <p class="fb-muted">Your <%= state.tierName %> membership is active, so the daily award is the membership rate rather than the free one.</p>
+            <% } %>
+          </div>
+        </section>
+
+        <section class="fb-panel">
+          <h2 class="fb-panel__title">Visits on your places</h2>
+          <div class="fb-panel__body fb-panel__body--flush">
+            <table class="fb-table fb-table--admin">
+              <thead>
+                <tr>
+                  <th scope="col">Place</th>
+                  <th scope="col">Visits</th>
+                  <th scope="col">Milestones paid</th>
+                  <th scope="col">Next at</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (state.places.length === 0) { %>
+                  <tr>
+                    <td colspan="4" class="fb-table__last">
+                      No places yet. Building and publishing a place is not part of this build, so there is
+                      nothing here to count visits on - this table fills in when places exist.
+                    </td>
+                  </tr>
+                <% } %>
+                <% state.places.forEach(function (place) { %>
+                  <tr>
+                    <td><%= place.name %><% if (place.visits === 0) { %> <span class="fb-muted">(unvisited)</span><% } %></td>
+                    <td><%= place.visits %></td>
+                    <td><%= place.awarded %> of <%= place.milestones %></td>
+                    <td><%= place.nextAt %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+          <p class="fb-panel__strip">
+            Every <%= state.visitBlock %> visits pays <%= state.visitReward %> Tickets, once per milestone.
+          </p>
+        </section>
+      </div>
+
+      <aside class="fb-col-side">
+        <section class="fb-panel">
+          <h2 class="fb-panel__title">What a day is worth</h2>
+          <div class="fb-panel__body">
+            <table class="fb-table fb-table--kv">
+              <tbody>
+                <% state.ladder.forEach(function (row) { %>
+                  <tr>
+                    <th scope="row"><%= row.label %></th>
+                    <td><%= row.tickets %> Tx<% if (row.bucks > 0) { %> + <%= row.bucks %> R$<% } %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+            <p class="fb-muted">
+              The membership rate replaces the free rate; it is not added to it. A daily award lands once
+              per day, on the first page you open while signed in.
+            </p>
+          </div>
+        </section>
+
+        <section class="fb-panel">
+          <h2 class="fb-panel__title">Spending them</h2>
+          <div class="fb-panel__body">
+            <p>Tickets buy catalog items. <a href="/catalog">Browse the catalog</a>.</p>
+            <p class="fb-muted">Everything you earn is a ledger entry on your account, so the amounts here are the same numbers the panel sees.</p>
+          </div>
+        </section>
+      </aside>
+    </div>
+  <% } %>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>
