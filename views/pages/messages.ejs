@@ -1,0 +1,71 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Messages</h1>
+    <span class="fb-pagecount"><%= unread %> unread</span>
+  </div>
+
+  <table class="fb-table">
+    <thead>
+      <tr>
+        <th scope="col">From</th>
+        <th scope="col">Subject</th>
+        <th scope="col">Received</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (messages.length === 0) { %>
+        <tr>
+          <td colspan="3" class="fb-table__last">No messages yet.</td>
+        </tr>
+      <% } else { %>
+        <% messages.forEach(function (message) { %>
+          <tr>
+            <td><a class="fb-table__name" href="/people/<%= message.from %>"><%= message.from %></a></td>
+            <td>
+              <a href="/messages/<%= message.id %>"><%= message.subject %></a>
+              <% if (!message.read) { %><span class="fb-msg--unread">new</span><% } %>
+            </td>
+            <td class="fb-table__last"><%= message.date %></td>
+          </tr>
+        <% }); %>
+      <% } %>
+    </tbody>
+  </table>
+
+  <p class="fb-pagination">Page 1 of 1</p>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">New Message</h2>
+    <div class="fb-panel__body">
+      <form class="fb-auth" method="post" action="/messages">
+        <div class="fb-auth__row">
+          <label for="msg-to">To</label>
+          <input id="msg-to" name="to" type="text" placeholder="Username" disabled>
+        </div>
+        <div class="fb-auth__row">
+          <label for="msg-subject">Subject</label>
+          <input id="msg-subject" name="subject" type="text" disabled>
+        </div>
+        <div class="fb-auth__row fb-auth__row--top">
+          <label for="msg-body">Message</label>
+          <textarea id="msg-body" name="body" rows="5" disabled></textarea>
+        </div>
+        <div class="fb-auth__actions">
+          <button class="fb-btn fb-btn--primary" type="submit" disabled>Send</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <div class="fb-notice">
+    <p><strong>Sending is not live.</strong></p>
+    <p>The inbox above is phase 1 display data between the demo members, so the table can be reviewed with real rows in it. Sending, read state, deletion and reporting all belong to the messaging service in phase 4; the form is disabled rather than silently discarding what you type.</p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <p class="fb-crumbs"><a href="/messages">Messages</a> &raquo; <%= message.subject %></p>
+
+  <div class="fb-title-row">
+    <h1 class="fb-title"><%= message.subject %></h1>
+  </div>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">
+      <span class="fb-panel__title-row">
+        <span>From <a href="/people/<%= message.from %>"><%= message.from %></a></span>
+        <span><%= message.date %></span>
+      </span>
+    </h2>
+    <div class="fb-panel__body fb-prose">
+      <% message.body.forEach(function (paragraph) { %>
+        <p><%= paragraph %></p>
+      <% }); %>
+    </div>
+    <p class="fb-panel__strip">To <%= message.to %></p>
+  </section>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Reply</h2>
+    <div class="fb-panel__body">
+      <form class="fb-auth" method="post" action="/messages">
+        <input type="hidden" name="to" value="<%= message.from %>">
+        <div class="fb-auth__row fb-auth__row--top">
+          <label for="reply-body">Message</label>
+          <textarea id="reply-body" name="body" rows="4" disabled></textarea>
+        </div>
+        <div class="fb-auth__actions">
+          <button class="fb-btn fb-btn--primary" type="submit" disabled>Send Reply</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <p class="fb-panel__more"><a href="/messages">Back to the inbox</a></p>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

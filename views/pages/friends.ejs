@@ -1,0 +1,65 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Friends</h1>
+    <span class="fb-pagecount"><%= total %> friends</span>
+  </div>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Friend Requests</h2>
+    <div class="fb-panel__body">
+      <div class="fb-cols">
+        <div class="fb-col-main">
+          <p class="fb-muted">Incoming</p>
+          <% if (incoming.length === 0) { %>
+            <p class="fb-muted">No incoming requests.</p>
+          <% } %>
+        </div>
+        <div class="fb-col-main">
+          <p class="fb-muted">Sent</p>
+          <% if (outgoing.length === 0) { %>
+            <p class="fb-muted">No requests waiting for a reply.</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <table class="fb-table">
+    <thead>
+      <tr>
+        <th scope="col">Avatar</th>
+        <th scope="col">Name</th>
+        <th scope="col">Status</th>
+        <th scope="col">Friends</th>
+        <th scope="col">Joined</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% friends.forEach(function (friend) { %>
+        <tr>
+          <td class="fb-table__avatar">
+            <%- include('../partials/avatar', { avatar: friend.avatar, size: 'xs' }) %>
+          </td>
+          <td><a class="fb-table__name" href="/people/<%= friend.username %>"><%= friend.username %></a></td>
+          <td><%= friend.online ? 'Online' : 'Offline' %></td>
+          <td><%= friend.stats.friends %></td>
+          <td class="fb-table__last"><%= friend.joined %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <p class="fb-pagination">Page 1 of 1</p>
+
+  <div class="fb-notice">
+    <p><strong>Read only for now.</strong></p>
+    <p>There are no Accept or Remove buttons on purpose. Friendship records, duplicate-request prevention and blocking all live in the social service, which arrives in phase 4. Both request lists are empty because you genuinely have no pending requests in this build - not because the panel was left blank.</p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

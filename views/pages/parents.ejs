@@ -1,0 +1,23 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-content">
+    <h1 class="fb-title">FieldBrik Parents</h1>
+
+    <ul class="fb-grid--parents">
+      <% cards.forEach(function (card) { %>
+        <li class="fb-card-parent">
+          <div>
+            <a class="fb-card-parent__title" href="<%= card.href %>"><%= card.title %></a>
+            <p class="fb-card-parent__text"><%= card.text %></p>
+          </div>
+        </li>
+      <% }); %>
+    </ul>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

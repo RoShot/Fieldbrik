@@ -1,0 +1,65 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-content">
+    <h1 class="fb-title">Carpenters Club</h1>
+
+    <div class="fb-prose">
+      <p>Carpenters Club is FieldBrik's optional membership. The free service stays free: everything you need to build, publish and play is available without a membership. Carpenters Club adds recognition and supporting benefits on top of it.</p>
+      <p>There are three tiers. Each tier can be bought for a fixed term, or permanently as a single payment that never renews.</p>
+    </div>
+
+    <h2 class="fb-subtitle">Membership tiers</h2>
+    <ul class="fb-list">
+      <% club.tiers.forEach(function (tier) { %>
+        <li><strong><%= tier.name %></strong> (<%= tier.shortName %>) - <%= tier.description %></li>
+      <% }); %>
+    </ul>
+
+    <h2 class="fb-subtitle">Terms and pricing</h2>
+    <p class="fb-muted"><%= club.currencyNote %></p>
+    <table class="fb-price-table">
+      <thead>
+        <tr>
+          <th scope="col">Membership</th>
+          <% club.terms.forEach(function (term) { %>
+            <th scope="col"><%= term.name %><br><span class="fb-muted"><%= term.note %></span></th>
+          <% }); %>
+        </tr>
+      </thead>
+      <tbody>
+        <% club.tiers.forEach(function (tier) { %>
+          <tr>
+            <td><%= tier.name %><br><span class="fb-muted"><%= tier.shortName %></span></td>
+            <% club.terms.forEach(function (term) { %>
+              <td><%= club.currencySymbol %><%= tier.prices[term.key].toFixed(2) %></td>
+            <% }); %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+
+    <div class="fb-notice">
+      <p><strong>Prices are set. Payment is not live.</strong></p>
+      <p>These are the membership prices. No checkout exists yet, so nothing on this page can take money, and no account can hold a membership until the accounts and economy services are built in phase 2.</p>
+    </div>
+
+    <h2 class="fb-subtitle">The badges</h2>
+    <p class="fb-prose">Membership is shown on your profile by a badge:</p>
+    <ul class="fb-grid--badges">
+      <% [['Carpenters Club', '#a9822f'], ['Carpenters Club Senior', '#8a6a1f'], ['Outrageous Carpenters Club', '#6a4a8a']].forEach(function (entry) { %>
+        <li class="fb-badge">
+          <span class="fb-badge__pip" style="--badge: <%= entry[1] %>;" aria-hidden="true"></span>
+          <%= entry[0] %>
+        </li>
+      <% }); %>
+    </ul>
+
+    <p class="fb-muted">Carpenters Club badges are awarded server-side from the account's membership record. A badge cannot be granted by editing anything in the browser.</p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

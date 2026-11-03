@@ -1,0 +1,83 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-title-row">
+    <h1 class="fb-title">Account Settings</h1>
+    <span class="fb-pagecount"><%= viewerName %></span>
+  </div>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Change Password</h2>
+    <div class="fb-panel__body">
+      <form class="fb-auth" method="post" action="/settings/password">
+        <div class="fb-auth__row">
+          <label for="pw-current">Current password</label>
+          <input id="pw-current" name="current" type="password" autocomplete="current-password" disabled>
+        </div>
+        <div class="fb-auth__row">
+          <label for="pw-new">New password</label>
+          <input id="pw-new" name="password" type="password" autocomplete="new-password" disabled>
+        </div>
+        <div class="fb-auth__row">
+          <label for="pw-confirm">Confirm new password</label>
+          <input id="pw-confirm" name="password" type="password" autocomplete="new-password" disabled>
+        </div>
+        <div class="fb-auth__actions">
+          <button class="fb-btn fb-btn--primary" type="submit" disabled>Change Password</button>
+        </div>
+      </form>
+      <p class="fb-muted">Changing a password ends every other session on the account.</p>
+    </div>
+  </section>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Notifications</h2>
+    <div class="fb-panel__body">
+      <ul class="fb-checks">
+        <li><label><input type="checkbox" checked disabled> New friend requests</label></li>
+        <li><label><input type="checkbox" checked disabled> New private messages</label></li>
+        <li><label><input type="checkbox" checked disabled> Warnings and moderation notices</label></li>
+        <li><label><input type="checkbox" disabled> News and announcements</label></li>
+      </ul>
+      <p class="fb-muted">Moderation notices cannot be turned off. Everything else can.</p>
+    </div>
+  </section>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Sessions</h2>
+    <div class="fb-panel__body fb-panel__body--flush">
+      <table class="fb-table fb-table--kv">
+        <tbody>
+          <tr>
+            <th scope="row">This device</th>
+            <td>Current session. Signing out ends it server-side, not just in the browser.</td>
+          </tr>
+          <tr>
+            <th scope="row">Other sessions</th>
+            <td>No other sessions are listed.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Close Account</h2>
+    <div class="fb-panel__body">
+      <p>Closing an account removes your profile content and clears your identifying details. Moderation and transaction records are retained without identifying you, so restrictions and currency records cannot be erased on request.</p>
+      <p>
+        <button class="fb-btn" type="button" disabled>Request Account Deletion</button>
+      </p>
+    </div>
+  </section>
+
+  <div class="fb-notice">
+    <p><strong>Nothing on this page can save yet.</strong></p>
+    <p>Every control is disabled because accounts do not exist. Passwords, preferences and deletion requests are handled by the accounts service in phase 2; the form layouts are here now so that phase 2 wires behaviour instead of rewriting pages.</p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>
