@@ -56,7 +56,11 @@
             <ul class="fb-grid--badges">
               <% heldBadges.forEach(function (badge) { %>
                 <li class="fb-badge" title="<%= badge.description %>">
-                  <span class="fb-badge__pip" style="--badge: <%= badge.color %>;" aria-hidden="true"></span>
+                  <% if (badge.art) { %>
+                    <img class="fb-badge__art" src="<%= badge.art %>" alt="" width="34" height="34">
+                  <% } else { %>
+                    <span class="fb-badge__pip" style="--badge: <%= badge.color %>;" aria-hidden="true"></span>
+                  <% } %>
                   <%= badge.name %>
                 </li>
               <% }); %>

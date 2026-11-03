@@ -48,9 +48,13 @@
     <h2 class="fb-subtitle">The badges</h2>
     <p class="fb-prose">Membership is shown on your profile by a badge:</p>
     <ul class="fb-grid--badges">
-      <% [['Carpenters Club', '#a9822f'], ['Carpenters Club Senior', '#8a6a1f'], ['Outrageous Carpenters Club', '#6a4a8a']].forEach(function (entry) { %>
+      <% [
+        ['Carpenters Club', '/img/ccb.png'],
+        ['Carpenters Club Senior', '/img/ccs.png'],
+        ['Outrageous Carpenters Club', '/img/occ.png']
+      ].forEach(function (entry) { %>
         <li class="fb-badge">
-          <span class="fb-badge__pip" style="--badge: <%= entry[1] %>;" aria-hidden="true"></span>
+          <img class="fb-badge__art" src="<%= entry[1] %>" alt="" width="34" height="34">
           <%= entry[0] %>
         </li>
       <% }); %>
