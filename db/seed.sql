@@ -1,9 +1,10 @@
 -- Seed data for FieldBrik 0.3.
 --
--- This file contains site structure only: badge definitions and forum sections.
--- It deliberately does not create members, places, items or posts. Those are
--- user data, and inventing them would put fake accounts into a real database.
--- The first real account is created through registration.
+-- This file contains site structure only: badge definitions, forum sections and
+-- the items the site itself sells. It deliberately does not create members,
+-- places or posts. Those are user data, and inventing them would put fake
+-- accounts into a real database. The first real account is created through
+-- registration.
 
 -- Badge definitions. The key is what user_badges stores, so these strings must
 -- match the role names, the Carpenters Club tiers and the file names chosen for
@@ -44,3 +45,51 @@ ON CONFLICT (slug) DO UPDATE SET
   description = excluded.description,
   position    = excluded.position,
   staff_only  = excluded.staff_only;
+
+-- Official catalog items.
+--
+-- These are what the site sells, so they ship with the site the way badge and
+-- forum definitions do. A catalog row needs an owner, and there is no separate
+-- "FieldBrik" account, so the creator is the oldest account - the founder, who
+-- is the first person to register.
+--
+-- Every statement below is a no-op on a database with no members yet (the
+-- subquery for the creator returns nothing, so nothing is inserted) and a no-op
+-- on a later run once the row exists. Names are the key: renaming an item in the
+-- panel creates a new row rather than editing this one, which is why the details
+-- are attached by name here.
+INSERT INTO catalog_items (name, category, creator_id, tickets, bucks, on_sale)
+SELECT 'Astronaut Helmet', 'Hats', (SELECT id FROM users ORDER BY id ASC LIMIT 1), 115, 15, 1
+ WHERE EXISTS (SELECT 1 FROM users)
+   AND NOT EXISTS (SELECT 1 FROM catalog_items WHERE name = 'Astronaut Helmet');
+
+INSERT INTO catalog_items (name, category, creator_id, tickets, bucks, on_sale)
+SELECT 'Black Iron Crown of Pwnage', 'Hats', (SELECT id FROM users ORDER BY id ASC LIMIT 1), 4000, 500, 1
+ WHERE EXISTS (SELECT 1 FROM users)
+   AND NOT EXISTS (SELECT 1 FROM catalog_items WHERE name = 'Black Iron Crown of Pwnage');
+
+INSERT INTO catalog_items (name, category, creator_id, tickets, bucks, on_sale)
+SELECT 'Helmet', 'Hats', (SELECT id FROM users ORDER BY id ASC LIMIT 1), 500, 93, 1
+ WHERE EXISTS (SELECT 1 FROM users)
+   AND NOT EXISTS (SELECT 1 FROM catalog_items WHERE name = 'Helmet');
+
+-- Descriptions and artwork. The image is a path under public/, and an item with
+-- an empty image is drawn as its colour swatch, which is why the art can arrive
+-- in a later pass without the page ever showing a broken picture.
+INSERT INTO catalog_item_details (item_id, description, image)
+SELECT i.id, 'Ad astra per aspera', ''
+  FROM catalog_items i
+ WHERE i.name = 'Astronaut Helmet'
+   AND NOT EXISTS (SELECT 1 FROM catalog_item_details d WHERE d.item_id = i.id);
+
+INSERT INTO catalog_item_details (item_id, description, image)
+SELECT i.id, '', ''
+  FROM catalog_items i
+ WHERE i.name = 'Black Iron Crown of Pwnage'
+   AND NOT EXISTS (SELECT 1 FROM catalog_item_details d WHERE d.item_id = i.id);
+
+INSERT INTO catalog_item_details (item_id, description, image)
+SELECT i.id, '', ''
+  FROM catalog_items i
+ WHERE i.name = 'Helmet'
+   AND NOT EXISTS (SELECT 1 FROM catalog_item_details d WHERE d.item_id = i.id);
