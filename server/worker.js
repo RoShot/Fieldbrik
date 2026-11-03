@@ -28,6 +28,7 @@ import adminModule from './routes/admin.js';
 import site from './config/site.js';
 import accounts from './services/accounts.js';
 import pageContext from './services/pageContext.js';
+import moderation from './services/moderation.js';
 
 // esbuild's CommonJS interop: a router is module.exports, so it can arrive as
 // either the default or the namespace depending on how it was bundled.
@@ -165,6 +166,26 @@ async function readBody(request) {
       for (const [key, value] of form) body[key] = value;
       return body;
     }
+    if (type.includes('multipart/form-data')) {
+      // Evidence uploads. A file arrives as an object with the same three
+      // members the service reads, so the route does not care which runtime it
+      // is in.
+      const form = await request.formData();
+      const body = {};
+      for (const [key, value] of form.entries()) {
+        if (typeof value === 'string') {
+          body[key] = value;
+        } else if (value && typeof value.arrayBuffer === 'function') {
+          body[key] = {
+            name: value.name,
+            size: value.size,
+            type: value.type,
+            arrayBuffer: () => value.arrayBuffer(),
+          };
+        }
+      }
+      return body;
+    }
   } catch (error) {
     // A malformed body is the caller's problem; the route validates it anyway.
   }
@@ -230,6 +251,7 @@ async function handlePage(request, url, env) {
   // Resolve the session once, before any route runs, so every page sees the
   // same viewer and the account routes can rely on req.cookies being parsed.
   let failure = null;
+  let blocked = null;
 
   if (req.db) {
     try {
@@ -239,9 +261,11 @@ async function handlePage(request, url, env) {
         const restriction = await accounts.activeRestriction(req.db, user.id);
 
         if (restriction) {
-          // A restricted account is treated as signed out, everywhere, because
-          // the check is here rather than in each page.
-          res.clearCookie(COOKIE, { path: '/' });
+          // The session is deliberately kept. Clearing it would show the notice
+          // once and then drop the member to a signed-out site, which is not
+          // what a ban means: every request should explain the situation until
+          // the restriction is lifted.
+          blocked = { user, restriction };
         } else {
           req.user = user;
 
@@ -258,7 +282,23 @@ async function handlePage(request, url, env) {
     }
   }
 
-  failure = await runRouter(authRoutes, req, res);
+  // A ban or restriction replaces every page with the notice, not just the
+  // sign-in form: refreshing should explain the situation rather than show a
+  // site the account cannot use.
+  if (blocked) {
+    const banner = await moderation.bannerFor(req.db, blocked.user, blocked.restriction);
+    res.status(403).render(
+      'pages/banned',
+      pageContext(req, {
+        pageTitle: 'Account restricted - FieldBrik',
+        banned: banner,
+      })
+    );
+  }
+
+  if (!state.answered) {
+    failure = await runRouter(authRoutes, req, res);
+  }
 
   // The admin panel gates itself over /admin, so it runs before the public
   // router rather than being one more page inside it.
@@ -305,9 +345,47 @@ async function handlePage(request, url, env) {
   return new Response(state.body || null, { status: state.status, headers: state.headers });
 }
 
+/**
+ * Serves one evidence image by its token.
+ *
+ * The token is the capability: the person who needs to see the image is the
+ * banned account, who has just been refused a session. It is 128 random bits,
+ * and the response is never cached by a shared cache.
+ */
+async function evidenceResponse(env, token) {
+  if (!env.DB || !/^[a-f0-9]{32}$/.test(token)) {
+    return new Response('Not found', { status: 404 });
+  }
+
+  const row = await env.DB.prepare(
+    'SELECT content_type, data FROM restriction_evidence WHERE access_token = ?'
+  )
+    .bind(token)
+    .first();
+
+  if (!row) return new Response('Not found', { status: 404 });
+
+  const binary = atob(row.data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+
+  return new Response(bytes, {
+    status: 200,
+    headers: {
+      'content-type': row.content_type,
+      'cache-control': 'private, no-store',
+      'x-content-type-options': 'nosniff',
+    },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith('/evidence/')) {
+      return evidenceResponse(env, url.pathname.slice('/evidence/'.length));
+    }
 
     if (isStatic(url.pathname)) {
       try {
