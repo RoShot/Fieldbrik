@@ -10,6 +10,7 @@ const express = require('express');
 
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const adminContentRoutes = require('./routes/adminContent');
 const earningsRoutes = require('./routes/earnings');
 const pageRoutes = require('./routes/pages');
 
@@ -44,6 +45,10 @@ app.use('/', authRoutes);
 
 // The panel, for the same reason as the Worker: it gates /admin itself.
 app.use('/', adminRoutes);
+
+// Catalog and earning-rate pages. A separate router because /routes/admin.js
+// is already the largest file in the project.
+app.use('/', adminContentRoutes);
 
 // Tickets: the earning page and its claim. Mounted before the page router so
 // /earnings is not mistaken for a page that does not exist.
