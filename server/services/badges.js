@@ -25,6 +25,9 @@ const ART = {
   friends_20: '/img/20friends.png',
   brikker: '/img/brikker.png',
   briksmith: '/img/briksmith.png',
+  combat_initiation: '/img/combatinitationbadge.jpg',
+  warrior: '/img/warriorbadge.jpg',
+  homestead: '/img/homesteadbadge.jpg',
   // The invite badge is stored under the key the referral grant already writes.
   referral: '/img/inviter.png',
 };
@@ -32,20 +35,22 @@ const ART = {
 /**
  * The badge a role carries.
  *
- * Several roles share one badge on purpose: the ladder has three moderator
- * grades and three administrator grades, and the art distinguishes moderator
- * from administrator rather than drawing six near-identical pictures. Root
- * carries the Super Administrator badge, which is what the operator described
- * that artwork as covering.
+ * There is no moderator badge and no support staff badge: the operator retired
+ * both, and moderators wear the Administrator badge. Roles still share a badge
+ * where the ladder has several grades of one job - three moderator grades, three
+ * administrator grades - because the art shows the job rather than the grade.
+ * Root carries the Super Administrator badge.
+ *
+ * An empty string means the role carries no badge at all.
  */
 const ROLE_BADGES = {
-  support_rep: 'support_staff',
-  support_admin: 'support_staff',
+  support_rep: '',
+  support_admin: '',
   image_moderator: 'image_moderator',
   forum_moderator: 'forum_moderator',
-  moderator: 'moderator',
-  senior_moderator: 'moderator',
-  super_moderator: 'moderator',
+  moderator: 'administrator',
+  senior_moderator: 'administrator',
+  super_moderator: 'administrator',
   junior_administrator: 'administrator',
   senior_administrator: 'administrator',
   administrator: 'administrator',
@@ -54,7 +59,7 @@ const ROLE_BADGES = {
 };
 
 /** Every badge a role can account for. Used when a role goes away. */
-const ROLE_BADGE_KEYS = ['support_staff', 'image_moderator', 'forum_moderator', 'moderator', 'administrator', 'super_administrator'];
+const ROLE_BADGE_KEYS = ['image_moderator', 'forum_moderator', 'administrator', 'super_administrator'];
 
 /** The drawing for a badge key, or '' when it has none yet. */
 function artFor(key) {

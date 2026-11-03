@@ -40,11 +40,12 @@ single place to change if a file is renamed.
 | File | Key | Awarded for |
 |---|---|---|
 | `brikker.png` | `brikker` | 150 knockouts |
+| `combatinitationbadge.jpg` | `combat_initiation` | 10 knockouts |
 | `briksmith.png` | `briksmith` | 100 visits on your place |
 | `20friends.png` | `friends_20` | 20 friends |
 | `inviter.png` | `referral` | invited a member who joined |
 | `superadmin.png` | `super_administrator` | Super Administrator |
-| `administrator.png` | `administrator` | Administrator and above |
+| `administrator.png` | `administrator` | Administrator and above, and Moderators |
 | `imagemod.png` | `image_moderator` | holds Image Moderator |
 | `formmod.png` | `forum_moderator` | holds Forum Moderator |
 | `ccb.png` | `carpenters_club` | Carpenters Club, kept after it ends |
@@ -53,15 +54,23 @@ single place to change if a file is renamed.
 | `officialmodelmaker.png` | `official_model_maker` | awarded by staff, Senior Moderator and above |
 | `ambassador.png` | `ambassador` | account linked to three or more platforms |
 | `1year.png` | `one_year` | account at least a year old |
+| `warriorbadge.jpg` | `warrior` | 1,500 knockouts |
+| `homesteadbadge.jpg` | `homestead` | 500 visits on your place |
 
-Still without a drawing, and drawn as their coloured square until one arrives:
-`combat_initiation.png`, `warrior.png`, `homestead.png`.
+Every badge in the catalogue now has art.
+
+Support Staff and Moderator were retired as badges: there is no badge for support
+staff, and moderators wear the Administrator badge. Migration 006 deletes the two
+old definitions and their grants.
+
+The combat file is spelled `combatinitationbadge.jpg` on disk, with one "i"
+missing. The art map follows the file; rename both together if it ever matters.
 
 ## Two known snags
 
 - `ambassador.png`, `briksmith.png`, `ccs.png` and `superadmin.png` are WebP image
-data saved under a `.png` name. Browsers read the bytes rather than the label, so
-they draw, but the file name is a lie. Re-save them as real PNG if one ever shows
-as a blank box.
+  data saved under a `.png` name. Browsers read the bytes rather than the label, so
+  they draw, but the file name is a lie. Re-save them as real PNG if one ever shows
+  as a blank box.
 - `1year.png` is 600x600 and about 400 KB to fill a 34px square. Downscaling it to
   96x96 would cut most of that.

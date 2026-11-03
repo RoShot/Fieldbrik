@@ -14,13 +14,11 @@
 WITH mapped AS (
   SELECT ur.user_id,
          CASE ur.role_key
-           WHEN 'support_rep'          THEN 'support_staff'
-           WHEN 'support_admin'        THEN 'support_staff'
            WHEN 'image_moderator'      THEN 'image_moderator'
            WHEN 'forum_moderator'      THEN 'forum_moderator'
-           WHEN 'moderator'            THEN 'moderator'
-           WHEN 'senior_moderator'     THEN 'moderator'
-           WHEN 'super_moderator'      THEN 'moderator'
+           WHEN 'moderator'            THEN 'administrator'
+           WHEN 'senior_moderator'     THEN 'administrator'
+           WHEN 'super_moderator'      THEN 'administrator'
            WHEN 'junior_administrator' THEN 'administrator'
            WHEN 'senior_administrator' THEN 'administrator'
            WHEN 'administrator'        THEN 'administrator'
@@ -30,7 +28,7 @@ WITH mapped AS (
          ur.granted_by
     FROM user_roles ur
    WHERE ur.role_key IN (
-           'support_rep', 'support_admin', 'image_moderator', 'forum_moderator',
+           'image_moderator', 'forum_moderator',
            'moderator', 'senior_moderator', 'super_moderator',
            'junior_administrator', 'senior_administrator', 'administrator',
            'super_administrator', 'root'

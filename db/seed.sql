@@ -12,8 +12,6 @@
 INSERT INTO badges (key, name, description, color) VALUES
   ('super_administrator',        'Super Administrator',     'Runs the platform.', '#8a2f2f'),
   ('administrator',              'Administrator',           'Administers the platform.', '#a8471f'),
-  ('moderator',                  'Moderator',               'Keeps the community safe.', '#2f6fb5'),
-  ('support_staff',              'Support Staff',           'Helps members with account issues.', '#3f8f5c'),
   ('image_moderator',            'Image Moderator',         'Reviews images and assets.', '#2f8f8a'),
   ('forum_moderator',            'Forum Moderator',         'Keeps the forum in order.', '#4f6fb5'),
   ('carpenters_club',            'Carpenters Club',         'Held a Carpenters Club membership.', '#a9822f'),
