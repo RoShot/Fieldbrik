@@ -4,56 +4,64 @@
 everything here is served from the site root: `public/img/banner2.png` is
 `/img/banner2.png`. Nothing outside `public/` is reachable from a browser.
 
+Files are **flat** in this folder. There are no `badges/` or `currency/`
+subfolders; the names below are exactly what is on disk.
+
 ## Rules
 
-- **png or jpg only.** Not `.jfif`: the asset server answers an unknown
+- **png or jpg only.** Not `.jfif`. The asset server answers an unknown
   extension with a generic binary type and browsers will not reliably render it.
-  Re-saving a `.jfif` as `.png` is the whole fix.
-- Lowercase, hyphens or underscores, no spaces.
-- Badge art is drawn at 34x34 CSS pixels, so supply 68x68 or 96x96 for a crisp
-  screen. Square is best.
-- The banner replaces the maroon band, so it should be wide: around 1200x200.
-- A file listed here that has not been uploaded yet is simply not referenced;
-  the coloured placeholder stays until the art lands.
+- Badge art is drawn at 34x34 CSS pixels. Square art looks best; anything else is
+  fitted inside the square rather than stretched.
+- The banner sits in a 68px-tall band and is drawn with `background-size: cover`,
+  so it is cropped at the sides rather than squashed. Around 1200x100 is ideal.
+- A badge with no drawing keeps its coloured square. Nothing here is referenced
+  speculatively, so a missing file is never a broken image.
 
 ## Top banner
 
 | File | Served at | Used on |
 |---|---|---|
-| `banner2.png` | `/img/banner2.png` | every public page; never the admin panel |
+| `banner2.png` | `/img/banner2.png` | every page with the site header; never the admin panel |
 
 ## Currency
 
 | File | Served at | Replaces |
 |---|---|---|
-| `currency/bucks.png` | `/img/currency/bucks.png` | the green Bucks pip |
-| `currency/tickets.png` | `/img/currency/tickets.png` | the orange Tickets pip |
+| `bucks.png` | `/img/bucks.png` | the green Bucks pip |
+| `tickets.png` | `/img/tickets.png` | the orange Tickets pip |
 
 ## Badges
 
-Key is the `badges.key` value in the database; the file name matches the key.
+The left column is the file, the right column is the `badges.key` the database
+stores. The two are wired together in `server/services/badges.js`, which is the
+single place to change if a file is renamed.
 
 | File | Key | Awarded for |
 |---|---|---|
-| `badges/brikker.png` | `brikker` | 150 knockouts |
-| `badges/combat_initiation.png` | `combat_initiation` | 10 knockouts |
-| `badges/warrior.png` | `warrior` | 1,500 knockouts |
-| `badges/briksmith.png` | `briksmith` | 100 visits on your place |
-| `badges/homestead.png` | `homestead` | 500 visits on your place |
-| `badges/friends_20.png` | `friends_20` | 20 friends |
-| `badges/inviter.png` | `inviter` | invited a member who joined |
-| `badges/super_admin.png` | `super_admin` | Super Administrator and above |
-| `badges/administrator.png` | `administrator` | Administrator and above |
-| `badges/image_moderator.png` | `image_moderator` | holds Image Moderator |
-| `badges/forum_moderator.png` | `forum_moderator` | holds Forum Moderator |
-| `badges/carpenters_club.png` | `carpenters_club` | Carpenters Club, kept after it ends |
-| `badges/carpenters_club_senior.png` | `carpenters_club_senior` | Carpenters Club Senior, kept after it ends |
-| `badges/outrageous_carpenters_club.png` | `outrageous_carpenters_club` | Outrageous Carpenters Club, kept after it ends |
-| `badges/official_model_maker.png` | `official_model_maker` | awarded by staff, Senior Moderator and above |
-| `badges/ambassador.png` | `ambassador` | account linked to three or more platforms |
-| `badges/one_year.png` | `one_year` | account at least a year old |
+| `brikker.png` | `brikker` | 150 knockouts |
+| `briksmith.png` | `briksmith` | 100 visits on your place |
+| `20friends.png` | `friends_20` | 20 friends |
+| `inviter.png` | `referral` | invited a member who joined |
+| `superadmin.png` | `super_administrator` | Super Administrator |
+| `administrator.png` | `administrator` | Administrator and above |
+| `imagemod.png` | `image_moderator` | holds Image Moderator |
+| `formmod.png` | `forum_moderator` | holds Forum Moderator |
+| `ccb.png` | `carpenters_club` | Carpenters Club, kept after it ends |
+| `ccs.png` | `carpenters_club_senior` | Carpenters Club Senior, kept after it ends |
+| `occ.png` | `outrageous_carpenters_club` | Outrageous Carpenters Club, kept after it ends |
+| `officialmodelmaker.png` | `official_model_maker` | awarded by staff, Senior Moderator and above |
+| `ambassador.png` | `ambassador` | account linked to three or more platforms |
+| `1year.png` | `one_year` | account at least a year old |
 
-Knockouts have no subsystem behind them yet (there is no client and no game
-server), and account linking does not exist, so those badges can only be awarded
-by hand until the systems that would earn them are built. Saying so here keeps
-the list honest.
+Still without a drawing, and drawn as their coloured square until one arrives:
+`combat_initiation.png`, `warrior.png`, `homestead.png`.
+
+## Two known snags
+
+- `ambassador.png`, `briksmith.png`, `ccs.png` and `superadmin.png` are WebP image
+data saved under a `.png` name. Browsers read the bytes rather than the label, so
+they draw, but the file name is a lie. Re-save them as real PNG if one ever shows
+as a blank box.
+- `1year.png` is 600x600 and about 400 KB to fill a 34px square. Downscaling it to
+  96x96 would cut most of that.
