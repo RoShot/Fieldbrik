@@ -4,6 +4,9 @@
  * Built pages render real EJS views. Designed-but-unbuilt pages render the
  * shared in-development view with their agreed scope, so navigation is complete
  * and nothing silently 404s mid-build.
+ *
+ * Phase 2 replaces the fixture viewer with a session viewer and wraps this
+ * router in the central moderation gate.
  */
 
 const { Router } = require('../lib/router');
@@ -12,6 +15,7 @@ const site = require('../config/site');
 const buildNavigation = require('../services/navigation');
 const pageContext = require('../services/pageContext');
 const fixtures = require('../services/fixtures');
+const notices = require('../services/notices');
 
 /*
  * Identity comes from the session; content still comes from fixtures.
@@ -151,6 +155,11 @@ router.get('/my-page', async (req, res) => {
       ? await peopleDirectory.badgesFor(req.db, req.viewer.id)
       : fixtures.badges.filter((badge) => heldBadgeKeys(req).includes(badge.key));
 
+  // Warnings are display only: nothing in the request gate reads them. This is
+  // the one place the member sees one, until they dismiss it.
+  const warnings =
+    req.db && req.viewer ? await notices.warnings(req.db, req.viewer.id) : [];
+
   res.render('pages/my-page', {
     pageTitle: `My Page - ${site.name}`,
     viewer: viewerFor(req),
@@ -158,6 +167,7 @@ router.get('/my-page', async (req, res) => {
     friendTotal: viewerFor(req).stats.friends,
     favouriteGames: ownedList(req, favouriteGames),
     heldBadges,
+    warnings,
     profileLinks,
   });
 });
@@ -623,6 +633,7 @@ router.get('/register', (req, res) => {
 });
 
 // ---------- Account and social pages ----------
+// Markup complete, behaviour deliberately disabled until the services exist.
 
 const avatarRepository = require('../services/avatarRepository');
 const accounts = require('../services/accounts');
@@ -697,34 +708,73 @@ router.get('/inventory', (req, res) => {
 
 router.get('/friends', (req, res, next) => renderFriends(req, res, 200, null).catch(next));
 
-router.get('/messages', (req, res) => {
-  signedIn(res);
+router.get('/messages', (req, res, next) => {
+  return (async () => {
+    signedIn(res);
 
-  res.render('pages/messages', {
-    pageTitle: `Messages - ${site.name}`,
-    messages: fixtures.messages,
-    unread: fixtures.messages.filter((message) => !message.read).length,
-    viewerName: viewerFor(req).username,
-  });
+    // A signed-in member reads their own rows. The fixture list is what the
+    // Express server shows, which runs without a database.
+    const messages =
+      req.db && req.viewer ? await notices.inbox(req.db, req.viewer.id) : fixtures.messages;
+
+    res.render('pages/messages', {
+      pageTitle: `Messages - ${site.name}`,
+      messages,
+      unread: messages.filter((message) => !message.read).length,
+      viewerName: viewerFor(req).username,
+      // Sending between members is still phase 4; the notice says which inbox
+      // this is rather than pretending the form works.
+      live: Boolean(req.db && req.viewer),
+    });
+  })().catch(next);
 });
 
-router.get('/messages/:id', (req, res) => {
-  signedIn(res);
+router.get('/messages/:id', (req, res, next) => {
+  return (async () => {
+    signedIn(res);
 
-  const message = fixtures.messages.find((entry) => String(entry.id) === req.params.id);
+    let message;
 
-  if (!message) {
-    return res.status(404).render('pages/error', {
-      pageTitle: `Message not found - ${site.name}`,
-      statusCode: 404,
-      message: 'That message is not in your inbox.',
+    if (req.db && req.viewer) {
+      // Only this member's rows: a number in the URL must not open somebody
+      // else's message.
+      message = /^\d+$/.test(req.params.id)
+        ? await notices.openMessage(req.db, req.viewer.id, Number(req.params.id))
+        : null;
+    } else {
+      message = fixtures.messages.find((entry) => String(entry.id) === req.params.id) || null;
+    }
+
+    if (!message) {
+      return res.status(404).render('pages/error', {
+        pageTitle: `Message not found - ${site.name}`,
+        statusCode: 404,
+        message: 'That message is not in your inbox.',
+      });
+    }
+
+    res.render('pages/message', {
+      pageTitle: `${message.subject} - ${site.name}`,
+      message,
     });
-  }
+  })().catch(next);
+});
 
-  res.render('pages/message', {
-    pageTitle: `${message.subject} - ${site.name}`,
-    message,
-  });
+/**
+ * Dismissing a warning marks it read for this member.
+ *
+ * It is not the warning being lifted: the row stays on the account's record,
+ * where staff still see it.
+ */
+router.post('/warnings/:id/dismiss', (req, res, next) => {
+  return (async () => {
+    if (!req.viewer) return res.redirect('/login');
+    if (!req.db) return res.status(503).send('The database is not attached.');
+    if (!/^\d+$/.test(req.params.id)) return res.redirect('/my-page');
+
+    await notices.acknowledgeWarning(req.db, req.viewer.id, Number(req.params.id));
+    return res.redirect('/my-page');
+  })().catch(next);
 });
 
 // Parents sub-tabs. Each tab is a real page with its own content.
@@ -809,6 +859,9 @@ function noticeFromQuery(req) {
 
 /**
  * The friends page, drawn from the session's own rows.
+ *
+ * The POST routes render through here too when something is refused, so the
+ * page and its error arrive together instead of an error and a redirect.
  */
 async function renderFriends(req, res, status, error) {
   signedIn(res);
