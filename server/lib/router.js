@@ -113,7 +113,14 @@ function Router() {
 
       req.params = found.params;
       try {
-        found.route.handler(req, res, fallback);
+        const result = found.route.handler(req, res, fallback);
+
+        // A handler that returns a promise is still answering; the caller has
+        // to wait for it before reading the response. It is parked on req so a
+        // runtime without async routing (the Worker) can await it.
+        if (result && typeof result.then === 'function') {
+          req.pending = result.catch((error) => fallback(error));
+        }
       } catch (error) {
         fallback(error);
       }
