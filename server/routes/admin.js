@@ -23,6 +23,7 @@ const clubService = require('../services/club');
 const referralService = require('../services/referrals');
 const blacklistService = require('../services/blacklist');
 const badgeService = require('../services/badges');
+const currencyService = require('../services/currency');
 
 const router = Router();
 
@@ -150,6 +151,8 @@ const DONE = {
   badge_revoked: 'Badge removed from the account.',
   blacklist_added: 'Email address blacklisted.',
   blacklist_removed: 'Email address removed from the blacklist.',
+  currency_granted: 'Currency added to the account.',
+  currency_taken: 'Currency taken off the account.',
 };
 
 const FAILED = {
@@ -174,6 +177,9 @@ const FAILED = {
   badge: 'That is not a badge the panel knows.',
   held: 'That account already holds that badge.',
   notheld: 'That account does not hold that badge.',
+  currency: 'That is not a currency the panel issues.',
+  amount: 'An amount must be a whole number between 1 and 1,000,000.',
+  funds: 'That account does not hold that much, so nothing was taken.',
 };
 
 function noticeFor(query) {
@@ -258,6 +264,7 @@ router.get(
           canClub: permissions.can(req.admin.role, 'club.grant'),
           canReferral: permissions.can(req.admin.role, 'users.referral'),
           canBadge: permissions.can(req.admin.role, 'users.badge'),
+          canIssue: mayTouch(req, account) && permissions.can(req.admin.role, 'billing.issue'),
           roleReason,
           roleOptions: roles.filter((role) => permissions.mayGrant(req.admin.role, role)),
         })
@@ -521,6 +528,68 @@ router.post(
 
       const key = result.ok ? 'done' : 'failed';
       return res.redirect(`/admin/blacklist?${key}=${encodeURIComponent(result.code)}`);
+    })();
+  })
+);
+
+// ---------- Currency ----------
+//
+// Balances are part of looking at an account, so the page sits at users.view and
+// the form is drawn only for a role that can issue. The POST is gated at
+// billing.issue, because the form is only a rendering of that rule.
+
+router.get(
+  '/admin/users/:id/currency',
+  staff('users.view', (req, res) => {
+    return (async () => {
+      const account = await adminService.findAccount(req.db, req.params.id);
+      if (!account) return notAllowed(req, res, 404, 'No account has that ID.');
+
+      const [overview, record] = await Promise.all([
+        adminService.overview(req.db),
+        adminService.accountRecord(req.db, account.id),
+      ]);
+
+      return res.render(
+        'admin/currency',
+        view(req, {
+          adminStatus: overview.status,
+          account,
+          ledger: record.ledger,
+          canIssue: mayTouch(req, account) && permissions.can(req.admin.role, 'billing.issue'),
+          currencies: currencyService.CURRENCIES,
+          maxAmount: currencyService.MAX_AMOUNT,
+          notice: noticeFor(req.query),
+        })
+      );
+    })();
+  })
+);
+
+router.post(
+  '/admin/users/:id/currency',
+  staff('billing.issue', (req, res) => {
+    return (async () => {
+      const targetId = Number(req.params.id) || 0;
+      const account = await adminService.findAccount(req.db, targetId);
+      if (!account) return res.redirect('/admin/users?failed=nobody');
+      if (!mayTouch(req, account)) {
+        return res.redirect(`/admin/users/${targetId}/currency?failed=rank`);
+      }
+
+      const body = req.body || {};
+
+      const result = await currencyService.adjust(req.db, {
+        userId: targetId,
+        currency: body.currency,
+        amount: Number(body.amount),
+        reason: body.reason,
+        take: String(body.action) === 'take',
+        actorId: req.viewer.id,
+      });
+
+      const key = result.ok ? 'done' : 'failed';
+      return res.redirect(`/admin/users/${targetId}/currency?${key}=${encodeURIComponent(result.code)}`);
     })();
   })
 );
