@@ -105,13 +105,13 @@ async function overview(db) {
   return {
     counts: { accounts, staff, places, live, threads, posts, bans },
     status: [
-      `configs: site settings are built in a later pass`,
+      'configs: ticket rates are editable; no other site settings exist yet',
       `${accounts} account${accounts === 1 ? '' : 's'}, ${staff} staff`,
       `${live} published place${live === 1 ? '' : 's'} of ${places}`,
       `${threads} forum thread${threads === 1 ? '' : 's'}, ${posts} post${posts === 1 ? '' : 's'}`,
       `${bans} active ban${bans === 1 ? '' : 's'}`,
       'players in games: no game servers are connected',
-      'abuse reports: the report queue arrives in a later pass',
+      'abuse reports: no report queue is built yet',
     ],
   };
 }
