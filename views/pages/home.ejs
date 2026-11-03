@@ -69,19 +69,22 @@
       <section class="fb-panel">
         <h2 class="fb-panel__title">Cool Places</h2>
         <div class="fb-panel__body">
-          <ul class="fb-grid--games">
-            <% featured.slice(0, 3).forEach(function (game) { %>
-              <li>
-                <a class="fb-card-game__thumb" href="/games/<%= game.id %>" style="--thumb: <%= game.thumb %>;" aria-hidden="true" tabindex="-1"></a>
-                <a class="fb-card-game__title" href="/games/<%= game.id %>"><%= game.name %></a>
-                <p class="fb-card-game__meta">
-                  Creator: <%= game.creator %><br>
-                  Played: <%= game.visits.toLocaleString('en-US') %> times<br>
-                  <span class="fb-card-game__players"><%= game.players %> players online</span>
-                </p>
-              </li>
-            <% }); %>
-          </ul>
+          <% if (featured.length === 0) { %>
+            <p class="fb-muted">No places have been published yet. The first one will appear here.</p>
+          <% } else { %>
+            <ul class="fb-grid--games">
+              <% featured.slice(0, 3).forEach(function (place) { %>
+                <li>
+                  <a class="fb-card-game__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                  <a class="fb-card-game__title" href="/games/<%= place.slug %>"><%= place.name %></a>
+                  <p class="fb-card-game__meta">
+                    By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a>
+                  </p>
+                </li>
+              <% }); %>
+            </ul>
+          <% } %>
+          <p class="fb-muted"><a href="/games">Every place</a> &middot; <a href="/places/new">Build one</a></p>
         </div>
       </section>
 
