@@ -4,9 +4,6 @@
  * Built pages render real EJS views. Designed-but-unbuilt pages render the
  * shared in-development view with their agreed scope, so navigation is complete
  * and nothing silently 404s mid-build.
- *
- * Phase 2 replaces the fixture viewer with a session viewer and wraps this
- * router in the central moderation gate.
  */
 
 const { Router } = require('../lib/router');
@@ -110,9 +107,9 @@ const GUARDED = [
   /^\/my-page$/,
   /^\/character(\/.*)?$/,
   /^\/inventory$/,
-  /^\/friends$/,
+  /^\/friends(\/.*)?$/,
   /^\/messages(\/.*)?$/,
-  /^\/settings$/,
+  /^\/settings(\/.*)?$/,
 ];
 
 // Shared locals for every page. One place, not once per page.
@@ -141,12 +138,18 @@ router.get('/', (req, res) => {
   });
 });
 
-router.get('/my-page', (req, res) => {
+router.get('/my-page', async (req, res) => {
   signedIn(res);
 
   const friends = fixtures.users.filter((user) => user.id !== viewerFor(req).id).slice(0, 6);
   const favouriteGames = fixtures.games.slice(0, 3);
-  const heldBadges = fixtures.badges.filter((badge) => heldBadgeKeys(req).includes(badge.key));
+
+  // Granted badges are rows now, so they are read rather than borrowed from the
+  // fixture list - which would show somebody a badge nobody had given them.
+  const heldBadges =
+    req.db && req.viewer
+      ? await peopleDirectory.badgesFor(req.db, req.viewer.id)
+      : fixtures.badges.filter((badge) => heldBadgeKeys(req).includes(badge.key));
 
   res.render('pages/my-page', {
     pageTitle: `My Page - ${site.name}`,
@@ -385,22 +388,26 @@ router.get('/people', async (req, res) => {
   });
 });
 
-router.get('/forum', (req, res) => {
+router.get('/forum', async (req, res) => {
   const query = String(req.query.q || '').trim();
   const needle = query.toLowerCase();
 
-  const sections = fixtures.forumSections.filter(
-    (section) =>
-      !needle ||
-      section.name.toLowerCase().includes(needle) ||
-      section.description.toLowerCase().includes(needle)
-  );
+  // Sections are site structure and live in the database; the fixture list is
+  // only for the Express development server, which runs without one.
+  const sections = req.db
+    ? await forumDirectory.list(req.db, { query })
+    : fixtures.forumSections.filter(
+        (section) =>
+          !needle ||
+          section.name.toLowerCase().includes(needle) ||
+          section.description.toLowerCase().includes(needle)
+      );
 
   res.render('pages/forum', {
     pageTitle: `Forum - ${site.name}`,
     sections,
     query,
-    totalThreads: fixtures.forumSections.reduce((sum, section) => sum + section.threads, 0),
+    totalThreads: sections.reduce((sum, section) => sum + section.threads, 0),
   });
 });
 
@@ -448,6 +455,9 @@ router.get('/people/:username', async (req, res) => {
       heldBadges: roleBadge ? [roleBadge] : [],
       friends: fixtures.users.filter((user) => user.id !== person.id).slice(0, 6),
       created: fixtures.games.filter((game) => game.creator === person.username),
+      // No database means no friendship rows, so no button is drawn.
+      friendAction: 'signed-out',
+      notice: noticeFromQuery(req),
     });
   }
 
@@ -460,12 +470,19 @@ router.get('/people/:username', async (req, res) => {
     peopleDirectory.gamesFor(req.db, person.id),
   ]);
 
+  // What this viewer is to that member decides which one button the page draws.
+  const relationship = req.viewer
+    ? await friendships.relationship(req.db, req.viewer.id, person.id)
+    : { state: 'signed-out' };
+
   res.render('pages/profile', {
     pageTitle: `${person.username} - ${site.name}`,
     person,
     heldBadges,
     friends: friends.slice(0, 6),
     created,
+    friendAction: relationship.state,
+    notice: noticeFromQuery(req),
   });
 });
 
@@ -558,9 +575,11 @@ router.get('/news/:slug', (req, res) => {
   });
 });
 
-router.get('/forum/:section', (req, res) => {
+router.get('/forum/:section', async (req, res) => {
   const wanted = req.params.section.toLowerCase();
-  const section = fixtures.forumSections.find((entry) => entry.slug === wanted);
+  const section = req.db
+    ? await forumDirectory.findOne(req.db, wanted)
+    : fixtures.forumSections.find((entry) => entry.slug === wanted);
 
   if (!section) {
     return res.status(404).render('pages/error', {
@@ -604,10 +623,14 @@ router.get('/register', (req, res) => {
 });
 
 // ---------- Account and social pages ----------
-// Markup complete, behaviour deliberately disabled until the services exist.
 
 const avatarRepository = require('../services/avatarRepository');
+const accounts = require('../services/accounts');
+const forumDirectory = require('../services/forum');
+const friendships = require('../services/friendships');
 const peopleDirectory = require('../services/people');
+
+const SESSION_COOKIE = accounts.SESSION_COOKIE;
 
 // Six independent colours, matching both the renderer and the schema (D19).
 const AVATAR_PARTS = [
@@ -672,35 +695,7 @@ router.get('/inventory', (req, res) => {
   });
 });
 
-router.get('/friends', async (req, res) => {
-  signedIn(res);
-
-  if (!req.db) {
-    return res.render('pages/friends', {
-      pageTitle: `Friends - ${site.name}`,
-      friends: fixtures.users.filter((user) => user.id !== viewerFor(req).id),
-      total: viewerFor(req).stats.friends,
-      incoming: [],
-      outgoing: [],
-      viewerName: viewerFor(req).username,
-    });
-  }
-
-  const [friends, incoming, outgoing] = await Promise.all([
-    peopleDirectory.friendsOf(req.db, req.viewer.id),
-    peopleDirectory.pending(req.db, req.viewer.id, 'incoming'),
-    peopleDirectory.pending(req.db, req.viewer.id, 'outgoing'),
-  ]);
-
-  res.render('pages/friends', {
-    pageTitle: `Friends - ${site.name}`,
-    friends,
-    total: friends.length,
-    incoming,
-    outgoing,
-    viewerName: req.viewer.username,
-  });
-});
+router.get('/friends', (req, res, next) => renderFriends(req, res, 200, null).catch(next));
 
 router.get('/messages', (req, res) => {
   signedIn(res);
@@ -729,15 +724,6 @@ router.get('/messages/:id', (req, res) => {
   res.render('pages/message', {
     pageTitle: `${message.subject} - ${site.name}`,
     message,
-  });
-});
-
-router.get('/settings', (req, res) => {
-  signedIn(res);
-
-  res.render('pages/settings', {
-    pageTitle: `Account Settings - ${site.name}`,
-    viewerName: viewerFor(req).username,
   });
 });
 
@@ -777,6 +763,183 @@ Object.entries(PENDING).forEach(([slug, meta]) => {
       meta,
     });
   });
+});
+
+// ---------- Friend actions ----------
+//
+// Each route changes one row and redirects, so a refresh cannot repeat it.
+// Failures come back as a code rather than a message: the page looks the
+// wording up, so nothing typed into a URL is ever rendered.
+
+/** Fixed wording for the ?done= codes these routes redirect with. */
+const DONE_MESSAGES = {
+  requested: 'Friend request sent.',
+  accepted: 'Friend request accepted.',
+  declined: 'Friend request declined.',
+  cancelled: 'Friend request withdrawn.',
+  removed: 'That member is no longer on your friends list.',
+  blocked: 'That member is blocked.',
+  password: 'Your password has been changed. Every other device was signed out.',
+  sessions: 'Every other device has been signed out.',
+};
+
+/** Fixed wording for the conditions the friendship service refuses. */
+const FAILED_MESSAGES = {
+  no_member: 'There is no member by that name.',
+  self: 'You cannot add yourself.',
+  already: 'You are already friends with that member.',
+  duplicate: 'That request has already been sent.',
+  answer_theirs: 'That member has already asked you. Answer it on the Friends page.',
+  not_friends: 'You are not friends with that member.',
+  wrong_way: 'There is no request from that member to answer.',
+  not_yours: 'That request is not yours to cancel.',
+  blocked: 'That action is not available for that member.',
+  refused: 'That did not work.',
+};
+
+function noticeFromQuery(req) {
+  const done = DONE_MESSAGES[String(req.query.done || '')];
+  if (done) return done;
+
+  const failed = String(req.query.failed || '');
+  if (!failed) return null;
+
+  return FAILED_MESSAGES[failed] || FAILED_MESSAGES.refused;
+}
+
+/**
+ * The friends page, drawn from the session's own rows.
+ */
+async function renderFriends(req, res, status, error) {
+  signedIn(res);
+
+  const base = {
+    pageTitle: `Friends - ${site.name}`,
+    notice: error || noticeFromQuery(req),
+    viewerName: viewerFor(req).username,
+    // Without a database there are no rows to change, so no button is drawn.
+    canAct: Boolean(req.db),
+  };
+
+  if (!req.db) {
+    return res.status(status).render('pages/friends', {
+      ...base,
+      friends: fixtures.users.filter((user) => user.id !== viewerFor(req).id),
+      total: viewerFor(req).stats.friends,
+      incoming: [],
+      outgoing: [],
+    });
+  }
+
+  const [friends, incoming, outgoing] = await Promise.all([
+    peopleDirectory.friendsOf(req.db, req.viewer.id),
+    peopleDirectory.pending(req.db, req.viewer.id, 'incoming'),
+    peopleDirectory.pending(req.db, req.viewer.id, 'outgoing'),
+  ]);
+
+  return res.status(status).render('pages/friends', {
+    ...base,
+    friends,
+    total: friends.length,
+    incoming,
+    outgoing,
+  });
+}
+
+/** Where a friendship action sends the browser afterwards. */
+const backToFriends = () => '/friends';
+const backToProfile = (req) => `/people/${encodeURIComponent(req.params.username)}`;
+
+function friendRoute(done, run, back) {
+  return (req, res, next) => {
+    // Returned, not just called: the Worker parks a returned promise and waits
+    // for it. A block body that dropped it answered 404 before the row changed.
+    return (async () => {
+      if (!req.db) return res.redirect(`${back(req)}?failed=no_member`);
+
+      try {
+        await run(req.db, req.viewer.id, req.params.username);
+        return res.redirect(`${back(req)}?done=${done}`);
+      } catch (error) {
+        if (error instanceof friendships.FriendError) {
+          return res.redirect(`${back(req)}?failed=${error.code}`);
+        }
+        throw error;
+      }
+    })().catch(next);
+  };
+}
+
+router.post('/friends/request/:username', friendRoute('requested', friendships.request, backToProfile));
+router.post('/friends/accept/:username', friendRoute('accepted', friendships.accept, backToFriends));
+router.post('/friends/decline/:username', friendRoute('declined', friendships.decline, backToFriends));
+router.post('/friends/cancel/:username', friendRoute('cancelled', friendships.cancel, backToFriends));
+router.post('/friends/remove/:username', friendRoute('removed', friendships.remove, backToProfile));
+router.post('/friends/block/:username', friendRoute('blocked', friendships.block, backToFriends));
+
+// ---------- Account settings ----------
+
+function sessionToken(req) {
+  return req.cookies ? req.cookies[SESSION_COOKIE] : null;
+}
+
+async function renderSettings(req, res, status, error) {
+  signedIn(res);
+
+  const sessions = req.db ? await accounts.activeSessionCount(req.db, req.viewer.id) : 0;
+
+  return res.status(status).render('pages/settings', {
+    pageTitle: `Account Settings - ${site.name}`,
+    viewerName: viewerFor(req).username,
+    // This request is itself one session, so the page is about the others.
+    otherSessions: Math.max(0, sessions - 1),
+    error: error || null,
+    notice: error ? null : noticeFromQuery(req),
+  });
+}
+
+router.get('/settings', (req, res, next) => renderSettings(req, res, 200, null).catch(next));
+
+router.post('/settings/password', (req, res, next) => {
+  return (async () => {
+    if (!req.db) return res.status(503).send('Accounts need the database.');
+
+    try {
+      await accounts.changePassword(req.db, req.viewer.id, req.body, sessionToken(req));
+      return res.redirect('/settings?done=password');
+    } catch (error) {
+      if (error instanceof accounts.AccountError) {
+        return renderSettings(req, res, 400, error.message);
+      }
+      throw error;
+    }
+  })().catch(next);
+});
+
+router.post('/settings/sessions', (req, res, next) => {
+  return (async () => {
+    if (!req.db) return res.status(503).send('Accounts need the database.');
+
+    await accounts.signOutOtherSessions(req.db, req.viewer.id, sessionToken(req));
+    return res.redirect('/settings?done=sessions');
+  })().catch(next);
+});
+
+router.post('/settings/close', (req, res, next) => {
+  return (async () => {
+    if (!req.db) return res.status(503).send('Accounts need the database.');
+
+    try {
+      await accounts.closeAccount(req.db, req.viewer.id, req.body);
+      res.clearCookie(SESSION_COOKIE, { path: '/' });
+      return res.redirect('/');
+    } catch (error) {
+      if (error instanceof accounts.AccountError) {
+        return renderSettings(req, res, 400, error.message);
+      }
+      throw error;
+    }
+  })().catch(next);
 });
 
 module.exports = router;

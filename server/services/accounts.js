@@ -425,7 +425,7 @@ async function loadViewer(db, user) {
   const [badges, games, items, friendships] = await Promise.all([
     db.prepare('SELECT COUNT(*) AS n FROM user_badges WHERE user_id = ?').bind(user.id).first(),
     db.prepare('SELECT COUNT(*) AS n FROM games WHERE creator_id = ? AND published = 1').bind(user.id).first(),
-    db.prepare('SELECT COUNT(*) AS n FROM items WHERE 1 = 0').bind(user.id).first(),
+    db.prepare('SELECT COUNT(*) AS n FROM user_items WHERE user_id = ?').bind(user.id).first(),
     db
       .prepare(
         `SELECT COUNT(*) AS n FROM friendships

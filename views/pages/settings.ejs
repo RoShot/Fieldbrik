@@ -7,27 +7,66 @@
     <span class="fb-pagecount"><%= viewerName %></span>
   </div>
 
+  <% if (notice) { %>
+    <div class="fb-notice">
+      <p><strong><%= notice %></strong></p>
+    </div>
+  <% } %>
+
+  <% if (error) { %>
+    <div class="fb-notice">
+      <p><strong>That did not work.</strong></p>
+      <p><%= error %></p>
+    </div>
+  <% } %>
+
   <section class="fb-panel">
     <h2 class="fb-panel__title">Change Password</h2>
     <div class="fb-panel__body">
       <form class="fb-auth" method="post" action="/settings/password">
         <div class="fb-auth__row">
           <label for="pw-current">Current password</label>
-          <input id="pw-current" name="current" type="password" autocomplete="current-password" disabled>
+          <input id="pw-current" name="current" type="password" autocomplete="current-password" required>
         </div>
         <div class="fb-auth__row">
           <label for="pw-new">New password</label>
-          <input id="pw-new" name="password" type="password" autocomplete="new-password" disabled>
+          <input id="pw-new" name="password" type="password" autocomplete="new-password" minlength="8" required>
         </div>
         <div class="fb-auth__row">
           <label for="pw-confirm">Confirm new password</label>
-          <input id="pw-confirm" name="confirm" type="password" autocomplete="new-password" disabled>
+          <input id="pw-confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" required>
         </div>
         <div class="fb-auth__actions">
-          <button class="fb-btn fb-btn--primary" type="submit" disabled>Change Password</button>
+          <button class="fb-btn fb-btn--primary" type="submit">Change Password</button>
         </div>
       </form>
-      <p class="fb-muted">Changing a password ends every other session on the account.</p>
+      <p class="fb-muted">Changing your password signs out every other device. This one stays signed in.</p>
+    </div>
+  </section>
+
+  <section class="fb-panel">
+    <h2 class="fb-panel__title">Sessions</h2>
+    <div class="fb-panel__body fb-panel__body--flush">
+      <table class="fb-table fb-table--kv">
+        <tbody>
+          <tr>
+            <th scope="row">This device</th>
+            <td>Signed in. Signing out ends this session on the server, not just in the browser.</td>
+          </tr>
+          <tr>
+            <th scope="row">Other sessions</th>
+            <td>
+              <%= otherSessions %> <%= otherSessions === 1 ? 'session' : 'sessions' %>
+              <span class="fb-muted">&mdash; a session lasts 14 days unless it is ended here.</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="fb-panel__body">
+      <form method="post" action="/settings/sessions">
+        <button class="fb-btn" type="submit" <%= otherSessions === 0 ? 'disabled' : '' %>>Sign Out Other Devices</button>
+      </form>
     </div>
   </section>
 
@@ -40,42 +79,26 @@
         <li><label><input type="checkbox" checked disabled> Warnings and moderation notices</label></li>
         <li><label><input type="checkbox" disabled> News and announcements</label></li>
       </ul>
-      <p class="fb-muted">Moderation notices cannot be turned off. Everything else can.</p>
-    </div>
-  </section>
-
-  <section class="fb-panel">
-    <h2 class="fb-panel__title">Sessions</h2>
-    <div class="fb-panel__body fb-panel__body--flush">
-      <table class="fb-table fb-table--kv">
-        <tbody>
-          <tr>
-            <th scope="row">This device</th>
-            <td>Current session. Signing out ends it server-side, not just in the browser.</td>
-          </tr>
-          <tr>
-            <th scope="row">Other sessions</th>
-            <td>No other sessions are listed.</td>
-          </tr>
-        </tbody>
-      </table>
+      <p class="fb-muted">These are fixed, not saved: there is no preferences table yet, so the boxes are read-only rather than pretending to remember a choice. Moderation notices are always on.</p>
     </div>
   </section>
 
   <section class="fb-panel">
     <h2 class="fb-panel__title">Close Account</h2>
     <div class="fb-panel__body">
-      <p>Closing an account removes your profile content and clears your identifying details. Moderation and transaction records are retained without identifying you, so restrictions and currency records cannot be erased on request.</p>
-      <p>
-        <button class="fb-btn" type="button" disabled>Request Account Deletion</button>
-      </p>
+      <p>Closing your account marks it closed, ends every session and takes your name out of the member directory and every public page. Moderation and currency records are kept, because a ban or a balance cannot be erased on request.</p>
+      <p>This version has no way to reopen a closed account, so treat it as a one-way door.</p>
+      <form class="fb-auth" method="post" action="/settings/close">
+        <div class="fb-auth__row">
+          <label for="close-password">Confirm your password</label>
+          <input id="close-password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <div class="fb-auth__actions">
+          <button class="fb-btn" type="submit">Close My Account</button>
+        </div>
+      </form>
     </div>
   </section>
-
-  <div class="fb-notice">
-    <p><strong>Nothing on this page can save yet.</strong></p>
-    <p>Every control is disabled because accounts do not exist. Passwords, preferences and deletion requests are handled by the accounts service in phase 2; the form layouts are here now so that phase 2 wires behaviour instead of rewriting pages.</p>
-  </div>
 </main>
 
 <%- include('../partials/footer') %>

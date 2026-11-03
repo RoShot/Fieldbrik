@@ -4,6 +4,12 @@
 <main class="fb-container fb-main">
   <p class="fb-crumbs"><a href="/people">People</a> &raquo; <%= person.username %></p>
 
+  <% if (notice) { %>
+    <div class="fb-notice">
+      <p><strong><%= notice %></strong></p>
+    </div>
+  <% } %>
+
   <div class="fb-cols">
 
     <aside class="fb-col-profile">
@@ -14,7 +20,31 @@
           <%= person.online ? 'Online now' : 'Last online ' + person.lastOnline.slice(0, 10) %>
         </p>
         <p class="fb-profile__url"><%= site.domain %>/user/<%= person.id %></p>
-        <p class="fb-profile__foot"><a href="/support">Report Abuse</a></p>
+        <div class="fb-profile__foot">
+          <% if (friendAction === 'friends') { %>
+            <form method="post" action="/friends/remove/<%= person.username %>">
+              <button class="fb-btn" type="submit">Remove Friend</button>
+            </form>
+          <% } else if (friendAction === 'incoming') { %>
+            <form method="post" action="/friends/accept/<%= person.username %>">
+              <button class="fb-btn fb-btn--primary" type="submit">Accept Request</button>
+            </form>
+            <form method="post" action="/friends/decline/<%= person.username %>">
+              <button class="fb-btn" type="submit">Decline</button>
+            </form>
+          <% } else if (friendAction === 'outgoing') { %>
+            <form method="post" action="/friends/cancel/<%= person.username %>">
+              <button class="fb-btn" type="submit">Cancel Request</button>
+            </form>
+          <% } else if (friendAction === 'blocked') { %>
+            <span class="fb-muted">Blocked</span>
+          <% } else if (friendAction === 'none') { %>
+            <form method="post" action="/friends/request/<%= person.username %>">
+              <button class="fb-btn fb-btn--primary" type="submit">Add Friend</button>
+            </form>
+          <% } %>
+          <a href="/support">Report Abuse</a>
+        </div>
       </div>
 
       <section class="fb-panel">
@@ -100,8 +130,8 @@
       </section>
 
       <div class="fb-notice">
-        <p><strong>Read only for now.</strong></p>
-        <p>The profile, the badges, the statistics and the friends listed here all come from the database, and the friends shown are that member's real accepted friendships. Add Friend and Send Message need their own routes and a confirmation step, so they are not drawn yet rather than drawn as buttons that do nothing.</p>
+        <p><strong>Friend requests are real. Messages are not.</strong></p>
+        <p>Badges, statistics and the friends listed here all come from the database, and those friends are that member's real accepted friendships. Adding a friend sends a request that only becomes a friendship when the other person accepts. Send Message has no route yet, so it is not drawn rather than drawn as a button that does nothing.</p>
       </div>
     </div>
 

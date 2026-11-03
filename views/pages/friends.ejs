@@ -7,23 +7,73 @@
     <span class="fb-pagecount"><%= total %> friends</span>
   </div>
 
+  <% if (notice) { %>
+    <div class="fb-notice">
+      <p><strong><%= notice %></strong></p>
+    </div>
+  <% } %>
+
   <section class="fb-panel">
     <h2 class="fb-panel__title">Friend Requests</h2>
-    <div class="fb-panel__body">
-      <div class="fb-cols">
-        <div class="fb-col-main">
-          <p class="fb-muted">Incoming</p>
-          <% if (incoming.length === 0) { %>
-            <p class="fb-muted">No incoming requests.</p>
+    <div class="fb-panel__body fb-panel__body--flush">
+      <table class="fb-table">
+        <thead>
+          <tr>
+            <th scope="col">Avatar</th>
+            <th scope="col">Name</th>
+            <th scope="col">Waiting for</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (incoming.length === 0 && outgoing.length === 0) { %>
+            <tr>
+              <td colspan="4" class="fb-table__last">No requests either way.</td>
+            </tr>
           <% } %>
-        </div>
-        <div class="fb-col-main">
-          <p class="fb-muted">Sent</p>
-          <% if (outgoing.length === 0) { %>
-            <p class="fb-muted">No requests waiting for a reply.</p>
-          <% } %>
-        </div>
-      </div>
+
+          <% incoming.forEach(function (person) { %>
+            <tr>
+              <td class="fb-table__avatar">
+                <%- include('../partials/avatar', { avatar: person.avatar, size: 'xs' }) %>
+              </td>
+              <td><a class="fb-table__name" href="/people/<%= person.username %>"><%= person.username %></a></td>
+              <td>Your answer</td>
+              <td>
+                <% if (canAct) { %>
+                  <form method="post" action="/friends/accept/<%= person.username %>">
+                    <button class="fb-btn fb-btn--primary" type="submit">Accept</button>
+                  </form>
+                  <form method="post" action="/friends/decline/<%= person.username %>">
+                    <button class="fb-btn" type="submit">Decline</button>
+                  </form>
+                <% } else { %>
+                  <span class="fb-muted">Read only</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+
+          <% outgoing.forEach(function (person) { %>
+            <tr>
+              <td class="fb-table__avatar">
+                <%- include('../partials/avatar', { avatar: person.avatar, size: 'xs' }) %>
+              </td>
+              <td><a class="fb-table__name" href="/people/<%= person.username %>"><%= person.username %></a></td>
+              <td>Their answer</td>
+              <td>
+                <% if (canAct) { %>
+                  <form method="post" action="/friends/cancel/<%= person.username %>">
+                    <button class="fb-btn" type="submit">Cancel Request</button>
+                  </form>
+                <% } else { %>
+                  <span class="fb-muted">Read only</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -35,9 +85,18 @@
         <th scope="col">Status</th>
         <th scope="col">Friends</th>
         <th scope="col">Joined</th>
+        <th scope="col">Action</th>
       </tr>
     </thead>
     <tbody>
+      <% if (friends.length === 0) { %>
+        <tr>
+          <td colspan="6" class="fb-table__last">
+            No friends yet. <a href="/people">Find someone to add</a>.
+          </td>
+        </tr>
+      <% } %>
+
       <% friends.forEach(function (friend) { %>
         <tr>
           <td class="fb-table__avatar">
@@ -47,6 +106,18 @@
           <td><%= friend.online ? 'Online' : 'Offline' %></td>
           <td><%= friend.stats.friends %></td>
           <td class="fb-table__last"><%= friend.joined %></td>
+          <td>
+            <% if (canAct) { %>
+              <form method="post" action="/friends/remove/<%= friend.username %>">
+                <button class="fb-btn" type="submit">Remove</button>
+              </form>
+              <form method="post" action="/friends/block/<%= friend.username %>">
+                <button class="fb-btn" type="submit">Block</button>
+              </form>
+            <% } else { %>
+              <span class="fb-muted">Read only</span>
+            <% } %>
+          </td>
         </tr>
       <% }); %>
     </tbody>
@@ -55,8 +126,8 @@
   <p class="fb-pagination">Page 1 of 1</p>
 
   <div class="fb-notice">
-    <p><strong>Requests are shown, buttons are not.</strong></p>
-    <p>Everything here comes from the friendships table: the people you are actually friends with, requests waiting for your reply, and requests you have sent. Accept, Remove and Block need their own routes and a confirmation step, so they are not drawn yet rather than drawn as buttons that do nothing.</p>
+    <p><strong>Requests are real.</strong></p>
+    <p>Sending a request only creates a pending row: nothing becomes a friendship until the other member answers. You can withdraw a request you sent, and either side can remove a friendship. Blocking ends it outright and stops any further request between the two accounts, without telling the other person that they were blocked.</p>
   </div>
 </main>
 
