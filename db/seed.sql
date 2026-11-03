@@ -73,23 +73,42 @@ SELECT 'Helmet', 'Hats', (SELECT id FROM users ORDER BY id ASC LIMIT 1), 500, 93
  WHERE EXISTS (SELECT 1 FROM users)
    AND NOT EXISTS (SELECT 1 FROM catalog_items WHERE name = 'Helmet');
 
--- Descriptions and artwork. The image is a path under public/, and an item with
--- an empty image is drawn as its colour swatch, which is why the art can arrive
--- in a later pass without the page ever showing a broken picture.
+-- Descriptions and artwork. The image is a path under public/ - the files sit in
+-- public/img/ - and an item with an empty image is drawn as its colour swatch,
+-- so an item without art never shows a broken picture.
 INSERT INTO catalog_item_details (item_id, description, image)
-SELECT i.id, 'Ad astra per aspera', ''
+SELECT i.id, 'Ad astra per aspera', '/img/Astronaut_Helmet.jpg'
   FROM catalog_items i
  WHERE i.name = 'Astronaut Helmet'
    AND NOT EXISTS (SELECT 1 FROM catalog_item_details d WHERE d.item_id = i.id);
 
 INSERT INTO catalog_item_details (item_id, description, image)
-SELECT i.id, '', ''
+SELECT i.id, '', '/img/Black_Iron_Crown_of_Pwnage.jpg'
   FROM catalog_items i
  WHERE i.name = 'Black Iron Crown of Pwnage'
    AND NOT EXISTS (SELECT 1 FROM catalog_item_details d WHERE d.item_id = i.id);
 
 INSERT INTO catalog_item_details (item_id, description, image)
-SELECT i.id, '', ''
+SELECT i.id, '', '/img/Helmet.jpg'
   FROM catalog_items i
  WHERE i.name = 'Helmet'
    AND NOT EXISTS (SELECT 1 FROM catalog_item_details d WHERE d.item_id = i.id);
+
+-- The artwork arrived after these rows already existed on the live database, and
+-- the inserts above only run when a detail row is missing. This fills in a path
+-- that is still blank, and leaves one that is already set alone, so an item whose
+-- art is deliberately removed stays removed.
+UPDATE catalog_item_details
+   SET image = '/img/Astronaut_Helmet.jpg'
+ WHERE image = ''
+   AND item_id IN (SELECT id FROM catalog_items WHERE name = 'Astronaut Helmet');
+
+UPDATE catalog_item_details
+   SET image = '/img/Black_Iron_Crown_of_Pwnage.jpg'
+ WHERE image = ''
+   AND item_id IN (SELECT id FROM catalog_items WHERE name = 'Black Iron Crown of Pwnage');
+
+UPDATE catalog_item_details
+   SET image = '/img/Helmet.jpg'
+ WHERE image = ''
+   AND item_id IN (SELECT id FROM catalog_items WHERE name = 'Helmet');
