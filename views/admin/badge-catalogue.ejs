@@ -1,0 +1,65 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Badge Catalogue</h1>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Art</th>
+                <th scope="col">Badge</th>
+                <th scope="col">Key</th>
+                <th scope="col">Awarded for</th>
+                <th scope="col">Held by</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% badges.forEach(function (entry) { %>
+                <tr>
+                  <td>
+                    <% if (entry.art) { %>
+                      <img class="fb-badge__art" src="<%= entry.art %>" alt="" width="34" height="34">
+                    <% } else { %>
+                      <span class="fb-badge__pip" style="--badge: <%= entry.color %>;" aria-hidden="true"></span>
+                    <% } %>
+                  </td>
+                  <td><strong><%= entry.name %></strong></td>
+                  <td><code><%= entry.key %></code></td>
+                  <td class="fb-table__note"><%= entry.description %></td>
+                  <td><%= entry.holders %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        Artwork is wired by badge key in server/services/badges.js. A badge with no drawing shows its
+        coloured square rather than a broken image, so a missing file reads as art still to come.
+        Granting happens on an account's Badges page.
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

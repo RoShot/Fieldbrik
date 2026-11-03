@@ -1,0 +1,130 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Badges: <%= account.username %></h1>
+        <div class="fb-panel__body">
+          <p class="fb-admin__muted">
+            Account <strong><%= account.id %></strong> &middot; <%= account.roleName %> (rank <%= account.roleRank %>)
+            &middot; <%= account.status %>
+          </p>
+
+          <% if (canGrant) { %>
+            <form method="post" action="/admin/users/<%= account.id %>/badges">
+              <h2 class="fb-admin__heading">Grant a badge</h2>
+              <p class="fb-admin__muted">
+                A badge is cosmetic: it appears on the member's profile and My Page and does nothing else.
+                Role badges are granted automatically when a role changes, so the list here is for awards
+                and event badges.
+              </p>
+
+              <% if (available.length === 0) { %>
+                <p class="fb-admin__muted">This account already holds every badge in the catalogue.</p>
+              <% } else { %>
+                <div class="fb-mod__field">
+                  <label for="fb-badge-key">Badge</label>
+                  <select id="fb-badge-key" name="key">
+                    <% available.forEach(function (entry) { %>
+                      <option value="<%= entry.key %>"><%= entry.name %> - <%= entry.description %></option>
+                    <% }); %>
+                  </select>
+                </div>
+
+                <div class="fb-mod__field">
+                  <label for="fb-badge-note">Note (staff only, never shown to the member)</label>
+                  <input id="fb-badge-note" type="text" name="note" maxlength="300" autocomplete="off">
+                </div>
+
+                <button class="fb-btn fb-btn--primary" type="submit" name="action" value="grant">Grant badge</button>
+              <% } %>
+            </form>
+          <% } else { %>
+            <p>
+              <strong>Your role cannot grant badges.</strong>
+              Senior Moderator and above can. This account's badges are still listed below.
+            </p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Badges held</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Badge</th>
+                <th scope="col">Key</th>
+                <th scope="col">Granted</th>
+                <th scope="col">Granted by</th>
+                <th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (held.length === 0) { %>
+                <tr><td colspan="5" class="fb-table__last">This account holds no badges.</td></tr>
+              <% } %>
+              <% held.forEach(function (entry) { %>
+                <tr>
+                  <td>
+                    <% if (entry.art) { %>
+                      <img class="fb-badge__art" src="<%= entry.art %>" alt="" width="34" height="34">
+                    <% } else { %>
+                      <span class="fb-badge__pip" style="--badge: <%= entry.color %>;" aria-hidden="true"></span>
+                    <% } %>
+                    <%= entry.name %>
+                  </td>
+                  <td><code><%= entry.key %></code></td>
+                  <td><%= entry.when %></td>
+                  <td><%= entry.by %></td>
+                  <td>
+                    <% if (canGrant) { %>
+                      <form method="post" action="/admin/users/<%= account.id %>/badges">
+                        <input type="hidden" name="action" value="remove">
+                        <input type="hidden" name="key" value="<%= entry.key %>">
+                        <button class="fb-btn" type="submit">Remove</button>
+                      </form>
+                    <% } else { %>
+                      -
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        Removing a badge deletes the grant, so it disappears from the profile; the audit log keeps the
+        fact that it was granted and removed, and by whom. Role badges are kept in step with the role -
+        a promotion adds one, a demotion takes it back - while earned badges such as a Carpenters Club
+        tier stay where they are.
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>
