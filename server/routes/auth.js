@@ -18,7 +18,7 @@ const pageContext = require('../services/pageContext');
 
 const router = Router();
 
-const COOKIE = 'fb_session';
+const COOKIE = accounts.SESSION_COOKIE;
 
 function databaseMissing(req, res) {
   return res.status(503).render(

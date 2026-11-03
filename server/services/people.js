@@ -20,12 +20,12 @@ const PERSON_COLUMNS = `
   (SELECT COUNT(*) FROM user_badges b WHERE b.user_id = u.id) AS badge_count,
   (SELECT COUNT(*) FROM games g WHERE g.creator_id = u.id AND g.published = 1) AS game_count,
   (SELECT COUNT(*) FROM user_items i WHERE i.user_id = u.id) AS item_count,
-  EXISTS (
-    SELECT 1 FROM sessions s
-     WHERE s.user_id = u.id
-       AND s.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-       AND s.created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-2 hours')
-  ) AS is_online
+  -- Presence is written by the request that was signed in (accounts.touchLastSeen)
+  -- and reads as "seen in the last five minutes". A session lasts a fortnight,
+  -- so session age said nothing about whether anybody was here.
+  CASE WHEN u.last_seen_at IS NOT NULL
+        AND u.last_seen_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-5 minutes')
+       THEN 1 ELSE 0 END AS is_online
 `;
 
 const PERSON_FROM = `
@@ -41,9 +41,9 @@ const ORDER = {
 };
 
 /**
- * Presence is an approximation: a session created in the last two hours. There
- * is no last-seen write yet, so this says "signed in recently" rather than
- * "looking at the site right now", and it is honest about that.
+ * Presence comes from last_seen_at, which a signed-in request writes. Someone
+ * who never signed in has no last_seen_at at all and reads as offline rather
+ * than "online because they are new".
  */
 function shape(row) {
   const person = accounts.toViewer(row, row, {

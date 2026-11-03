@@ -10,6 +10,8 @@ const passwords = require('./passwords');
 const usernamePolicy = require('./usernamePolicy');
 
 const SESSION_DAYS = 14;
+// The one place the session cookie's name is written down; the routes read it.
+const SESSION_COOKIE = 'fb_session';
 const USERNAME = /^[A-Za-z0-9_]{3,20}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 8;
@@ -259,6 +261,129 @@ async function activeRestriction(db, userId) {
     .first();
 }
 
+const LAST_SEEN_INTERVAL_MS = 60 * 1000;
+
+/**
+ * Records that this account was here, at most once a minute.
+ *
+ * Presence has to be written by the request that was signed in, not inferred
+ * from a session's creation time: a session lasts a fortnight, so "created a
+ * session recently" says nothing about whether anybody is here now. The
+ * interval keeps it to one small write per member per minute rather than one
+ * per request.
+ */
+async function touchLastSeen(db, user) {
+  if (!db || !user || !user.id) return;
+
+  const last = Date.parse(user.last_seen_at || '') || 0;
+  if (Date.now() - last < LAST_SEEN_INTERVAL_MS) return;
+
+  const now = nowIso();
+  await db.prepare('UPDATE users SET last_seen_at = ? WHERE id = ?').bind(now, user.id).run();
+  user.last_seen_at = now;
+}
+
+/** Sessions that have not expired. The current device is one of them. */
+async function activeSessionCount(db, userId) {
+  const row = await db
+    .prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ? AND expires_at > ?')
+    .bind(userId, nowIso())
+    .first();
+
+  return row ? Number(row.n) : 0;
+}
+
+function storedSecret(row) {
+  return {
+    hash: row.password_hash,
+    salt: row.password_salt,
+    iterations: row.password_iterations,
+  };
+}
+
+/**
+ * Changes the password, ending every other session.
+ *
+ * The device that made the change stays signed in, because forcing somebody to
+ * sign straight back in on the screen they are already using only encourages
+ * them to skip changing the password. Any other token is deleted, which is the
+ * point of changing it at all after a scare.
+ */
+async function changePassword(db, userId, input, keepToken) {
+  const body = input || {};
+  const current = String(body.current || '');
+  const next = String(body.password || '');
+  const confirm = body.confirm === undefined ? next : String(body.confirm || '');
+
+  if (next.length < MIN_PASSWORD) {
+    throw new AccountError(`A password needs at least ${MIN_PASSWORD} characters.`);
+  }
+  if (next !== confirm) {
+    throw new AccountError('The two passwords do not match.');
+  }
+  if (next === current) {
+    throw new AccountError('That is already your password.');
+  }
+
+  const row = await findById(db, userId);
+  if (!row) throw new AccountError('That account no longer exists.');
+
+  const ok = await passwords.verify(current, storedSecret(row));
+  if (!ok) throw new AccountError('That is not your current password.');
+
+  const secret = await passwords.hash(next);
+
+  await db
+    .prepare('UPDATE users SET password_hash = ?, password_salt = ?, password_iterations = ? WHERE id = ?')
+    .bind(secret.hash, secret.salt, secret.iterations, userId)
+    .run();
+
+  return signOutOtherSessions(db, userId, keepToken);
+}
+
+/** Ends every session except the one making the request. */
+async function signOutOtherSessions(db, userId, keepToken) {
+  const keepHash = keepToken ? await passwords.hashToken(keepToken) : null;
+
+  const result = keepHash
+    ? await db
+        .prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?')
+        .bind(userId, keepHash)
+        .run()
+    : await db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
+
+  return result && result.meta ? Number(result.meta.changes) || 0 : 0;
+}
+
+/**
+ * Closes the account: marked closed rather than deleted, so history survives.
+ * Every auth query filters on closed_at, so the name stops working immediately.
+ * The close is written to the moderation log, which is append-only, because
+ * "where did this account go" should be answerable later.
+ */
+async function closeAccount(db, userId, input) {
+  const password = String((input || {}).password || '');
+  const row = await findById(db, userId);
+  if (!row) throw new AccountError('That account no longer exists.');
+
+  const ok = await passwords.verify(password, storedSecret(row));
+  if (!ok) throw new AccountError('That is not your password.');
+
+  const now = nowIso();
+
+  await db.prepare('UPDATE users SET closed_at = ? WHERE id = ?').bind(now, userId).run();
+  await db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
+  await db
+    .prepare(
+      `INSERT INTO moderation_log (actor_id, target_id, action, detail, created_at)
+       VALUES (?, ?, 'account_closed', 'Closed by the account holder.', ?)`
+    )
+    .bind(userId, userId, now)
+    .run();
+
+  return { closedAt: now };
+}
+
 /**
  * Shapes a database row into what the templates expect.
  *
@@ -300,7 +425,7 @@ async function loadViewer(db, user) {
   const [badges, games, items, friendships] = await Promise.all([
     db.prepare('SELECT COUNT(*) AS n FROM user_badges WHERE user_id = ?').bind(user.id).first(),
     db.prepare('SELECT COUNT(*) AS n FROM games WHERE creator_id = ? AND published = 1').bind(user.id).first(),
-    db.prepare('SELECT COUNT(*) AS n FROM user_items WHERE user_id = ?').bind(user.id).first(),
+    db.prepare('SELECT COUNT(*) AS n FROM items WHERE 1 = 0').bind(user.id).first(),
     db
       .prepare(
         `SELECT COUNT(*) AS n FROM friendships
@@ -320,16 +445,22 @@ async function loadViewer(db, user) {
 
 module.exports = {
   AccountError,
+  SESSION_COOKIE,
   SESSION_DAYS,
   STARTER_AVATAR,
   activeRestriction,
+  activeSessionCount,
   authenticate,
+  changePassword,
+  closeAccount,
   createSession,
   destroySession,
   findByUsername,
   loadViewer,
   register,
+  signOutOtherSessions,
   toViewer,
+  touchLastSeen,
   touchSession,
   userForToken,
   validate,

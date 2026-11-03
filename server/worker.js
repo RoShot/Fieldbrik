@@ -242,6 +242,11 @@ async function handlePage(request, url, env) {
           res.clearCookie(COOKIE, { path: '/' });
         } else {
           req.user = user;
+
+          // Presence is written before the viewer is shaped, so this page and
+          // every other one agree about when this member was last here.
+          await accounts.touchLastSeen(req.db, user);
+
           req.viewer = await accounts.loadViewer(req.db, user);
           req.cookies.live = '1';
         }
