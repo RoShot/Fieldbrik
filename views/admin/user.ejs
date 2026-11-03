@@ -53,6 +53,9 @@
             <% if (canReferral) { %>
               <a class="fb-btn" href="/admin/users/<%= account.id %>/referral">Referral Program</a>
             <% } %>
+            <% if (canIssue) { %>
+              <a class="fb-btn" href="/admin/users/<%= account.id %>/currency">Currency</a>
+            <% } %>
             <a class="fb-btn" href="/admin/users/<%= account.id %>/badges">Badges<% if (canBadge) { %> and Awards<% } %></a>
             <a class="fb-btn" href="/admin/users">Back to search</a>
           </div>
