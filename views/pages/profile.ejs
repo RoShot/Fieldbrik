@@ -43,7 +43,9 @@
               <button class="fb-btn fb-btn--primary" type="submit">Add Friend</button>
             </form>
           <% } %>
-          <a href="/support">Report Abuse</a>
+          <% if (friendAction !== 'signed-out' && friendAction !== 'blocked' && person.username !== viewer.username) { %>
+            <a class="fb-btn" href="/messages/compose?to=<%= encodeURIComponent(person.username) %>">Send Message</a>
+          <% } %>
         </div>
       </div>
 
@@ -134,8 +136,13 @@
       </section>
 
       <div class="fb-notice">
-        <p><strong>Friend requests are real. Messages are not.</strong></p>
-        <p>Badges, statistics and the friends listed here all come from the database, and those friends are that member's real accepted friendships. Adding a friend sends a request that only becomes a friendship when the other person accepts. Send Message has no route yet, so it is not drawn rather than drawn as a button that does nothing.</p>
+        <p><strong>Everything on this page is real.</strong></p>
+        <p>Badges, statistics and the friends listed here all come from the database, and those
+           friends are that member's real accepted friendships. Adding a friend sends a request
+           that only becomes a friendship when the other person accepts, and Send Message writes
+           a private message that lands in their inbox.</p>
+        <p>There is no Report Abuse button yet. The report queue is not built, so a report about a
+           member or a message goes through the <a href="/support">Support</a> page until it is.</p>
       </div>
     </div>
 
