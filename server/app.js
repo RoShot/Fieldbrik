@@ -13,6 +13,7 @@ const adminRoutes = require('./routes/admin');
 const adminContentRoutes = require('./routes/adminContent');
 const earningsRoutes = require('./routes/earnings');
 const mailboxRoutes = require('./routes/mailbox');
+const reportsRoutes = require('./routes/reports');
 const pageRoutes = require('./routes/pages');
 
 const app = express();
@@ -43,6 +44,9 @@ app.use(express.json());
 // Account routes first: they answer POST /login, /register and /logout. On
 // this server there is no database, so they reply 503 rather than half-working.
 app.use('/', authRoutes);
+
+// Reports: the member's form and list, and the queue at /admin/reports.
+app.use('/', reportsRoutes);
 
 // The panel, for the same reason as the Worker: it gates /admin itself.
 app.use('/', adminRoutes);
