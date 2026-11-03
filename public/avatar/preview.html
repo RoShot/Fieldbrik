@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FieldBrik avatar renderer - test bench</title>
+  <link rel="stylesheet" href="avatar.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #dfe7f1;
+      font: 13px/1.5 Arial, Helvetica, sans-serif;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: #555;
+      max-width: 640px;
+    }
+
+    .bench {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #b9c4d2;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .card .fieldbrik-avatar {
+      width: 160px;
+      height: 220px;
+    }
+
+    .card small {
+      display: block;
+      margin-top: 6px;
+      color: #666;
+    }
+
+    .controls {
+      margin: 0 0 18px;
+      padding: 10px;
+      background: #ffffff;
+      border: 1px solid #b9c4d2;
+    }
+
+    button {
+      font: inherit;
+      padding: 3px 10px;
+      margin-right: 6px;
+      cursor: pointer;
+    }
+
+    code {
+      background: #eef2f7;
+      padding: 1px 4px;
+      border: 1px solid #d3dae3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Avatar renderer test bench</h1>
+
+  <p>
+    The real renderer, on a page you can poke at. Serve the site over HTTP and
+    open <code>/avatar/preview.html</code>. Opening the file directly will not
+    work, because a <code>file://</code> page cannot import modules.
+  </p>
+
+  <p>
+    Without <code>head.obj</code> the renderer logs a warning and draws a box
+    head, so the body, colours and faces can still be checked.
+  </p>
+
+  <div class="controls">
+    <button id="spin">Toggle spin</button>
+    <button id="recolour">Random colours</button>
+    <button id="face">Next face</button>
+    <span id="status"></span>
+  </div>
+
+  <div class="bench" id="bench"></div>
+
+  <script type="module">
+    import {
+      initializeAvatar,
+      createAvatar,
+      DEFAULT_AVATAR,
+      FACE_IDS
+    } from "./avatar.js";
+
+    const status = document.getElementById("status");
+
+    // One full-size figure, driven by the controls.
+    const hero = document.createElement("div");
+    hero.className = "fieldbrik-avatar";
+    const heroCard = document.createElement("div");
+    heroCard.className = "card";
+    heroCard.appendChild(hero);
+    document.getElementById("bench").appendChild(heroCard);
+
+    // A row of small figures to prove caching: this must fetch head.obj once.
+    const roster = [
+      DEFAULT_AVATAR,
+      { headColor: "#8a6fb5", torsoColor: "#2f6fb5", leftArmColor: "#8a6fb5", rightArmColor: "#8a6fb5", leftLegColor: "#111111", rightLegColor: "#111111", face: "chuckle" },
+      { headColor: "#b5443a", torsoColor: "#111111", leftArmColor: "#b5443a", rightArmColor: "#f57c00", leftLegColor: "#234d7f", rightLegColor: "#234d7f", face: "durr" }
+    ];
+
+    let view = null;
+
+    try {
+      view = await initializeAvatar(hero, DEFAULT_AVATAR, { antialias: false });
+      status.textContent = "WebGL ready.";
+    } catch (error) {
+      status.textContent = "WebGL unavailable: " + error.message;
+      hero.className = "fieldbrik-avatar fieldbrik-avatar-fallback";
+      hero.textContent = "No WebGL on this machine.";
+    }
+
+    for (const data of roster) {
+      const slot = document.createElement("div");
+      slot.className = "fieldbrik-avatar";
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.appendChild(slot);
+
+      const label = document.createElement("small");
+      label.textContent = data.face;
+      card.appendChild(label);
+
+      document.getElementById("bench").appendChild(card);
+
+      const small = await initializeAvatar(slot, data);
+      small.renderer.setSize(160, 220, false);
+      small.camera.aspect = 160 / 220;
+      small.camera.updateProjectionMatrix();
+      small.invalidate();
+    }
+
+    let current = { ...DEFAULT_AVATAR };
+    let faceIndex = 0;
+
+    document.getElementById("spin").addEventListener("click", () => {
+      if (view) {
+        view.setSpin(!view.scene.rotation.y || view.scene.rotation.y === 0);
+      }
+    });
+
+    document.getElementById("recolour").addEventListener("click", async () => {
+      if (!view) {
+        return;
+      }
+
+      const hex = () =>
+        "#" + Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+
+      current = {
+        ...current,
+        headColor: hex(),
+        torsoColor: hex(),
+        leftArmColor: hex(),
+        rightArmColor: hex(),
+        leftLegColor: hex(),
+        rightLegColor: hex()
+      };
+
+      await view.update(current);
+    });
+
+    document.getElementById("face").addEventListener("click", async () => {
+      if (!view) {
+        return;
+      }
+
+      faceIndex = (faceIndex + 1) % FACE_IDS.length;
+      current = { ...current, face: FACE_IDS[faceIndex] };
+
+      await view.update(current);
+      status.textContent = "Face: " + current.face;
+    });
+  </script>
+</body>
+</html>
