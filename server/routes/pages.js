@@ -13,7 +13,28 @@ const { Router } = require('../lib/router');
 
 const site = require('../config/site');
 const buildNavigation = require('../services/navigation');
+const pageContext = require('../services/pageContext');
 const fixtures = require('../services/fixtures');
+
+/*
+ * Identity comes from the session; content still comes from fixtures.
+ *
+ * A signed-in account must never be shown someone else's name or stats, so the
+ * viewer is replaced wholesale. Lists that would be attributed to that account -
+ * friends, favourite games, badges held - come back empty rather than borrowed,
+ * because a new account genuinely has none of them yet.
+ */
+function viewerFor(req) {
+  return req.viewer || fixtures.viewer;
+}
+
+function ownedList(req, list) {
+  return req.viewer ? [] : list;
+}
+
+function heldBadgeKeys(req) {
+  return req.viewer ? [] : fixtures.viewerBadges;
+}
 
 const router = Router();
 
@@ -79,14 +100,29 @@ const PENDING = {
   },
 };
 
+/**
+ * Pages that only make sense for a signed-in member.
+ *
+ * Without a session they redirect to the one form instead of drawing somebody
+ * else's account, which is what the fixtures did while accounts were missing.
+ */
+const GUARDED = [
+  /^\/my-page$/,
+  /^\/character(\/.*)?$/,
+  /^\/inventory$/,
+  /^\/friends$/,
+  /^\/messages(\/.*)?$/,
+  /^\/settings$/,
+];
+
 // Shared locals for every page. One place, not once per page.
 router.use((req, res, next) => {
-  res.locals.site = site;
-  res.locals.nav = buildNavigation(req.path);
-  res.locals.viewer = fixtures.viewer;
-  res.locals.currentPath = req.path;
-  res.locals.pageTitle = site.name;
-  res.locals.authState = 'guest';
+  if (!req.viewer && GUARDED.some((pattern) => pattern.test(req.path))) {
+    if (req.method === 'GET') return res.redirect('/login');
+    return res.status(401).json({ ok: false, error: 'Sign in first.' });
+  }
+
+  Object.assign(res.locals, pageContext(req));
   next();
 });
 
@@ -108,16 +144,16 @@ router.get('/', (req, res) => {
 router.get('/my-page', (req, res) => {
   signedIn(res);
 
-  const friends = fixtures.users.filter((user) => user.id !== fixtures.viewer.id).slice(0, 6);
+  const friends = fixtures.users.filter((user) => user.id !== viewerFor(req).id).slice(0, 6);
   const favouriteGames = fixtures.games.slice(0, 3);
-  const heldBadges = fixtures.badges.filter((badge) => fixtures.viewerBadges.includes(badge.key));
+  const heldBadges = fixtures.badges.filter((badge) => heldBadgeKeys(req).includes(badge.key));
 
   res.render('pages/my-page', {
     pageTitle: `My Page - ${site.name}`,
-    viewer: fixtures.viewer,
-    friends,
-    friendTotal: fixtures.viewer.stats.friends,
-    favouriteGames,
+    viewer: viewerFor(req),
+    friends: ownedList(req, friends),
+    friendTotal: viewerFor(req).stats.friends,
+    favouriteGames: ownedList(req, favouriteGames),
     heldBadges,
     profileLinks,
   });
@@ -134,7 +170,7 @@ router.get('/carpenters-club', (req, res) => {
   res.render('pages/carpenters-club', {
     pageTitle: `Carpenters Club - ${site.name}`,
     club: site.carpentersClub,
-    heldBadges: fixtures.viewerBadges,
+    heldBadges: heldBadgeKeys(req),
   });
 });
 
@@ -519,12 +555,22 @@ router.get('/privacy', (req, res) => {
   res.render('pages/privacy', { pageTitle: `Privacy Policy - ${site.name}` });
 });
 
+// error and values are passed even when empty: the template reads them, and EJS
+// throws on a name that is missing from the locals object entirely.
 router.get('/login', (req, res) => {
-  res.render('pages/login', { pageTitle: `Log In - ${site.name}` });
+  // Already signed in? There is nothing to do on this page.
+  if (req.viewer) return res.redirect('/my-page');
+
+  res.render('pages/login', {
+    pageTitle: `Log In - ${site.name}`,
+    error: null,
+    values: null,
+  });
 });
 
+// One form does both jobs, so the old separate page is just a way in.
 router.get('/register', (req, res) => {
-  res.render('pages/register', { pageTitle: `Create an Account - ${site.name}` });
+  res.redirect('/login');
 });
 
 // ---------- Account and social pages ----------
@@ -547,14 +593,14 @@ router.get('/character', (req, res) => {
 
   res.render('pages/character', {
     pageTitle: `Character - ${site.name}`,
-    avatar: fixtures.viewer.avatar,
-    viewerName: fixtures.viewer.username,
+    avatar: viewerFor(req).avatar,
+    viewerName: viewerFor(req).username,
     palette: fixtures.avatarPalette,
     faces: fixtures.avatarFaces,
     parts: AVATAR_PARTS.map((part) => ({
       label: part.label,
       source: part.source,
-      current: fixtures.viewer.avatar[part.source],
+      current: viewerFor(req).avatar[part.source],
     })),
   });
 });
@@ -564,7 +610,7 @@ router.get('/character', (req, res) => {
 // was accepted.
 router.post('/character/avatar', (req, res, next) => {
   try {
-    const saved = avatarStore.save(fixtures.viewer.id, req.body);
+    const saved = avatarStore.save(viewerFor(req).id, req.body);
 
     res.json({ ok: true, avatar: saved });
   } catch (error) {
@@ -586,7 +632,7 @@ router.get('/inventory', (req, res) => {
     pageTitle: `Inventory - ${site.name}`,
     owned,
     wearing: owned.filter((item) => item.equipped),
-    viewerName: fixtures.viewer.username,
+    viewerName: viewerFor(req).username,
   });
 });
 
@@ -595,11 +641,11 @@ router.get('/friends', (req, res) => {
 
   res.render('pages/friends', {
     pageTitle: `Friends - ${site.name}`,
-    friends: fixtures.users.filter((user) => user.id !== fixtures.viewer.id),
-    total: fixtures.viewer.stats.friends,
+    friends: fixtures.users.filter((user) => user.id !== viewerFor(req).id),
+    total: viewerFor(req).stats.friends,
     incoming: [],
     outgoing: [],
-    viewerName: fixtures.viewer.username,
+    viewerName: viewerFor(req).username,
   });
 });
 
@@ -610,7 +656,7 @@ router.get('/messages', (req, res) => {
     pageTitle: `Messages - ${site.name}`,
     messages: fixtures.messages,
     unread: fixtures.messages.filter((message) => !message.read).length,
-    viewerName: fixtures.viewer.username,
+    viewerName: viewerFor(req).username,
   });
 });
 
@@ -638,7 +684,7 @@ router.get('/settings', (req, res) => {
 
   res.render('pages/settings', {
     pageTitle: `Account Settings - ${site.name}`,
-    viewerName: fixtures.viewer.username,
+    viewerName: viewerFor(req).username,
   });
 });
 
