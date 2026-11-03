@@ -45,6 +45,7 @@
           <% } %>
           <% if (friendAction !== 'signed-out' && friendAction !== 'blocked' && person.username !== viewer.username) { %>
             <a class="fb-btn" href="/messages/compose?to=<%= encodeURIComponent(person.username) %>">Send Message</a>
+            <a href="/reports/new?kind=member&amp;user=<%= encodeURIComponent(person.username) %>">Report Abuse</a>
           <% } %>
         </div>
       </div>
@@ -115,18 +116,18 @@
       </section>
 
       <section class="fb-panel">
-        <h2 class="fb-panel__title"><%= person.username %>'s Games</h2>
+        <h2 class="fb-panel__title"><%= person.username %>'s Places</h2>
         <div class="fb-panel__body">
           <% if (created.length === 0) { %>
-            <p class="fb-muted">No published games yet.</p>
+            <p class="fb-muted">No published places yet.</p>
           <% } else { %>
             <ul class="fb-grid--games">
-              <% created.forEach(function (game) { %>
+              <% created.forEach(function (place) { %>
                 <li>
-                  <a class="fb-card-game__thumb" href="/games/<%= game.id %>" style="--thumb: <%= game.thumb %>;" aria-hidden="true" tabindex="-1"></a>
-                  <a class="fb-card-game__title" href="/games/<%= game.id %>"><%= game.name %></a>
+                  <a class="fb-card-game__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                  <a class="fb-card-game__title" href="/games/<%= place.slug %>"><%= place.name %></a>
                   <p class="fb-card-game__meta">
-                    Played: <%= game.visits.toLocaleString('en-US') %> times
+                    <% if (place.created) { %>Built <%= place.created %><% } else { %>By <%= person.username %><% } %>
                   </p>
                 </li>
               <% }); %>
@@ -138,11 +139,13 @@
       <div class="fb-notice">
         <p><strong>Everything on this page is real.</strong></p>
         <p>Badges, statistics and the friends listed here all come from the database, and those
-           friends are that member's real accepted friendships. Adding a friend sends a request
+           friends are that member's real accepted friendships, and each place listed above is one
+           they published. Adding a friend sends a request
            that only becomes a friendship when the other person accepts, and Send Message writes
            a private message that lands in their inbox.</p>
-        <p>There is no Report Abuse button yet. The report queue is not built, so a report about a
-           member or a message goes through the <a href="/support">Support</a> page until it is.</p>
+        <p>There is a Report Abuse link on every profile and on every message you receive. A report
+           goes into one moderation queue, is never shown to the member it is about, and is
+           answered by a member of staff rather than by an automatic ban.</p>
       </div>
     </div>
 

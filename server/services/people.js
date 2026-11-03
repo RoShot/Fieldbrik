@@ -158,7 +158,7 @@ async function badgesFor(db, userId) {
 async function gamesFor(db, userId) {
   const result = await db
     .prepare(
-      `SELECT id, name, visits
+      `SELECT id, slug, name, visits, created_at
          FROM games
         WHERE creator_id = ? AND published = 1
         ORDER BY updated_at DESC
@@ -167,7 +167,18 @@ async function gamesFor(db, userId) {
     .bind(userId)
     .all();
 
-  return (result.results || []).map((game) => ({ ...game, thumb: '#8a6fb5' }));
+  // The slug, not the id, is what a place is linked by: it is the address the
+  // Games page and every place link use, and it survives a rename. `visits` is
+  // carried because the column exists, but nothing counts one yet - the profile
+  // panel says so rather than printing a zero.
+  return (result.results || []).map((game) => ({
+    id: Number(game.id),
+    slug: game.slug,
+    name: game.name,
+    visits: Number(game.visits) || 0,
+    created: String(game.created_at || '').slice(0, 10),
+    thumb: '#8a6fb5',
+  }));
 }
 
 module.exports = { badgesFor, findOne, friendsOf, gamesFor, list, pending, shape };
