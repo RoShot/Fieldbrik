@@ -9,7 +9,16 @@
  * passwords already in the table.
  */
 
-const ITERATIONS = 120000;
+/**
+ * Cloudflare refuses PBKDF2 above 100,000 iterations - "Pbkdf2 failed:
+ * iteration counts above 100000 are not supported" - and it refuses it at
+ * runtime, not at build time, so a higher number deploys fine and then fails
+ * every sign-up. This is the highest count the platform accepts.
+ *
+ * Each row stores its own count, so this can be raised on another runtime
+ * without invalidating passwords already in the table.
+ */
+const ITERATIONS = 100000;
 const KEY_BYTES = 32;
 
 function toHex(bytes) {

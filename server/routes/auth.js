@@ -85,9 +85,6 @@ async function handleSignIn(req, res) {
     if (error instanceof accounts.AccountError) {
       return renderForm(req, res, 400, error.message, { username });
     }
-
-    // TEMPORARY DIAGNOSTIC - removed once the deployed failure is understood.
-    res.setHeader('x-fb-error', String((error && error.message) || error).slice(0, 300));
     throw error;
   }
 }
