@@ -1,0 +1,23 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-content">
+    <h1 class="fb-title"><%= statusCode %></h1>
+    <p class="fb-muted"><%= message %></p>
+
+    <div class="fb-prose">
+      <p>Head back to the <a href="/">home page</a>, or try one of these:</p>
+      <ul class="fb-list">
+        <li><a href="/games">Games</a></li>
+        <li><a href="/catalog">Catalog</a></li>
+        <li><a href="/people">People</a></li>
+        <li><a href="/help">Help</a></li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

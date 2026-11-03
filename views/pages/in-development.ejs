@@ -1,0 +1,30 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-content">
+    <h1 class="fb-title"><%= meta.title %></h1>
+    <p class="fb-muted"><%= meta.summary %></p>
+
+    <div class="fb-prose">
+      <div class="fb-notice">
+        <p><strong>This page is in development.</strong></p>
+        <p>It is scheduled for a later build pass. Nothing here is clickable yet, and no functionality is being faked in the meantime.</p>
+      </div>
+
+      <p>When it is built it will include:</p>
+      <ul class="fb-list">
+        <% meta.planned.forEach(function (line) { %>
+          <li><%= line %></li>
+        <% }); %>
+      </ul>
+      <% if (meta.note) { %>
+        <p class="fb-muted"><%= meta.note %></p>
+      <% } %>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

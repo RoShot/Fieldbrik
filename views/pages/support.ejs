@@ -1,0 +1,34 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-content">
+    <h1 class="fb-title">Support</h1>
+    <p class="fb-muted">Account problems, reports and questions.</p>
+
+    <div class="fb-prose">
+      <h2>Contact Us</h2>
+      <p>For account recovery, billing questions, moderation appeals or anything the <a href="/help">Help</a> page does not answer, contact the support team.</p>
+
+      <div class="fb-notice">
+        <p><strong>Contact address not yet active.</strong></p>
+        <p>The support inbox is being set up. The address that will receive support mail is <code><%= site.supportEmailPlaceholder %></code>. It is displayed here for layout purposes only and does not accept mail yet.</p>
+      </div>
+
+      <h2>What to include</h2>
+      <p>When you contact support, include your username, what you expected to happen, what happened instead, and the approximate time it occurred. If your report concerns another member, include their username and, where relevant, the message they sent.</p>
+
+      <h2>Before you write</h2>
+      <ul class="fb-list">
+        <li>Problems signing in are usually solved by resetting your password rather than contacting support.</li>
+        <li>Reports about a member are handled by moderators, who can issue warnings and restrict accounts.</li>
+        <li>If you believe a ban was issued in error, include your account ID so it can be looked up.</li>
+        <li>Never send your password to anyone, including staff. No member of support will ask for it.</li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

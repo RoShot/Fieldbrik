@@ -1,0 +1,49 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-content">
+    <h1 class="fb-title fb-title--small">Create an Account</h1>
+
+    <div class="fb-notice">
+      <p><strong>Registration is not live yet.</strong></p>
+      <p>The fields below are the real shape of sign-up, but nothing can be submitted: there is no database to write to until the accounts service is built in phase 2. The button is disabled rather than pretending to work.</p>
+    </div>
+
+    <form class="fb-auth" method="post" action="/register">
+      <div class="fb-auth__row">
+        <label for="register-username">Character Name</label>
+        <input id="register-username" name="username" type="text" autocomplete="username" disabled>
+      </div>
+      <div class="fb-auth__row">
+        <label for="register-email">Email</label>
+        <input id="register-email" name="email" type="email" autocomplete="email" disabled>
+      </div>
+      <div class="fb-auth__row">
+        <label for="register-password">Password</label>
+        <input id="register-password" name="password" type="password" autocomplete="new-password" disabled>
+      </div>
+      <div class="fb-auth__row">
+        <label for="register-confirm">Confirm Password</label>
+        <input id="register-confirm" name="confirm" type="password" autocomplete="new-password" disabled>
+      </div>
+      <div class="fb-auth__actions">
+        <button class="fb-btn fb-btn--primary" type="submit" disabled>Create Account</button>
+      </div>
+    </form>
+
+    <div class="fb-prose" style="margin-top:16px">
+      <h2>What happens with your details</h2>
+      <p>Your email is used to sign in and to recover your account. It is never shown to other members. The <a href="/privacy">privacy policy</a> lists everything that is stored and why.</p>
+
+      <p class="fb-muted">Sign-up for members under the age of majority will require a parent or guardian, and that consent step is still being designed. It is deliberately not drawn here as a checkbox that does nothing.</p>
+
+      <h2>Already have an account?</h2>
+      <p><a href="/login">Log in here.</a></p>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

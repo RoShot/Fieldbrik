@@ -1,0 +1,39 @@
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-container fb-main">
+  <div class="fb-content">
+    <h1 class="fb-title fb-title--small">Log In</h1>
+
+    <div class="fb-notice">
+      <p><strong>Sign-in is not live yet.</strong></p>
+      <p>The form below is the real layout, but it cannot sign anyone in: there is no account table, no password check and no session until the accounts service is built in phase 2. The button is disabled rather than pretending to work.</p>
+    </div>
+
+    <form class="fb-auth" method="post" action="/login">
+      <div class="fb-auth__row">
+        <label for="login-username">Character Name</label>
+        <input id="login-username" name="username" type="text" autocomplete="username" disabled>
+      </div>
+      <div class="fb-auth__row">
+        <label for="login-password">Password</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" disabled>
+      </div>
+      <div class="fb-auth__actions">
+        <button class="fb-btn fb-btn--primary" type="submit" disabled>Log In</button>
+      </div>
+    </form>
+
+    <div class="fb-prose" style="margin-top:16px">
+      <h2>No account yet?</h2>
+      <p><a href="/register">Create one here.</a> Registration opens with accounts in phase 2.</p>
+
+      <h2>Forgotten your password?</h2>
+      <p>Password recovery arrives with accounts. Until then there is nothing to recover, because no accounts exist.</p>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>
