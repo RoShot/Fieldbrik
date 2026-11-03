@@ -1,0 +1,63 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Audit Log</h1>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Actor</th>
+                <th scope="col">Account</th>
+                <th scope="col">Action</th>
+                <th scope="col">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (entries.length === 0) { %>
+                <tr>
+                  <td colspan="5" class="fb-table__last">Nothing has been logged yet.</td>
+                </tr>
+              <% } %>
+              <% entries.forEach(function (entry) { %>
+                <tr>
+                  <td class="fb-table__last"><%= entry.when %></td>
+                  <td><%= entry.actor %></td>
+                  <td><%= entry.target %></td>
+                  <td><%= entry.action %></td>
+                  <td class="fb-table__note"><%= entry.detail %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        Newest first, last 100 entries. The log is append-only: there is no edit or
+        delete path anywhere in the panel, which is the only reason it can be used to
+        explain a decision later.
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

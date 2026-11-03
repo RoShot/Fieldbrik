@@ -24,6 +24,7 @@
 import views from './views.generated.js';
 import pagesModule from './routes/pages.js';
 import authModule from './routes/auth.js';
+import adminModule from './routes/admin.js';
 import site from './config/site.js';
 import accounts from './services/accounts.js';
 import pageContext from './services/pageContext.js';
@@ -32,6 +33,7 @@ import pageContext from './services/pageContext.js';
 // either the default or the namespace depending on how it was bundled.
 const pageRoutes = pagesModule.default || pagesModule;
 const authRoutes = authModule.default || authModule;
+const adminRoutes = adminModule.default || adminModule;
 
 const COOKIE = 'fb_session';
 
@@ -257,6 +259,12 @@ async function handlePage(request, url, env) {
   }
 
   failure = await runRouter(authRoutes, req, res);
+
+  // The admin panel gates itself over /admin, so it runs before the public
+  // router rather than being one more page inside it.
+  if (!failure && !state.answered) {
+    failure = await runRouter(adminRoutes, req, res);
+  }
 
   if (!failure && !state.answered) {
     failure = await runRouter(pageRoutes, req, res);

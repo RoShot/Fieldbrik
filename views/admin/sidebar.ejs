@@ -1,0 +1,11 @@
+<%# Admin sidebar. Groups with nothing in them are not drawn - see services/admin.js. %>
+<aside class="fb-admin__side">
+  <% adminNav.forEach(function (group) { %>
+    <div class="fb-sidenav">
+      <div class="fb-sidenav__title"><%= group.label %></div>
+      <% group.items.forEach(function (item) { %>
+        <a class="fb-sidenav__link<%= item.active ? ' is-active' : '' %>" href="<%= item.href %>"<%= item.active ? ' aria-current="page"' : '' %>><%= item.label %></a>
+      <% }); %>
+    </div>
+  <% }); %>
+</aside>

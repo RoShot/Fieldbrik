@@ -9,6 +9,7 @@ const path = require('path');
 const express = require('express');
 
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 const pageRoutes = require('./routes/pages');
 
 const app = express();
@@ -39,6 +40,9 @@ app.use(express.json());
 // Account routes first: they answer POST /login, /register and /logout. On
 // this server there is no database, so they reply 503 rather than half-working.
 app.use('/', authRoutes);
+
+// The panel, for the same reason as the Worker: it gates /admin itself.
+app.use('/', adminRoutes);
 
 app.use('/', pageRoutes);
 

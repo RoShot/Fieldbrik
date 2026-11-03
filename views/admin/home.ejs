@@ -1,0 +1,79 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Administration Home</h1>
+        <div class="fb-panel__body">
+          <h2 class="fb-admin__heading">FieldBrik Administration Panel</h2>
+
+          <p>Welcome to the FieldBrik Administration Panel.</p>
+          <p>Use the menu on the left to manage users, content, moderation and system settings.</p>
+          <p>This area is restricted to authorized administrators only.</p>
+
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">What</th>
+                <th scope="col">Count</th>
+                <th scope="col">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Accounts</td>
+                <td><%= counts.accounts %></td>
+                <td class="fb-table__note">Open accounts only.</td>
+              </tr>
+              <tr>
+                <td>Staff accounts</td>
+                <td><%= counts.staff %></td>
+                <td class="fb-table__note">Rank 50 and above.</td>
+              </tr>
+              <tr>
+                <td>Places</td>
+                <td><%= counts.places %></td>
+                <td class="fb-table__note"><%= counts.live %> published.</td>
+              </tr>
+              <tr>
+                <td>Forum threads</td>
+                <td><%= counts.threads %></td>
+                <td class="fb-table__note"><%= counts.posts %> posts.</td>
+              </tr>
+              <tr>
+                <td>Active bans</td>
+                <td><%= counts.bans %></td>
+                <td class="fb-table__note">Bans that have not expired or been lifted.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="fb-admin__note">
+            This panel is being built in passes. Overview and the audit log exist now.
+            Searching accounts, moderation, memberships, billing and settings are wired
+            in the passes that follow, and until then the menu does not offer them:
+            a link that leads to nothing is worse than a missing one.
+          </p>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

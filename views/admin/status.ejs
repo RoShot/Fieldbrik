@@ -1,0 +1,7 @@
+<%# Status strip. Every line is either a real count or a plain statement that the
+    subsystem is not built - never a zero standing in for "missing". %>
+<div class="fb-admin__status">
+  <% adminStatus.forEach(function (line) { %>
+    <span class="fb-admin__status-line"><%= line %></span>
+  <% }); %>
+</div>

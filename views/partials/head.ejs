@@ -8,5 +8,10 @@
   <%# The ?v= is a cache buster: the stylesheet changes often during the build,
       and a stale copy shows the old avatar figure through the 3D canvas. %>
   <link rel="stylesheet" href="/css/fieldbrik.css?v=4">
+  <%# Extra stylesheet, used by the admin panel. Pages that do not pass it are
+      unaffected; typeof keeps a missing local from throwing in EJS. %>
+  <% if (typeof extraCss !== 'undefined' && extraCss) { %>
+  <link rel="stylesheet" href="<%= extraCss %>">
+  <% } %>
 </head>
 <body>
