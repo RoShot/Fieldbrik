@@ -23,6 +23,7 @@ const site = {
     { key: 'my-page', label: 'My FieldBrik', href: '/my-page' },
     { key: 'games', label: 'Games', href: '/games' },
     { key: 'catalog', label: 'Catalog', href: '/catalog' },
+    { key: 'earnings', label: 'Tickets', href: '/earnings' },
     { key: 'people', label: 'People', href: '/people' },
     { key: 'carpenters-club', label: 'Carpenters Club', href: '/carpenters-club' },
     { key: 'forum', label: 'Forum', href: '/forum' },

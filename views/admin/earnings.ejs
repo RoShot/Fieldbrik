@@ -1,0 +1,86 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Ticket Rates</h1>
+        <div class="fb-panel__body">
+          <p class="fb-admin__muted">
+            What an account earns for using the site. These numbers are read on every award, so a change
+            here applies from the next daily award and the next visit milestone - nothing already paid is
+            recalculated.
+          </p>
+
+          <form method="post" action="/admin/earnings">
+            <% fields.forEach(function (field) { %>
+              <div class="fb-mod__field">
+                <label for="fb-rate-<%= field.name %>"><%= field.label %></label>
+                <input id="fb-rate-<%= field.name %>" type="number" name="<%= field.name %>" min="0" max="<%= maxRate %>" step="1" value="<%= field.value %>" required>
+                <p class="fb-admin__muted"><%= field.note %></p>
+              </div>
+            <% }); %>
+
+            <button class="fb-btn fb-btn--primary" type="submit">Save rates</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">What a day is worth now</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Account</th>
+                <th scope="col">Tickets per day</th>
+                <th scope="col">Bucks per day</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% ladder.forEach(function (row) { %>
+                <tr>
+                  <td><%= row.label %></td>
+                  <td><%= row.tickets %></td>
+                  <td><%= row.bucks > 0 ? row.bucks : '-' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+        <p class="fb-panel__strip">
+          Visits: every <%= visits.block %> visits on a place pays its owner <%= visits.tickets %> Tickets, once per milestone.
+        </p>
+      </div>
+
+      <p class="fb-admin__note">
+        A daily award lands on the first page a member opens after midnight UTC, and is recorded once per
+        day in the ledger, so reloading cannot pay twice. Visit milestones are recorded per place and per
+        milestone for the same reason. Nothing in this pass increments a visit, because visiting a place
+        is not built yet.
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

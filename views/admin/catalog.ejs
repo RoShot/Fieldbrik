@@ -1,0 +1,143 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Catalog Items</h1>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col">Category</th>
+                <th scope="col">Prices</th>
+                <th scope="col">Owners</th>
+                <th scope="col">Sale</th>
+                <th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (items.length === 0) { %>
+                <tr><td colspan="6" class="fb-table__last">No items in the catalog yet. Create one below.</td></tr>
+              <% } %>
+              <% items.forEach(function (item) { %>
+                <tr>
+                  <td>
+                    <div class="fb-catalog-row">
+                      <span class="fb-card-item__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true">
+                        <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } %>
+                      </span>
+                      <span>
+                        <strong><%= item.name %></strong><br>
+                        <span class="fb-muted">by <%= item.creator %></span>
+                      </span>
+                    </div>
+                  </td>
+                  <td><%= item.category %></td>
+                  <td>
+                    <% if (item.tickets === null) { %>-<% } else { %><%= item.tickets %> Tx<% } %>
+                    <% if (item.bucks !== null) { %><br><%= item.bucks %> R$<% } %>
+                  </td>
+                  <td><%= item.owners %></td>
+                  <td><%= item.onSale ? 'on sale' : 'off sale' %></td>
+                  <td>
+                    <a class="fb-btn" href="/admin/catalog/<%= item.id %>">Edit</a>
+                    <form class="fb-inline" method="post" action="/admin/catalog/<%= item.id %>/sale">
+                      <input type="hidden" name="on_sale" value="<%= item.onSale ? '0' : '1' %>">
+                      <button class="fb-btn" type="submit"><%= item.onSale ? 'Take off sale' : 'Put on sale' %></button>
+                    </form>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <% if (canEdit) { %>
+        <div class="fb-panel">
+          <h2 class="fb-panel__title">New item</h2>
+          <div class="fb-panel__body">
+            <form method="post" action="/admin/catalog">
+              <div class="fb-mod__field">
+                <label for="fb-new-name">Name</label>
+                <input id="fb-new-name" type="text" name="name" maxlength="60" required autocomplete="off">
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-new-category">Category</label>
+                <select id="fb-new-category" name="category">
+                  <% categories.forEach(function (name) { %>
+                    <option value="<%= name %>"><%= name %></option>
+                  <% }); %>
+                </select>
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-new-tickets">Price in Tickets (leave empty if it is not sold for Tickets)</label>
+                <input id="fb-new-tickets" type="number" name="tickets" min="0" max="1000000" step="1">
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-new-bucks">Price in Bucks (leave empty if it is not sold for Bucks)</label>
+                <input id="fb-new-bucks" type="number" name="bucks" min="0" max="1000000" step="1">
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-new-description">Description (shown on the item page)</label>
+                <textarea id="fb-new-description" name="description" rows="3" maxlength="1000"></textarea>
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-new-image">Picture path (for example /img/Helmet.jpg, or empty for the colour swatch)</label>
+                <input id="fb-new-image" type="text" name="image" maxlength="200" autocomplete="off">
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-new-sale">On sale</label>
+                <select id="fb-new-sale" name="on_sale">
+                  <option value="1">On sale</option>
+                  <option value="0">Off sale</option>
+                </select>
+              </div>
+
+              <button class="fb-btn fb-btn--primary" type="submit">Create item</button>
+            </form>
+          </div>
+        </div>
+      <% } else { %>
+        <p><strong>Your role cannot change the catalog.</strong> Image Moderator and above can; the list above is readable.</p>
+      <% } %>
+
+      <p class="fb-admin__note">
+        Items are never deleted here, because members who bought one hold a row that points at it.
+        Taking an item off sale is the reversible equivalent: it leaves the catalog but stays in the
+        inventory of everybody who owns it. Pictures are paths under public/img, so a file goes in the
+        repository and the path is typed here; there is no upload yet.
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

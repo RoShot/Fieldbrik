@@ -1,0 +1,100 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Edit: <%= item.name %></h1>
+        <div class="fb-panel__body">
+          <table class="fb-table fb-table--kv">
+            <tbody>
+              <tr><th scope="row">Item ID</th><td><%= item.id %></td></tr>
+              <tr><th scope="row">Created by</th><td><%= item.creator %></td></tr>
+              <tr><th scope="row">On sale</th><td><%= item.onSale ? 'yes' : 'no' %></td></tr>
+              <tr><th scope="row">Owners</th><td><%= item.owners %></td></tr>
+            </tbody>
+          </table>
+
+          <% if (canEdit) { %>
+            <form method="post" action="/admin/catalog/<%= item.id %>">
+              <h2 class="fb-admin__heading">Change the item</h2>
+
+              <div class="fb-mod__field">
+                <label for="fb-name">Name</label>
+                <input id="fb-name" type="text" name="name" maxlength="60" required value="<%= item.name %>">
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-category">Category</label>
+                <select id="fb-category" name="category">
+                  <% categories.forEach(function (name) { %>
+                    <option value="<%= name %>"<%= item.category === name ? ' selected' : '' %>><%= name %></option>
+                  <% }); %>
+                </select>
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-tickets">Price in Tickets (empty = not sold for Tickets)</label>
+                <input id="fb-tickets" type="number" name="tickets" min="0" max="1000000" step="1" value="<%= item.tickets === null ? '' : item.tickets %>">
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-bucks">Price in Bucks (empty = not sold for Bucks)</label>
+                <input id="fb-bucks" type="number" name="bucks" min="0" max="1000000" step="1" value="<%= item.bucks === null ? '' : item.bucks %>">
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-description">Description</label>
+                <textarea id="fb-description" name="description" rows="3" maxlength="1000"><%= item.description %></textarea>
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-image">Picture path (for example /img/Helmet.jpg, or empty for the colour swatch)</label>
+                <input id="fb-image" type="text" name="image" maxlength="200" value="<%= item.image %>">
+              </div>
+
+              <div class="fb-mod__field">
+                <label for="fb-sale">On sale</label>
+                <select id="fb-sale" name="on_sale">
+                  <option value="1"<%= item.onSale ? ' selected' : '' %>>On sale</option>
+                  <option value="0"<%= item.onSale ? '' : ' selected' %>>Off sale</option>
+                </select>
+              </div>
+
+              <button class="fb-btn fb-btn--primary" type="submit">Save changes</button>
+            </form>
+          <% } else { %>
+            <p><strong>Your role cannot change the catalog.</strong> Image Moderator and above can.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <p class="fb-panel__more">
+        <a href="/admin/catalog">Back to the catalog list</a> &middot;
+        <a href="/catalog/<%= item.id %>">See the item on the site</a>
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>
