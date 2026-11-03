@@ -142,3 +142,92 @@
     width: 100%;
   }
 }
+
+/* ---------- Account search and the account page ---------- */
+
+.fb-admin__search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  background: #f7f5ea;
+  font-size: 11px;
+}
+
+.fb-admin__search input[type="text"] {
+  width: 220px;
+  padding: 2px 4px;
+  border: 1px solid #9a9a9a;
+  font: 11px Arial, Helvetica, sans-serif;
+}
+
+.fb-account {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.fb-account__avatar {
+  flex: 0 0 auto;
+}
+
+.fb-account__facts {
+  flex: 1 1 auto;
+}
+
+.fb-admin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.fb-roleform {
+  margin: 12px 0 0;
+  padding: 10px;
+  border: 1px solid #d8c48a;
+  background: #fdf8e7;
+}
+
+.fb-roleform__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.fb-roleform select {
+  padding: 1px 2px;
+  font: 11px Arial, Helvetica, sans-serif;
+}
+
+.fb-admin__muted {
+  margin: 0 0 8px;
+  color: #555555;
+  font-size: 10px;
+}
+
+.fb-admin__subheading {
+  margin: 14px 0 6px;
+  font: bold 11px/1.4 Arial, Helvetica, sans-serif;
+}
+
+.fb-notice--admin p {
+  margin: 0;
+}
+
+.fb-status--online {
+  color: var(--green);
+  font-weight: bold;
+}
+
+.fb-status--offline {
+  color: var(--ink-mute);
+}
+
+.fb-status--closed {
+  color: var(--red);
+  font-weight: bold;
+}

@@ -77,7 +77,7 @@ function view(req, extra) {
       viewer: req.viewer,
       admin: req.admin.role,
       currentPath: req.path,
-      adminNav: adminService.nav(req.admin.role, req.path),
+      adminNav: adminService.nav(req.admin.role, req.path, req.query),
       pageTitle: 'Administration - FieldBrik',
     },
     extra || {}
@@ -93,7 +93,9 @@ router.get(
         'admin/home',
         view(req, { adminStatus: overview.status, counts: overview.counts })
       );
-    })();
+    })().catch((error) => {
+      throw error;
+    });
   })
 );
 
@@ -107,6 +109,126 @@ router.get(
       ]);
 
       return res.render('admin/logs', view(req, { adminStatus: overview.status, entries }));
+    })();
+  })
+);
+
+/** Result of a role change, looked up from a fixed code rather than the URL. */
+const DONE = {
+  role: 'Role changed.',
+};
+
+const FAILED = {
+  self: 'You cannot change your own role.',
+  rank: 'That account is at or above your own rank, so you cannot act on it.',
+  grant: 'Your role cannot grant that role.',
+  unknown: 'That is not a role in the ladder.',
+  nobody: 'No account has that ID.',
+};
+
+function noticeFor(query) {
+  if (query && DONE[query.done]) return DONE[query.done];
+  if (query && FAILED[query.failed]) return FAILED[query.failed];
+  return '';
+}
+
+router.get(
+  '/admin/users',
+  staff('users.search', (req, res) => {
+    return (async () => {
+      const query = String(req.query.q || '').trim();
+      const staffOnly = String(req.query.staff || '') === '1';
+
+      const [accounts, overview] = await Promise.all([
+        adminService.searchAccounts(req.db, { q: query, staff: staffOnly }),
+        adminService.overview(req.db),
+      ]);
+
+      return res.render(
+        'admin/users',
+        view(req, {
+          adminStatus: overview.status,
+          accounts,
+          query,
+          staffOnly,
+          notice: noticeFor(req.query),
+        })
+      );
+    })();
+  })
+);
+
+router.get(
+  '/admin/users/:id',
+  staff('users.view', (req, res) => {
+    return (async () => {
+      const account = await adminService.findAccount(req.db, req.params.id);
+
+      if (!account) {
+        return notAllowed(req, res, 404, 'No account has that ID.');
+      }
+
+      const [record, overview, roles] = await Promise.all([
+        adminService.accountRecord(req.db, account.id),
+        adminService.overview(req.db),
+        permissions.can(req.admin.role, 'users.role') ? permissions.list(req.db) : Promise.resolve([]),
+      ]);
+
+      const actor = { id: req.viewer.id, rank: req.admin.role.rank };
+      const rootOverRoot = actor.rank === 255 && account.roleRank === 255;
+      const aboveOrEqual = account.roleRank >= actor.rank && !rootOverRoot;
+
+      const canChangeRole =
+        permissions.can(req.admin.role, 'users.role') &&
+        String(account.id) !== String(actor.id) &&
+        !aboveOrEqual;
+
+      let roleReason = 'Your role cannot change roles at all.';
+
+      if (permissions.can(req.admin.role, 'users.role')) {
+        if (String(account.id) === String(actor.id)) {
+          roleReason = 'You cannot change your own role.';
+        } else if (aboveOrEqual) {
+          roleReason = 'That account is at or above your own rank.';
+        }
+      }
+
+      return res.render(
+        'admin/user',
+        view(req, {
+          adminStatus: overview.status,
+          account,
+          record,
+          notice: noticeFor(req.query),
+          canChangeRole,
+          roleReason,
+          roleOptions: roles.filter((role) => permissions.mayGrant(req.admin.role, role)),
+        })
+      );
+    })();
+  })
+);
+
+router.post(
+  '/admin/users/:id/role',
+  staff('users.role', (req, res) => {
+    return (async () => {
+      const body = req.body || {};
+      const targetId = Number(req.params.id) || 0;
+
+      const result = await adminService.setRole(
+        req.db,
+        { id: req.viewer.id, rank: req.admin.role.rank },
+        targetId,
+        body.role,
+        new Date().toISOString()
+      );
+
+      if (!result.ok) {
+        return res.redirect(`/admin/users/${targetId}?failed=${encodeURIComponent(result.code)}`);
+      }
+
+      return res.redirect(`/admin/users/${targetId}?done=role`);
     })();
   })
 );

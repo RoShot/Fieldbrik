@@ -1,0 +1,82 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue"><%= staffOnly ? 'User Admins' : 'Search Users' %></h1>
+
+        <form class="fb-admin__search" method="get" action="/admin/users">
+          <label for="fb-user-q"><%= staffOnly ? 'Search staff' : 'Account ID or username' %></label>
+          <input id="fb-user-q" type="text" name="q" value="<%= query %>" autocomplete="off">
+          <% if (staffOnly) { %><input type="hidden" name="staff" value="1"><% } %>
+          <button class="fb-btn fb-btn--primary" type="submit">Search</button>
+          <% if (query || staffOnly) { %><a href="/admin/users">Clear</a><% } %>
+        </form>
+
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Account ID</th>
+                <th scope="col">Username</th>
+                <th scope="col">Role</th>
+                <th scope="col">Join Date</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (accounts.length === 0) { %>
+                <tr>
+                  <td colspan="5" class="fb-table__last">
+                    <%= query ? 'No account matches that.' : 'There are no accounts yet.' %>
+                  </td>
+                </tr>
+              <% } %>
+              <% accounts.forEach(function (account) { %>
+                <tr>
+                  <td><a href="/admin/users/<%= account.id %>"><%= account.id %></a></td>
+                  <td><a class="fb-table__name" href="/admin/users/<%= account.id %>"><%= account.username %></a></td>
+                  <td><%= account.roleName %></td>
+                  <td><%= account.joined %></td>
+                  <td class="fb-status--<%= account.status %>"><%= account.status %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        <% if (staffOnly) { %>
+          Every account that holds a staff role, highest rank first. This list is only
+          offered to roles that can change roles.
+        <% } else if (query) { %>
+          A number is read as an account ID; anything else matches part of a username.
+          Closed accounts are included, because finding out where an account went is
+          part of the job.
+        <% } else { %>
+          Type a username or an account ID. With nothing typed, the newest accounts are
+          listed.
+        <% } %>
+      </p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

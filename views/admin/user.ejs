@@ -1,0 +1,186 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Account: <%= account.username %></h1>
+        <div class="fb-panel__body">
+          <div class="fb-account">
+            <div class="fb-account__avatar">
+              <%- include('../partials/avatar', { avatar: account.avatar, size: 'md' }) %>
+            </div>
+            <table class="fb-table fb-table--kv fb-account__facts">
+              <tbody>
+                <tr><th scope="row">Username</th><td><strong><%= account.username %></strong></td></tr>
+                <tr><th scope="row">Account ID</th><td><%= account.id %></td></tr>
+                <tr><th scope="row">Current role</th><td><%= account.roleName %> (rank <%= account.roleRank %>)</td></tr>
+                <tr><th scope="row">Status</th><td class="fb-status--<%= account.status %>"><%= account.status %></td></tr>
+                <tr><th scope="row">Join date</th><td><%= account.joined %></td></tr>
+                <tr><th scope="row">Last seen</th><td><%= account.lastSeen %></td></tr>
+                <tr><th scope="row">Balances</th><td><%= account.tickets %> Tickets &middot; <%= account.bucks %> Bucks</td></tr>
+                <tr><th scope="row">Email</th><td><%= account.email ? account.email : 'not set' %></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="fb-admin__actions">
+            <a class="fb-btn" href="/people/<%= account.username %>">Visit Profile</a>
+            <a class="fb-btn" href="/admin/users">Back to search</a>
+          </div>
+
+          <% if (canChangeRole) { %>
+            <form class="fb-roleform" method="post" action="/admin/users/<%= account.id %>/role">
+              <h2 class="fb-admin__heading">Change account role</h2>
+              <p class="fb-admin__muted">
+                Only roles below your own rank are offered, and only Root may grant Root.
+                The same rules are checked again on the server.
+              </p>
+              <div class="fb-roleform__row">
+                <label for="fb-role">Role</label>
+                <select id="fb-role" name="role">
+                  <option value="member"<%= account.roleKey === 'member' ? ' selected' : '' %>>Member (no staff role)</option>
+                  <% roleOptions.forEach(function (role) { %>
+                    <option value="<%= role.key %>"<%= account.roleKey === role.key ? ' selected' : '' %>><%= role.name %> (rank <%= role.rank %>)</option>
+                  <% }); %>
+                </select>
+                <button class="fb-btn fb-btn--primary" type="submit">Change Role</button>
+              </div>
+            </form>
+          <% } else { %>
+            <p class="fb-roleform">
+              <strong>Role cannot be changed here.</strong>
+              <%= roleReason %>
+            </p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Admin Record</h2>
+        <div class="fb-panel__body">
+          <table class="fb-table fb-table--kv">
+            <tbody>
+              <tr><th scope="row">Active sessions</th><td><%= record.sessions.count %> (last used <%= record.sessions.lastUsed %>)</td></tr>
+              <tr>
+                <th scope="row">Badges</th>
+                <td>
+                  <% if (record.badges.length === 0) { %>
+                    none
+                  <% } else { %>
+                    <% record.badges.forEach(function (badge, index) { %><%= index > 0 ? ', ' : '' %><%= badge.name %><% }); %>
+                  <% } %>
+                </td>
+              </tr>
+              <tr><th scope="row">Description</th><td><%= account.description ? account.description : 'empty' %></td></tr>
+            </tbody>
+          </table>
+
+          <h3 class="fb-admin__subheading">Restrictions and warnings</h3>
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Kind</th>
+                <th scope="col">Reason</th>
+                <th scope="col">Issued</th>
+                <th scope="col">Expires</th>
+                <th scope="col">Lifted</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (record.restrictions.length === 0) { %>
+                <tr><td colspan="5" class="fb-table__last">None on record.</td></tr>
+              <% } %>
+              <% record.restrictions.forEach(function (entry) { %>
+                <tr>
+                  <td><%= entry.kind %></td>
+                  <td class="fb-table__note"><%= entry.reason %></td>
+                  <td><%= entry.issued %></td>
+                  <td><%= entry.expires %></td>
+                  <td><%= entry.lifted ? entry.lifted : '-' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+
+          <h3 class="fb-admin__subheading">Recent ledger entries</h3>
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Currency</th>
+                <th scope="col">Change</th>
+                <th scope="col">Balance after</th>
+                <th scope="col">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (record.ledger.length === 0) { %>
+                <tr><td colspan="5" class="fb-table__last">No currency has moved on this account yet.</td></tr>
+              <% } %>
+              <% record.ledger.forEach(function (entry) { %>
+                <tr>
+                  <td><%= entry.when %></td>
+                  <td><%= entry.currency %></td>
+                  <td><%= entry.delta > 0 ? '+' + entry.delta : entry.delta %></td>
+                  <td><%= entry.balanceAfter %></td>
+                  <td class="fb-table__note"><%= entry.reason %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+
+          <h3 class="fb-admin__subheading">Administrative history</h3>
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Action</th>
+                <th scope="col">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (record.log.length === 0) { %>
+                <tr><td colspan="3" class="fb-table__last">Nothing has been logged against this account.</td></tr>
+              <% } %>
+              <% record.log.forEach(function (entry) { %>
+                <tr>
+                  <td><%= entry.when %></td>
+                  <td><%= entry.action %></td>
+                  <td class="fb-table__note"><%= entry.detail %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+
+          <p class="fb-admin__note">
+            Moderation actions - warn, ban, scrub, notices - arrive in the next pass and
+            are not drawn here yet, so there is nothing on this page that looks like a
+            button but does nothing.
+          </p>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>
