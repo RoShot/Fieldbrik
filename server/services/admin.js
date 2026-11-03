@@ -8,6 +8,7 @@
  */
 
 const permissions = require('./permissions');
+const badgeService = require('./badges');
 
 function isoNow() {
   return new Date().toISOString();
@@ -30,7 +31,7 @@ const NAV = [
       { label: 'Blacklist Email', href: '/admin/blacklist', cap: 'users.blacklist_email' },
     ],
   },
-  { label: 'Content', items: [] },
+  { label: 'Content', items: [{ label: 'Badge Catalogue', href: '/admin/badges', cap: 'users.badge' }] },
   { label: 'Moderation', items: [] },
   { label: 'System', items: [{ label: 'Audit Log', href: '/admin/logs', cap: 'log.view' }] },
   { label: 'Billing', items: [] },
@@ -283,7 +284,8 @@ async function accountRecord(db, id) {
 
   const badges = await db
     .prepare(
-      `SELECT b.name, b.color FROM user_badges ub JOIN badges b ON b.key = ub.badge_key
+      `SELECT b.key, b.name, b.color, ub.granted_at
+         FROM user_badges ub JOIN badges b ON b.key = ub.badge_key
         WHERE ub.user_id = ? ORDER BY ub.granted_at ASC`
     )
     .bind(userId)
@@ -294,7 +296,13 @@ async function accountRecord(db, id) {
       count: sessions ? Number(sessions.n) || 0 : 0,
       lastUsed: sessions && sessions.last_used ? String(sessions.last_used).replace('T', ' ').slice(0, 16) : 'never',
     },
-    badges: badges.results || [],
+    badges: (badges.results || []).map((row) => ({
+      key: row.key,
+      name: row.name,
+      color: row.color,
+      art: badgeService.artFor(row.key),
+      when: formatDate(row.granted_at),
+    })),
     ledger: (ledger.results || []).map((row) => ({
       currency: row.currency,
       delta: Number(row.delta) || 0,
@@ -367,6 +375,15 @@ async function setRole(db, actor, targetId, roleKey, now) {
       .bind(account.id, role.key, actor.id)
       .run();
   }
+
+  // The badge that belongs to the job. Earned badges - club tier, knockouts,
+  // invites - are left alone by syncRoleBadge, so a demotion cannot take away
+  // something the member did not get from the position.
+  await badgeService.syncRoleBadge(db, {
+    userId: account.id,
+    roleKey: wanted === 'member' ? '' : role.key,
+    actorId: actor.id,
+  });
 
   await db
     .prepare(
