@@ -1,0 +1,32 @@
+# Cloudflare Workers configuration.
+#
+# The site runs on the Worker now:
+#   npx wrangler dev     local instance, with a local D1
+#   npx wrangler deploy  manual publish (the GitHub Action does this on push)
+#
+# Express is still in the tree so the same pages can be diffed against it; the
+# Worker is the runtime that ships.
+
+# v0.3 has its own Worker name and its own database so v0.2 keeps running,
+# untouched, and moving the domain back to v0.2 stays possible.
+name = "fieldbrik-v03"
+main = "server/worker.js"
+compatibility_date = "2026-11-01"
+
+# Lets the Worker use a subset of Node built-ins. Not a Node runtime - no
+# fs, no child processes, no long-lived sockets outside Durable Objects.
+compatibility_flags = ["nodejs_compat"]
+
+# Static files: CSS, public/js, and the avatar renderer plus its assets.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Database. The id comes from the Cloudflare dashboard for fieldbrik_v03.
+[[d1_databases]]
+binding = "DB"
+database_name = "fieldbrik_v03"
+database_id = "fffe4e6f-e4b8-43a1-8c76-19d8b86bc756"
+
+[observability]
+enabled = true

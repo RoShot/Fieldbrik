@@ -1,0 +1,24 @@
+{
+  "name": "fieldbrik",
+  "version": "0.3.0",
+  "private": true,
+  "description": "FieldBrik - an independent online social building and gaming platform, inspired by the early Roblox era (2004-2007).",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "build:views": "node scripts/build-views.js",
+    "verify:views": "node scripts/verify-views.js",
+    "db:schema:local": "npx wrangler d1 execute fieldbrik_v03 --local --file=db/schema.sql",
+    "db:seed:local": "npx wrangler d1 execute fieldbrik_v03 --local --file=db/seed.sql",
+    "db:schema:remote": "npx wrangler d1 execute fieldbrik_v03 --remote --file=db/schema.sql",
+    "db:seed:remote": "npx wrangler d1 execute fieldbrik_v03 --remote --file=db/seed.sql"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.2"
+  }
+}

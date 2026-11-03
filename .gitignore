@@ -1,0 +1,13 @@
+node_modules/
+npm-debug.log*
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+coverage/
+tmp/
+
+# Cloudflare Workers
+.wrangler/
+.dev.vars
