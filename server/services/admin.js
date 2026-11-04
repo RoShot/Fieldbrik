@@ -35,6 +35,7 @@ const NAV = [
     label: 'Content',
     items: [
       { label: 'Catalog Items', href: '/admin/catalog', cap: 'content.review', path: '/admin/catalog' },
+      { label: 'News', href: '/admin/news', cap: 'content.review', path: '/admin/news' },
       { label: 'Badge Catalogue', href: '/admin/badges', cap: 'users.badge' },
     ],
   },
