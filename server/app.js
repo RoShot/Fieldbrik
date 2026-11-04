@@ -14,6 +14,7 @@ const adminContentRoutes = require('./routes/adminContent');
 const earningsRoutes = require('./routes/earnings');
 const mailboxRoutes = require('./routes/mailbox');
 const reportsRoutes = require('./routes/reports');
+const newsRoutes = require('./routes/news');
 const placesRoutes = require('./routes/places');
 const pageRoutes = require('./routes/pages');
 
@@ -27,7 +28,7 @@ app.set('views', path.join(__dirname, '..', 'views'));
 app.use(
   express.static(path.join(__dirname, '..', 'public'), {
     // No caching in development: a stale stylesheet during the build hides new
-    // rules and looks like a bug in the page. Max-age is one hour in production.
+    // rules and looks like a bug in the page. Production keeps the hour.
     maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
     extensions: ['html'],
   })
@@ -60,10 +61,13 @@ app.use('/', adminContentRoutes);
 // /earnings is not mistaken for a page that does not exist.
 app.use('/', earningsRoutes);
 
-// Messages: the inbox, the sent box and the conversation forms. Mounted before
-// the page router so /messages/sent and /messages/compose are not read as a
-// message id.
+// Messages: the inbox, the sent box and their forms. Mounted before the page
+// router so /messages/sent and /messages/compose are not read as a message id.
 app.use('/', mailboxRoutes);
+
+// News: the archive, the article pages and /admin/news. Mounted before the page
+// router, which still answers /news from the phase 1 fixtures.
+app.use('/', newsRoutes);
 
 // Places: /games, the place pages and the create/edit forms, plus GET / and
 // GET /my-page, which read the fixture place list until this pass. Before the
