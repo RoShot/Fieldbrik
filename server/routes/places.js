@@ -9,6 +9,11 @@
  * Page's place panel now show real published places, so every link from either
  * one resolves to a real page.
  *
+ * The home page no longer reads fixtures at all: its news panel comes from the
+ * news service, its platform figures are counted from D1, and its online list is
+ * real presence. My Page's "View Public Profile" link is the signed-in member's
+ * own profile rather than a fixture account.
+ *
  * Mounted before the page router, so everything it does not answer - /people,
  * /forum, /catalog and the rest - still falls through.
  */
@@ -17,23 +22,30 @@ const { Router } = require('../lib/router');
 
 const site = require('../config/site');
 const pageContext = require('../services/pageContext');
-const fixtures = require('../services/fixtures');
 const places = require('../services/places');
 const people = require('../services/people');
 const notices = require('../services/notices');
+const news = require('../services/news');
 
 const router = Router();
 
-/** The links on My Page's profile panel, same order as the page router's. */
-const profileLinks = [
-  { label: 'Friends', href: '/friends' },
-  { label: 'Change Character', href: '/character' },
-  { label: 'Account Settings', href: '/settings' },
-  { label: 'Messages', href: '/messages' },
-  { label: 'Inventory', href: '/inventory' },
-  { label: 'View Public Profile', href: '/people/BrikFounder' },
-  { label: 'Log Out', href: '/logout' },
-];
+/**
+ * The links on My Page's profile panel, same order as the page router's. The
+ * profile link is built per request: the fixture version pointed at
+ * /people/BrikFounder, which is a 404 on a database where that account never
+ * existed.
+ */
+function profileLinksFor(viewer) {
+  return [
+    { label: 'Friends', href: '/friends' },
+    { label: 'Change Character', href: '/character' },
+    { label: 'Account Settings', href: '/settings' },
+    { label: 'Messages', href: '/messages' },
+    { label: 'Inventory', href: '/inventory' },
+    { label: 'View Public Profile', href: `/people/${encodeURIComponent(viewer.username)}` },
+    { label: 'Log Out', href: '/logout' },
+  ];
+}
 
 const DONE = {
   created: 'Place created. Publish it when you are ready for other members to see it.',
@@ -58,6 +70,35 @@ function noticeFor(query) {
   if (!failed) return null;
 
   return FAILED[failed] || FAILED.refused;
+}
+
+/**
+ * The figures in the home page's Platform panel.
+ *
+ * Four counts, each of something that exists: open accounts, accounts seen in
+ * the last five minutes, published places, and catalog items currently on sale.
+ * A fresh database honestly reports zeros.
+ */
+async function platformStats(db) {
+  const row = await db
+    .prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM users WHERE closed_at IS NULL) AS members,
+         (SELECT COUNT(*) FROM users
+           WHERE closed_at IS NULL
+             AND last_seen_at IS NOT NULL
+             AND last_seen_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-5 minutes')) AS online,
+         (SELECT COUNT(*) FROM games WHERE published = 1) AS games,
+         (SELECT COUNT(*) FROM catalog_items WHERE on_sale = 1) AS items`
+    )
+    .first();
+
+  return {
+    members: Number(row && row.members) || 0,
+    online: Number(row && row.online) || 0,
+    games: Number(row && row.games) || 0,
+    itemsListed: Number(row && row.items) || 0,
+  };
 }
 
 /** Keeps a facet link on the same query string without losing the selection. */
@@ -313,28 +354,33 @@ router.post('/places/:id/status', (req, res, next) => {
   })().catch(next);
 });
 
-// ---------- The two pages that read the fixture place list ----------
+// ---------- The home page and My Page ----------
 
 /**
- * The home page.
- *
- * Same locals as the page router passes, except Cool Places: three real
- * published places rather than three invented ones. News, the platform figures
- * and the online list are still the fixture values they were - those belong to
- * their own passes, and this one is about places.
+ * The home page: Cool Places, Latest News, the platform figures and the online
+ * list, all from the database. There is no fixture left on this page.
  */
 router.get('/', (req, res, next) => {
   return (async () => {
-    const featured = req.db ? await places.featured(req.db, 3) : [];
+    const db = req.db;
+
+    const [featured, latestNews, stats, online] = db
+      ? await Promise.all([
+          places.featured(db, 3),
+          news.latest(db, 3),
+          platformStats(db),
+          people.online(db, 12),
+        ])
+      : [[], [], { members: 0, online: 0, games: 0, itemsListed: 0 }, []];
 
     return res.render(
       'pages/home',
       pageContext(req, {
         pageTitle: `${site.name} - ${site.tagline.join(' ')}`,
         featured,
-        news: fixtures.news.slice(0, 4),
-        stats: fixtures.platformStats,
-        online: fixtures.users.filter((user) => user.online),
+        news: latestNews,
+        stats,
+        online,
       })
     );
   })().catch(next);
@@ -375,7 +421,7 @@ router.get('/my-page', (req, res, next) => {
         newestPlaces: newest,
         heldBadges,
         warnings,
-        profileLinks,
+        profileLinks: profileLinksFor(viewer),
       })
     );
   })().catch(next);
