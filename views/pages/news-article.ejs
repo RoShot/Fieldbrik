@@ -13,9 +13,13 @@
     <a href="/news?category=<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
   </p>
 
+  <% if (article.summary) { %>
+    <p class="fb-subtitle"><%= article.summary %></p>
+  <% } %>
+
   <div class="fb-content">
     <div class="fb-prose">
-      <% article.body.forEach(function (paragraph) { %>
+      <% article.paragraphs.forEach(function (paragraph) { %>
         <p><%= paragraph %></p>
       <% }); %>
     </div>

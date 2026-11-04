@@ -34,6 +34,9 @@
         <h2 class="fb-panel__title">Online Now</h2>
         <div class="fb-panel__body">
           <ul class="fb-onlinelist">
+            <% if (online.length === 0) { %>
+              <li class="fb-muted">Nobody has been here in the last five minutes. Sign in and this list fills up.</li>
+            <% } %>
             <% online.forEach(function (user) { %>
               <li>
                 <%- include('../partials/avatar', { avatar: user.avatar, size: 'xs' }) %>
@@ -91,9 +94,12 @@
       <section class="fb-panel">
         <h2 class="fb-panel__title">Latest News</h2>
         <div class="fb-panel__body fb-prose">
+          <% if (news.length === 0) { %>
+            <p class="fb-muted">No announcements yet. When the team posts one, it appears here.</p>
+          <% } %>
           <% news.slice(0, 3).forEach(function (item) { %>
             <p>
-              <strong><a href="/news"><%= item.title %></a></strong><br>
+              <strong><a href="/news/<%= item.slug %>"><%= item.title %></a></strong><br>
               <span class="fb-muted"><%= item.date %> - posted by <%= item.author %></span><br>
               <%= item.summary %>
             </p>

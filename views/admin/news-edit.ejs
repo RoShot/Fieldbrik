@@ -1,0 +1,105 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+      <% if (failure) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= failure %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue"><%= isNew ? 'New article' : 'Edit article' %></h1>
+        <div class="fb-panel__body">
+          <% if (!isNew) { %>
+            <table class="fb-table fb-table--kv">
+              <tbody>
+                <tr><th scope="row">Article ID</th><td><%= article.id %></td></tr>
+                <tr><th scope="row">Author</th><td><%= article.author %></td></tr>
+                <tr>
+                  <th scope="row">Status</th>
+                  <td>
+                    <%= article.published ? 'published' : 'draft' %>
+                    <% if (article.published) { %>
+                      &middot; <a href="/news/<%= article.slug %>">read it on the site</a>
+                    <% } %>
+                  </td>
+                </tr>
+                <tr><th scope="row">Address</th><td>/news/<%= article.slug %></td></tr>
+              </tbody>
+            </table>
+          <% } %>
+
+          <form method="post" action="<%= isNew ? '/admin/news' : '/admin/news/' + article.id %>">
+            <h2 class="fb-admin__heading"><%= isNew ? 'Write it' : 'Change it' %></h2>
+
+            <div class="fb-mod__field">
+              <label for="fb-news-title">Title</label>
+              <input id="fb-news-title" type="text" name="title" maxlength="<%= titleMax %>" required value="<%= article.title %>">
+            </div>
+
+            <div class="fb-mod__field">
+              <label for="fb-news-category">Category</label>
+              <select id="fb-news-category" name="category">
+                <% categories.forEach(function (name) { %>
+                  <option value="<%= name %>"<%= article.category === name ? ' selected' : '' %>><%= name %></option>
+                <% }); %>
+              </select>
+            </div>
+
+            <div class="fb-mod__field">
+              <label for="fb-news-summary">Summary (shown in the list, up to <%= summaryMax %> characters)</label>
+              <textarea id="fb-news-summary" name="summary" rows="3" maxlength="<%= summaryMax %>"><%= article.summary %></textarea>
+            </div>
+
+            <div class="fb-mod__field">
+              <label for="fb-news-body">Article (leave a blank line between paragraphs)</label>
+              <textarea id="fb-news-body" name="body" rows="16" maxlength="<%= bodyMax %>" required><%= article.body %></textarea>
+            </div>
+
+            <% if (isNew) { %>
+              <div class="fb-mod__field">
+                <label for="fb-news-published">When it is saved</label>
+                <select id="fb-news-published" name="published">
+                  <option value="0">Save as a draft</option>
+                  <option value="1">Publish it</option>
+                </select>
+              </div>
+            <% } %>
+
+            <button class="fb-btn fb-btn--primary" type="submit"><%= isNew ? 'Create article' : 'Save changes' %></button>
+          </form>
+
+          <% if (!isNew) { %>
+            <form class="fb-inline" method="post" action="/admin/news/<%= article.id %>/status">
+              <input type="hidden" name="published" value="<%= article.published ? '0' : '1' %>">
+              <button class="fb-btn" type="submit"><%= article.published ? 'Unpublish this article' : 'Publish this article' %></button>
+            </form>
+          <% } %>
+        </div>
+      </div>
+
+      <p class="fb-panel__more"><a href="/admin/news">Back to the news list</a></p>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

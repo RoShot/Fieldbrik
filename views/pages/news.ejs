@@ -20,8 +20,13 @@
     <div class="fb-col-main">
       <% if (articles.length === 0) { %>
         <div class="fb-notice">
-          <p><strong>Nothing published in that category yet.</strong></p>
-          <p><a href="/news">Show every article</a>.</p>
+          <% if (total === 0) { %>
+            <p><strong>No articles have been published yet.</strong></p>
+            <p>The team posts development updates here. Nothing is shown until something is actually written, so this page never invents an announcement.</p>
+          <% } else { %>
+            <p><strong>Nothing published in that category yet.</strong></p>
+            <p><a href="/news">Show every article</a>.</p>
+          <% } %>
         </div>
       <% } else { %>
         <ul class="fb-newslist">
@@ -32,17 +37,17 @@
                 By <%= article.author %> &middot; <%= article.date %> &middot;
                 <a href="/news?category=<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
               </p>
-              <p class="fb-newsitem__summary"><%= article.summary %></p>
+              <% if (article.summary) { %>
+                <p class="fb-newsitem__summary"><%= article.summary %></p>
+              <% } %>
             </li>
           <% }); %>
         </ul>
       <% } %>
 
-      <p class="fb-pagination">Page 1 of 1</p>
-
       <div class="fb-notice">
         <p><strong>These are the platform's own announcements.</strong></p>
-        <p>Everything listed here was written by the FieldBrik team about FieldBrik. Posting and editing news is an admin function and arrives with the news service in phase 5.</p>
+        <p>Everything listed here was written by the FieldBrik team about FieldBrik, and is stored in the site's own database. Posts by members belong on the <a href="/forum">forum</a>.</p>
       </div>
     </div>
   </div>
