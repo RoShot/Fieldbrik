@@ -90,6 +90,29 @@ async function findOne(db, username) {
   return row ? shape(row) : null;
 }
 
+/**
+ * Who is here right now, newest presence first.
+ *
+ * Presence is the same five-minute rule the directory and the panel use: a
+ * signed-in request writes last_seen_at, so this is a list of accounts that have
+ * been seen recently, not a list of accounts that are simply new.
+ */
+async function online(db, limit) {
+  const result = await db
+    .prepare(
+      `SELECT ${PERSON_COLUMNS} ${PERSON_FROM}
+        WHERE u.closed_at IS NULL
+          AND u.last_seen_at IS NOT NULL
+          AND u.last_seen_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-5 minutes')
+        ORDER BY u.last_seen_at DESC
+        LIMIT ?`
+    )
+    .bind(Math.max(1, Math.min(Number(limit) || 10, 50)))
+    .all();
+
+  return (result.results || []).map(shape);
+}
+
 /** The people this account has an accepted friendship with. */
 async function friendsOf(db, userId) {
   const result = await db
@@ -181,4 +204,4 @@ async function gamesFor(db, userId) {
   }));
 }
 
-module.exports = { badgesFor, findOne, friendsOf, gamesFor, list, pending, shape };
+module.exports = { badgesFor, findOne, friendsOf, gamesFor, list, online, pending, shape };

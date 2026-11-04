@@ -29,6 +29,7 @@ import adminContentModule from './routes/adminContent.js';
 import earningsModule from './routes/earnings.js';
 import mailboxModule from './routes/mailbox.js';
 import reportsModule from './routes/reports.js';
+import newsModule from './routes/news.js';
 import placesModule from './routes/places.js';
 import site from './config/site.js';
 import accounts from './services/accounts.js';
@@ -45,6 +46,7 @@ const adminContentRoutes = adminContentModule.default || adminContentModule;
 const earningsRoutes = earningsModule.default || earningsModule;
 const mailboxRoutes = mailboxModule.default || mailboxModule;
 const reportsRoutes = reportsModule.default || reportsModule;
+const newsRoutes = newsModule.default || newsModule;
 const placesRoutes = placesModule.default || placesModule;
 
 const COOKIE = 'fb_session';
@@ -350,6 +352,12 @@ async function handlePage(request, url, env) {
   // before the page router, which still answers GET /messages/:id.
   if (!failure && !state.answered) {
     failure = await runRouter(mailboxRoutes, req, res);
+  }
+
+  // News owns /news, the article pages and /admin/news. Before the page router,
+  // which still answers /news from the phase 1 fixture list.
+  if (!failure && !state.answered) {
+    failure = await runRouter(newsRoutes, req, res);
   }
 
   // Places own /games, the place pages and the create/edit forms, plus GET /
