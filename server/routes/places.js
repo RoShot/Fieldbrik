@@ -1,18 +1,14 @@
 /**
- * Places: the Games listing, a place page, and the pages that create and edit
- * one.
+ * Places: the front page, a place page, and the pages that create and edit one.
  *
- * This router owns /games because the page router still answers it from the
- * phase 1 fixture list, and routes/pages.js is far too large to upload as one
- * file. It also takes over GET / and GET /my-page for the same reason: both of
- * them read the fixture place list, and the home page's Cool Places row and My
- * Page's place panel now show real published places, so every link from either
- * one resolves to a real page.
+ * This router owns /home, /games and GET / because the page router still answers
+ * them from the phase 1 fixture list, and routes/pages.js is far too large to
+ * upload as one file.
  *
- * The home page no longer reads fixtures at all: its news panel comes from the
- * news service, its platform figures are counted from D1, and its online list is
- * real presence. My Page's "View Public Profile" link is the signed-in member's
- * own profile rather than a fixture account.
+ * The front page and the old Games listing were two versions of the same screen,
+ * so they are now one page at /home: / and /games both redirect there. Everything
+ * on it reads D1 - the member's friendships, the member's own places, and every
+ * published place - so there is no fixture left on the front of the site.
  *
  * Mounted before the page router, so everything it does not answer - /people,
  * /forum, /catalog and the rest - still falls through.
@@ -25,7 +21,7 @@ const pageContext = require('../services/pageContext');
 const places = require('../services/places');
 const people = require('../services/people');
 const notices = require('../services/notices');
-const news = require('../services/news');
+const permissions = require('../services/permissions');
 
 const router = Router();
 
@@ -50,8 +46,8 @@ function profileLinksFor(viewer) {
 const DONE = {
   created: 'Place created. Publish it when you are ready for other members to see it.',
   saved: 'Place saved.',
-  published: 'Place published. It is in the Games list now.',
-  unpublished: 'Place unpublished. It is out of the Games list; the page still exists for you.',
+  published: 'Place published. It is on the front page now.',
+  unpublished: 'Place unpublished. It is off the front page; the page still exists for you.',
 };
 
 const FAILED = {
@@ -72,86 +68,58 @@ function noticeFor(query) {
   return FAILED[failed] || FAILED.refused;
 }
 
+// ---------- The front page ----------
+
+// One front page. Everything that still links to / lands on it.
+router.get('/', (req, res) => res.redirect('/home'));
+
+// A link to the old listing is a link to the front page; a search term travels
+// with it rather than being dropped.
+router.get('/games', (req, res) => {
+  const query = String(req.query.q || '').trim();
+  return res.redirect(query ? `/home?q=${encodeURIComponent(query)}` : '/home');
+});
+
 /**
- * The figures in the home page's Platform panel.
+ * The front page: friends, your own places, and every published place.
  *
- * Four counts, each of something that exists: open accounts, accounts seen in
- * the last five minutes, published places, and catalog items currently on sale.
- * A fresh database honestly reports zeros.
+ * Friends are the viewer's accepted friendships. Continue is the viewer's own
+ * places, drafts included, because a half-built place is exactly the thing to
+ * pick up again. The grid is every published place, and the search box filters
+ * it by name or creator.
+ *
+ * canOpenPanel comes from the role table on every request, so the sidebar's
+ * Panel button appears for Intern and above and for nobody else. The panel
+ * gates itself as well; this only decides whether the door is drawn.
  */
-async function platformStats(db) {
-  const row = await db
-    .prepare(
-      `SELECT
-         (SELECT COUNT(*) FROM users WHERE closed_at IS NULL) AS members,
-         (SELECT COUNT(*) FROM users
-           WHERE closed_at IS NULL
-             AND last_seen_at IS NOT NULL
-             AND last_seen_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-5 minutes')) AS online,
-         (SELECT COUNT(*) FROM games WHERE published = 1) AS games,
-         (SELECT COUNT(*) FROM catalog_items WHERE on_sale = 1) AS items`
-    )
-    .first();
-
-  return {
-    members: Number(row && row.members) || 0,
-    online: Number(row && row.online) || 0,
-    games: Number(row && row.games) || 0,
-    itemsListed: Number(row && row.items) || 0,
-  };
-}
-
-/** Keeps a facet link on the same query string without losing the selection. */
-function facetHref(current, changes) {
-  const params = new URLSearchParams();
-
-  Object.entries({ ...current, ...changes }).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') params.set(key, value);
-  });
-
-  const query = params.toString();
-  return query ? `/games?${query}` : '/games';
-}
-
-// ---------- The listing ----------
-
-router.get('/games', (req, res, next) => {
+router.get('/home', (req, res, next) => {
   return (async () => {
+    const db = req.db;
+    const viewer = req.viewer;
     const query = String(req.query.q || '').trim();
-    const creator = String(req.query.creator || '').trim();
-    const sort = String(req.query.sort || '');
-    const current = { q: query, creator, sort };
 
-    const [list, creators] = req.db
-      ? await Promise.all([places.list(req.db, { query, creator, sort }), places.creators(req.db)])
-      : [[], []];
+    const [friends, ownPlaces, recommended] = db
+      ? await Promise.all([
+          viewer ? people.friendsOf(db, viewer.id) : [],
+          viewer ? places.mine(db, viewer.id) : [],
+          places.list(db, { query }),
+        ])
+      : [[], [], []];
 
-    const browseFacets = [
-      { label: 'All places', value: '' },
-      { label: 'Newest', value: 'newest' },
-      { label: 'Recently updated', value: 'updated' },
-      { label: 'Name A to Z', value: 'name' },
-    ].map((facet) => ({
-      label: facet.label,
-      active: sort === facet.value || (!sort && facet.value === ''),
-      href: facetHref(current, { sort: facet.value }),
-    }));
-
-    const creatorFacets = creators.map((name) => ({
-      label: name,
-      active: creator === name,
-      href: facetHref(current, { creator: creator === name ? '' : name }),
-    }));
+    const role = viewer && db ? await permissions.roleOf(db, viewer.id) : null;
 
     return res.render(
-      'pages/games',
+      'pages/home',
       pageContext(req, {
-        pageTitle: `Games - ${site.name}`,
-        places: list,
+        pageTitle: `${site.name} - Home`,
+        extraCss: '/css/app.css',
+        bodyClass: 'fb-app',
         query,
-        browseFacets,
-        creatorFacets,
-        canCreate: Boolean(req.viewer && req.db),
+        friends: friends.slice(0, 9),
+        friendTotal: viewer ? viewer.stats.friends : 0,
+        continuePlaces: ownPlaces.slice(0, 5),
+        recommended: recommended.slice(0, 10),
+        canOpenPanel: permissions.can(role, 'admin.open'),
       })
     );
   })().catch(next);
@@ -351,38 +319,6 @@ router.post('/places/:id/status', (req, res, next) => {
     if (!result.ok) return res.redirect(`/places/mine?failed=${encodeURIComponent(result.code)}`);
 
     return res.redirect(`/places/mine?done=${encodeURIComponent(result.code)}`);
-  })().catch(next);
-});
-
-// ---------- The home page and My Page ----------
-
-/**
- * The home page: Cool Places, Latest News, the platform figures and the online
- * list, all from the database. There is no fixture left on this page.
- */
-router.get('/', (req, res, next) => {
-  return (async () => {
-    const db = req.db;
-
-    const [featured, latestNews, stats, online] = db
-      ? await Promise.all([
-          places.featured(db, 3),
-          news.latest(db, 3),
-          platformStats(db),
-          people.online(db, 12),
-        ])
-      : [[], [], { members: 0, online: 0, games: 0, itemsListed: 0 }, []];
-
-    return res.render(
-      'pages/home',
-      pageContext(req, {
-        pageTitle: `${site.name} - ${site.tagline.join(' ')}`,
-        featured,
-        news: latestNews,
-        stats,
-        online,
-      })
-    );
   })().catch(next);
 });
 
