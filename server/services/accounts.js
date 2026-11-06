@@ -75,6 +75,54 @@ function validate(input) {
   return { username, email, password };
 }
 
+/**
+ * Birthday and gender, checked together.
+ *
+ * Called by the sign-up route rather than by register(), so tooling can still
+ * create an account without them. The rules are real: a date that does not exist
+ * is refused instead of stored, so the 31st of a 30-day month is rejected.
+ *
+ * @returns {{month: number, day: number, year: number, gender: string}}
+ */
+function validateProfile(input) {
+  const body = input || {};
+  const rawMonth = String(body.birthMonth === undefined ? '' : body.birthMonth).trim();
+  const rawDay = String(body.birthDay === undefined ? '' : body.birthDay).trim();
+  const rawYear = String(body.birthYear === undefined ? '' : body.birthYear).trim();
+  const gender = String(body.gender || '').trim().toLowerCase();
+
+  if (!rawMonth || !rawDay || !rawYear) {
+    throw new AccountError('Choose your birthday: month, day and year.');
+  }
+
+  const month = Number(rawMonth);
+  const day = Number(rawDay);
+  const year = Number(rawYear);
+  const thisYear = new Date().getUTCFullYear();
+
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new AccountError('That is not a real month.');
+  }
+
+  if (!Number.isInteger(year) || year < 1900 || year > thisYear) {
+    throw new AccountError('That is not a real year.');
+  }
+
+  // Day 0 of the next month is the last day of this one, which handles February
+  // and leap years without carrying a table around.
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+  if (!Number.isInteger(day) || day < 1 || day > lastDay) {
+    throw new AccountError('That day does not exist in that month.');
+  }
+
+  if (gender !== 'male' && gender !== 'female') {
+    throw new AccountError('Choose a gender.');
+  }
+
+  return { month, day, year, gender };
+}
+
 function findById(db, id) {
   return db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
 }
@@ -146,6 +194,18 @@ async function register(db, input) {
     )
     .bind(userId, a.head, a.torso, a.leftArm, a.rightArm, a.leftLeg, a.rightLeg, a.face)
     .run();
+
+  // Birthday and gender, when the caller has already checked them. Optional
+  // here so tooling can still create an account; the sign-up route insists.
+  if (input.profile) {
+    await db
+      .prepare(
+        `INSERT INTO user_profiles (user_id, birth_month, birth_day, birth_year, gender)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .bind(userId, input.profile.month, input.profile.day, input.profile.year, input.profile.gender)
+      .run();
+  }
 
   return findById(db, userId);
 }
@@ -464,4 +524,5 @@ module.exports = {
   touchSession,
   userForToken,
   validate,
+  validateProfile,
 };
