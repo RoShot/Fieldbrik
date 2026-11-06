@@ -35,7 +35,7 @@ const app = require('../server/app');
 
 const BASE_PATHS = [
   '/', '/my-page', '/parents', '/carpenters-club', '/help', '/about', '/support',
-  '/games', '/catalog', '/people', '/forum', '/news', '/terms', '/privacy',
+  '/home', '/catalog', '/people', '/forum', '/news', '/terms', '/privacy',
   '/login', '/register', '/character', '/inventory', '/friends', '/messages',
   '/settings', '/parents/guide', '/parents/safety', '/parents/learning',
   '/parents/faq', '/parents/guestbook', '/messages/1',
@@ -43,7 +43,7 @@ const BASE_PATHS = [
 
 /** Detail pages: pull a couple of real links out of each index page. */
 const DISCOVER = [
-  { from: '/games', pattern: /\/games\/([a-z0-9-]+)/gi, max: 2 },
+  { from: '/home', pattern: /\/games\/([a-z0-9-]+)/gi, max: 2 },
   { from: '/catalog', pattern: /\/catalog\/([a-z0-9-]+)/gi, max: 2 },
   { from: '/people', pattern: /\/people\/([A-Za-z0-9_]+)/g, max: 2 },
   { from: '/news', pattern: /\/news\/([a-z0-9-]+)/gi, max: 2 },

@@ -1,0 +1,31 @@
+<%#
+  The left column of the app layout.
+
+  No icons: every entry is a word, because no icon set exists for this site and
+  inventing one would mean drawing art that is not ours. The Panel button is the
+  only staff-only thing here, and it is drawn from the rank the route worked out,
+  never from anything the browser sends.
+%>
+<aside class="fb-side">
+  <a class="fb-side__brand" href="/home"><%= site.name %></a>
+  <a class="fb-side__upgrade" href="/carpenters-club">Upgrade Now</a>
+
+  <nav class="fb-side__nav" aria-label="Main navigation">
+    <% nav.primary.forEach(function (link) { %>
+      <a class="fb-side__link<%= link.active ? ' is-active' : '' %>" href="<%= link.href %>"<%= link.active ? ' aria-current="page"' : '' %>><%= link.label %></a>
+    <% }); %>
+  </nav>
+
+  <% if (authState === 'guest') { %>
+    <div class="fb-side__auth">
+      <a href="/login">Log In</a>
+      <a href="/register">Sign Up</a>
+    </div>
+  <% } %>
+
+  <%# Intern and above only. The panel gates itself too; this is the door, not
+      the lock. %>
+  <% if (typeof canOpenPanel !== 'undefined' && canOpenPanel) { %>
+    <a class="fb-side__panel" href="/admin">Panel</a>
+  <% } %>
+</aside>
