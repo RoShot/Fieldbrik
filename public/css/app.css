@@ -3,8 +3,10 @@
    white working area whose content sits in a centred column. Used by the front
    page.
 
-   Scoped to body.fb-app so none of it can reach a page that still wears the
-   site header.
+   body.fb-app only carries the page background. The flex row is .fb-shell: the
+   body and the wrapper must never share a class, or the layout rules land on the
+   body and the bar, the column and the content become three columns side by
+   side.
    ========================================================================== */
 
 body.fb-app {
@@ -130,7 +132,7 @@ body.fb-app {
 
 /* ---------- Frame ---------- */
 
-.fb-app {
+.fb-shell {
   display: flex;
   align-items: stretch;
   min-height: calc(100vh - 34px);
@@ -410,7 +412,7 @@ body.fb-app {
 }
 
 @media (max-width: 820px) {
-  .fb-app {
+  .fb-shell {
     min-height: 0;
     flex-direction: column;
   }
