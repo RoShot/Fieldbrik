@@ -3,7 +3,7 @@
 
 <main class="fb-container fb-main">
   <p class="fb-crumbs">
-    <a href="/games">Games</a> &raquo;
+    <a href="/home">Home</a> &raquo;
     <% if (place) { %><a href="/games/<%= place.slug %>"><%= place.name %></a> &raquo; Edit<% } else { %>New place<% } %>
   </p>
 
@@ -33,7 +33,7 @@
           <label for="fb-place-publish">Visibility</label>
           <select id="fb-place-publish" name="published">
             <option value="0">Draft - only I can see it</option>
-            <option value="1">Published - listed in Games</option>
+            <option value="1">Published - listed on the Home page</option>
           </select>
         <% } %>
 
@@ -53,9 +53,9 @@
         <p>
           This place is <strong><%= place.published ? 'published' : 'a draft' %></strong>.
           <% if (place.published) { %>
-            Anybody can open <a href="/games/<%= place.slug %>">/games/<%= place.slug %></a> and it is listed in Games.
+            Anybody can open <a href="/games/<%= place.slug %>">/games/<%= place.slug %></a> and it is listed on the Home page.
           <% } else { %>
-            Only you can open it. Publishing puts it in the Games list.
+            Only you can open it. Publishing lists it on the Home page.
           <% } %>
         </p>
         <form method="post" action="/places/<%= place.id %>/status">
@@ -72,10 +72,10 @@
     <p><strong>A place is a listing, not a world yet.</strong></p>
     <p>There is no brick editor and no Play button: building and playing happen in the FieldBrik
        client, which is the next project. What you can do here is give a place its name and
-       description, keep it as a draft, and publish it to the Games list.</p>
+       description, keep it as a draft, and publish it to the Home page.</p>
   </div>
 
-  <p class="fb-panel__more"><a href="/places/mine">My places</a> &middot; <a href="/games">All places</a></p>
+  <p class="fb-panel__more"><a href="/places/mine">My places</a> &middot; <a href="/home">All places</a></p>
 </main>
 
 <%- include('../partials/footer') %>

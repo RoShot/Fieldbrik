@@ -2,7 +2,7 @@
 <%- include('../partials/header') %>
 
 <main class="fb-container fb-main">
-  <p class="fb-crumbs"><a href="/games">Games</a> &raquo; <%= place.name %></p>
+  <p class="fb-crumbs"><a href="/home">Home</a> &raquo; <%= place.name %></p>
 
   <% if (notice) { %>
     <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
@@ -12,7 +12,7 @@
     <div class="fb-notice">
       <p><strong>This place is a draft.</strong></p>
       <p>Only you can see this page. Publish it from <a href="/places/<%= place.id %>/edit">Edit place</a>
-         when it is ready, and it appears in the Games list for everybody.</p>
+         when it is ready, and it appears on the Home page for everybody.</p>
     </div>
   <% } %>
 
@@ -95,7 +95,7 @@
               </button>
             </form>
             <p class="fb-admin__note">
-              Unpublishing takes it out of the Games list and keeps the page, your draft and its
+              Unpublishing takes it off the Home page and keeps the page, your draft and its
               address. Nobody else can open an unpublished place.
             </p>
           </div>
@@ -105,7 +105,7 @@
       <section class="fb-panel">
         <h2 class="fb-panel__title">More places</h2>
         <div class="fb-panel__body">
-          <p class="fb-muted"><a href="/games">Browse every place</a>, or filter by creator from the Games page.</p>
+          <p class="fb-muted"><a href="/home">Browse every place</a>, and filter by creator from the Home page.</p>
         </div>
       </section>
     </aside>
