@@ -21,7 +21,7 @@ const site = {
   // Primary navigation, rendered by partials/header.ejs from this list only.
   nav: [
     { key: 'my-page', label: 'My FieldBrik', href: '/my-page' },
-    { key: 'games', label: 'Games', href: '/games' },
+    { key: 'home', label: 'Home', href: '/home' },
     { key: 'catalog', label: 'Catalog', href: '/catalog' },
     { key: 'earnings', label: 'Tickets', href: '/earnings' },
     { key: 'people', label: 'People', href: '/people' },
