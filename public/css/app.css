@@ -1,16 +1,20 @@
 /* ==========================================================================
-   The app layout: a slim dark bar across the top, a light left column, and a
-   white working area whose content sits in a centred column. Used by the front
+   The app layout: a blue bar across the top, a light left column with icons, and
+   a white working area whose content sits in a centred column. Used by the front
    page.
 
    body.fb-app only carries the page background. The flex row is .fb-shell: the
    body and the wrapper must never share a class, or the layout rules land on the
-   body and the bar, the column and the content become three columns side by
-   side.
+   body and the bar, the column and the content become three columns side by side.
    ========================================================================== */
 
 body.fb-app {
   background: #ffffff;
+}
+
+.fb-ico {
+  flex: 0 0 auto;
+  display: block;
 }
 
 /* ---------- Top bar ---------- */
@@ -18,17 +22,17 @@ body.fb-app {
 .fb-bar {
   display: flex;
   align-items: center;
-  height: 34px;
-  padding: 0 10px;
-  background: #1b2b3f;
-  color: #dfe7f2;
+  height: 48px;
+  padding: 0 12px;
+  background: linear-gradient(180deg, #1b91dd, #0d6cb4);
+  color: #ffffff;
 }
 
 .fb-bar__brand {
   flex: 0 0 auto;
-  margin-right: 10px;
-  font: bold 16px/1 Arial, Helvetica, sans-serif;
-  letter-spacing: 0.4px;
+  margin-right: 14px;
+  font: bold 20px/1 Arial, Helvetica, sans-serif;
+  letter-spacing: 0.6px;
   color: #ffffff;
 }
 
@@ -46,21 +50,21 @@ body.fb-app {
 .fb-bar__link {
   display: flex;
   align-items: center;
-  height: 34px;
-  padding: 0 9px;
-  color: #d3dcea;
-  font-size: 12px;
+  height: 48px;
+  padding: 0 12px;
+  color: #ffffff;
+  font-size: 13px;
   line-height: 1;
 }
 
 .fb-bar__link:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.14);
   color: #ffffff;
   text-decoration: none;
 }
 
 .fb-bar__link.is-active {
-  color: #ffffff;
+  background: rgba(0, 0, 0, 0.18);
   font-weight: bold;
 }
 
@@ -68,23 +72,23 @@ body.fb-app {
   display: flex;
   align-items: center;
   flex: 1 1 auto;
-  min-width: 120px;
-  max-width: 560px;
-  height: 22px;
-  margin: 0 14px;
-  padding: 0 6px;
-  border-radius: 3px;
+  min-width: 110px;
+  max-width: 520px;
+  height: 28px;
+  margin: 0 18px;
+  padding: 0 7px;
+  border-radius: 2px;
   background: #ffffff;
 }
 
 .fb-bar__search input {
   flex: 1 1 auto;
   min-width: 0;
-  height: 20px;
+  height: 24px;
   border: 0;
   background: transparent;
   color: #333333;
-  font: 12px Arial, Helvetica, sans-serif;
+  font: 13px Arial, Helvetica, sans-serif;
   outline: none;
 }
 
@@ -94,39 +98,51 @@ body.fb-app {
   padding: 0 2px;
   border: 0;
   background: transparent;
-  color: #4a4a4a;
+  color: #333333;
   cursor: pointer;
 }
 
-.fb-bar__money {
+.fb-bar__icons {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   margin-left: auto;
+}
+
+.fb-bar__icon {
+  display: flex;
+  align-items: center;
+  color: #ffffff;
+  opacity: 0.95;
+}
+
+.fb-bar__icon:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.fb-bar__icon .fb-ico {
+  width: 18px;
+  height: 18px;
+}
+
+.fb-bar__count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 12px;
+  font-weight: bold;
   color: #ffffff;
 }
 
-.fb-bar__money span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.fb-bar__auth {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 14px;
-  margin-left: auto;
+.fb-bar__login {
+  color: #ffffff;
   font-size: 12px;
+  font-weight: bold;
   white-space: nowrap;
 }
 
-.fb-bar__auth a {
-  color: #ffffff;
-}
-
-.fb-bar__auth a:hover {
+.fb-bar__login:hover {
   text-decoration: underline;
 }
 
@@ -135,7 +151,7 @@ body.fb-app {
 .fb-shell {
   display: flex;
   align-items: stretch;
-  min-height: calc(100vh - 34px);
+  min-height: calc(100vh - 48px);
 }
 
 /* ---------- Sidebar ---------- */
@@ -145,19 +161,19 @@ body.fb-app {
   width: 175px;
   display: flex;
   flex-direction: column;
-  padding: 8px 10px 12px;
+  padding: 8px 9px 12px;
   background: #f2f2f2;
-  border-right: 1px solid #dddddd;
+  border-right: 1px solid #dcdcdc;
   position: sticky;
-  top: 34px;
-  height: calc(100vh - 34px);
+  top: 48px;
+  height: calc(100vh - 48px);
   overflow-y: auto;
 }
 
 .fb-side__who {
   display: block;
-  margin: 2px 0 8px 2px;
-  font: bold 12px/1.3 Arial, Helvetica, sans-serif;
+  margin: 2px 0 8px 4px;
+  font: bold 13px/1.3 Arial, Helvetica, sans-serif;
   color: #222222;
 }
 
@@ -166,12 +182,15 @@ body.fb-app {
   text-decoration: none;
 }
 
+/* The green button the front page reference has, kept on request: the account
+   panel offers the same membership as the blue one, in the colour this page
+   uses for it. */
 .fb-side__upgrade {
   display: block;
-  margin: 0 0 10px 2px;
+  margin: 0 0 12px 4px;
   padding: 6px 0;
-  width: 108px;
-  border: 1px solid #31860f;
+  width: 104px;
+  border: 1px solid #2f7d0e;
   border-radius: 3px;
   background: linear-gradient(180deg, #55b524, #3d9a15);
   color: #ffffff;
@@ -192,10 +211,18 @@ body.fb-app {
 }
 
 .fb-side__link {
-  padding: 5px 4px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 5px;
   border-radius: 2px;
-  color: #333333;
+  color: #2f2f2f;
   font-size: 13px;
+  line-height: 1.2;
+}
+
+.fb-side__link .fb-ico {
+  color: #4a4a4a;
 }
 
 .fb-side__link:hover {
@@ -209,12 +236,32 @@ body.fb-app {
   font-weight: bold;
 }
 
+.fb-side__link.is-off {
+  color: #a2a2a2;
+  cursor: default;
+}
+
+.fb-side__link.is-off .fb-ico {
+  color: #b4b4b4;
+}
+
+.fb-side__link.is-off:hover {
+  background: transparent;
+}
+
+.fb-side__rule {
+  display: block;
+  height: 1px;
+  margin: 8px 5px;
+  background: #d8d8d8;
+}
+
 .fb-side__auth {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-top: auto;
-  padding-top: 12px;
+  padding: 12px 4px 0;
   font-size: 12px;
 }
 
@@ -295,8 +342,8 @@ body.fb-app {
 }
 
 .fb-friend {
-  flex: 0 0 78px;
-  width: 78px;
+  flex: 0 0 80px;
+  width: 80px;
   text-align: center;
 }
 
@@ -422,12 +469,13 @@ body.fb-app {
     width: auto;
     height: auto;
     position: static;
+    top: auto;
     padding: 10px 12px 12px;
     border-right: 0;
-    border-bottom: 1px solid #dddddd;
+    border-bottom: 1px solid #dcdcdc;
   }
 
-  /* The column becomes a bar: the links wrap instead of stacking, so the page
+  /* The column becomes a bar: the entries wrap instead of stacking, so the page
      below it still starts on the first screen. */
   .fb-side__nav {
     flex-direction: row;
@@ -437,6 +485,10 @@ body.fb-app {
 
   .fb-side__link {
     padding: 4px 2px;
+  }
+
+  .fb-side__rule {
+    display: none;
   }
 
   .fb-side__auth {
@@ -456,7 +508,7 @@ body.fb-app {
 }
 
 @media (max-width: 560px) {
-  .fb-bar__money {
+  .fb-bar__count {
     display: none;
   }
 
