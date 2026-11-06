@@ -1,101 +1,102 @@
 <%- include('../partials/head', { pageTitle: pageTitle, extraCss: extraCss, bodyClass: bodyClass }) %>
+<%- include('../partials/appbar') %>
 
 <div class="fb-app">
   <%- include('../partials/sidebar') %>
 
   <main class="fb-app__main">
-    <h1 class="fb-app__title">Home</h1>
+    <div class="fb-app__inner">
+      <h1 class="fb-app__title">Home</h1>
 
-    <form class="fb-app__search" method="get" action="/home">
-      <input type="search" name="q" value="<%= query %>" placeholder="Search places and creators" aria-label="Search places and creators">
-      <button class="fb-app__searchbtn" type="submit">Search</button>
-      <% if (query) { %><a class="fb-muted" href="/home">Clear</a><% } %>
-    </form>
+      <% if (query) { %>
+        <p class="fb-app__query">Places matching &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a></p>
+      <% } %>
 
-    <%# ---------- Friends ---------- %>
-    <div class="fb-row">
-      <h2 class="fb-row__title">My Friends (<%= friendTotal %>)</h2>
-      <a class="fb-row__more" href="/friends">See All &rsaquo;</a>
-    </div>
+      <%# ---------- Friends ---------- %>
+      <div class="fb-row">
+        <h2 class="fb-row__title">My Friends (<%= friendTotal %>)</h2>
+        <a class="fb-row__more" href="/friends">See All &rsaquo;</a>
+      </div>
 
-    <% if (authState === 'guest') { %>
-      <p class="fb-app__empty"><a href="/login">Sign in</a> to see your friends, keep building and pick up where you left off.</p>
-    <% } else if (friends.length === 0) { %>
-      <p class="fb-app__empty">No friends yet. <a href="/people">Find people</a> and send a friend request; they show up here once it is accepted.</p>
-    <% } else { %>
-      <ul class="fb-friends">
-        <% friends.forEach(function (friend) { %>
-          <li class="fb-friend">
-            <a href="/people/<%= encodeURIComponent(friend.username) %>">
-              <%- include('../partials/avatar', { avatar: friend.avatar, size: 'md' }) %>
-            </a>
-            <a class="fb-friend__name" href="/people/<%= encodeURIComponent(friend.username) %>"><%= friend.username %></a>
-            <span class="fb-friend__state">
-              <span class="fb-friend__dot<%= friend.online ? ' is-online' : '' %>" aria-hidden="true"></span><%= friend.online ? 'Online' : 'Offline' %>
-            </span>
-          </li>
-        <% }); %>
-      </ul>
-    <% } %>
+      <% if (authState === 'guest') { %>
+        <p class="fb-app__empty"><a href="/login">Sign in</a> to see your friends, keep building and pick up where you left off.</p>
+      <% } else if (friends.length === 0) { %>
+        <p class="fb-app__empty">No friends yet. <a href="/people">Find people</a> and send a friend request; they show up here once it is accepted.</p>
+      <% } else { %>
+        <ul class="fb-friends">
+          <% friends.forEach(function (friend) { %>
+            <li class="fb-friend">
+              <a href="/people/<%= encodeURIComponent(friend.username) %>">
+                <%- include('../partials/avatar', { avatar: friend.avatar, size: 'md' }) %>
+              </a>
+              <a class="fb-friend__name" href="/people/<%= encodeURIComponent(friend.username) %>">
+                <span class="fb-friend__dot<%= friend.online ? ' is-online' : '' %>" aria-hidden="true"></span><%= friend.username %>
+              </a>
+              <span class="fb-friend__state"><%= friend.online ? 'Online' : 'Offline' %></span>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
 
-    <%# ---------- Continue ---------- %>
-    <div class="fb-row">
-      <h2 class="fb-row__title">Continue</h2>
-      <a class="fb-row__more" href="/places/mine">See All &rsaquo;</a>
-    </div>
+      <%# ---------- Continue ---------- %>
+      <div class="fb-row">
+        <h2 class="fb-row__title">Continue</h2>
+        <a class="fb-row__more" href="/places/mine">See All &rsaquo;</a>
+      </div>
 
-    <% if (authState === 'guest') { %>
-      <p class="fb-app__empty"><a href="/login">Sign in</a> to build a place of your own.</p>
-    <% } else if (continuePlaces.length === 0) { %>
-      <p class="fb-app__empty">You have not made a place yet. <a href="/places/new">Build your first one</a>.</p>
-    <% } else { %>
-      <ul class="fb-tiles">
-        <% continuePlaces.forEach(function (place) { %>
-          <li>
-            <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
-            <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
-            <p class="fb-tile__meta"><%= place.published ? 'Published' : 'Draft' %></p>
-          </li>
-        <% }); %>
-      </ul>
-    <% } %>
+      <% if (authState === 'guest') { %>
+        <p class="fb-app__empty"><a href="/login">Sign in</a> to build a place of your own.</p>
+      <% } else if (continuePlaces.length === 0) { %>
+        <p class="fb-app__empty">You have not made a place yet. <a href="/places/new">Build your first one</a>.</p>
+      <% } else { %>
+        <ul class="fb-tiles">
+          <% continuePlaces.forEach(function (place) { %>
+            <li>
+              <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+              <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
+              <p class="fb-tile__meta"><%= place.published ? 'Published' : 'Draft' %></p>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
 
-    <%# ---------- Recommended ---------- %>
-    <div class="fb-row">
-      <h2 class="fb-row__title">Recommended For You</h2>
-      <a class="fb-row__more" href="/places/new">Build a place &rsaquo;</a>
-    </div>
+      <%# ---------- Recommended ---------- %>
+      <div class="fb-row">
+        <h2 class="fb-row__title">Recommended For You</h2>
+        <a class="fb-row__more" href="/places/new">Build a place &rsaquo;</a>
+      </div>
 
-    <% if (recommended.length === 0) { %>
-      <p class="fb-app__empty">
-        <% if (query) { %>
-          Nothing matches &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a>.
-        <% } else { %>
-          No places are published yet. Every place here is made by a member, so this row stays empty until somebody publishes one.
-        <% } %>
+      <% if (recommended.length === 0) { %>
+        <p class="fb-app__empty">
+          <% if (query) { %>
+            Nothing matches &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a>.
+          <% } else { %>
+            No places are published yet. Every place here is made by a member, so this row stays empty until somebody publishes one.
+          <% } %>
+        </p>
+      <% } else { %>
+        <ul class="fb-tiles">
+          <% recommended.forEach(function (place) { %>
+            <li>
+              <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+              <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
+              <p class="fb-tile__meta">By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
+
+      <p class="fb-app__note">
+        <strong>A place is a listing, not a world.</strong>
+        Building and playing happen in the FieldBrik client, which is a separate project and not
+        built yet. Places have real pages and real owners; what they do not have is somewhere to
+        walk around in, so visits are not counted.
       </p>
-    <% } else { %>
-      <ul class="fb-tiles">
-        <% recommended.forEach(function (place) { %>
-          <li>
-            <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
-            <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
-            <p class="fb-tile__meta">By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
-          </li>
-        <% }); %>
-      </ul>
-    <% } %>
 
-    <p class="fb-app__note">
-      <strong>A place is a listing, not a world.</strong>
-      Building and playing happen in the FieldBrik client, which is a separate project and not
-      built yet. Places have real pages and real owners; what they do not have is somewhere to
-      walk around in, so visits are not counted.
-    </p>
-
-    <p class="fb-app__legal">
-      <%= site.name %> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/about">About</a> &middot; <a href="/help">Help</a>
-    </p>
+      <p class="fb-app__legal">
+        <%= site.name %> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/about">About</a> &middot; <a href="/help">Help</a>
+      </p>
+    </div>
   </main>
 </div>
 

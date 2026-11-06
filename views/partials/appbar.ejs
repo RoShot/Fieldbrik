@@ -1,0 +1,41 @@
+<%#
+  The slim bar across the top of the app layout.
+
+  The wordmark is text, not art: no logo image exists for this site and the only
+  pictures allowed on a page are banner2 and the currency pips, so the name is
+  set in type. The search box is the front page's only search field, which is why
+  the content area no longer has one of its own.
+%>
+<header class="fb-bar">
+  <a class="fb-bar__brand" href="/home"><%= site.name.toUpperCase() %></a>
+
+  <nav class="fb-bar__nav" aria-label="Site">
+    <%# Five entries only: the bar is 34px tall and the search field needs the
+        rest of the row. The sidebar carries the full list. %>
+    <% nav.primary.slice(1, 6).forEach(function (link) { %>
+      <a class="fb-bar__link<%= link.active ? ' is-active' : '' %>" href="<%= link.href %>"<%= link.active ? ' aria-current="page"' : '' %>><%= link.label %></a>
+    <% }); %>
+  </nav>
+
+  <form class="fb-bar__search" method="get" action="/home" role="search">
+    <input name="q" type="search" value="<%= typeof query !== 'undefined' ? query : '' %>" placeholder="Search" aria-label="Search places and creators">
+    <button class="fb-bar__searchbtn" type="submit" aria-label="Search">
+      <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+        <line x1="10" y1="10" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.8"></line>
+      </svg>
+    </button>
+  </form>
+
+  <% if (authState === 'member') { %>
+    <div class="fb-bar__money">
+      <span><%- include('currency-icon', { kind: 'bucks' }) %><strong><%= viewer.currency.bucks.toLocaleString('en-US') %></strong></span>
+      <span><%- include('currency-icon', { kind: 'tickets' }) %><strong><%= viewer.currency.tickets.toLocaleString('en-US') %></strong></span>
+    </div>
+  <% } else { %>
+    <div class="fb-bar__auth">
+      <a href="/login">Log In</a>
+      <a href="/register">Sign Up</a>
+    </div>
+  <% } %>
+</header>

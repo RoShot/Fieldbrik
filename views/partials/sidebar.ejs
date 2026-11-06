@@ -1,13 +1,20 @@
 <%#
   The left column of the app layout.
 
-  No icons: every entry is a word, because no icon set exists for this site and
-  inventing one would mean drawing art that is not ours. The Panel button is the
-  only staff-only thing here, and it is drawn from the rank the route worked out,
-  never from anything the browser sends.
+  It opens with whoever is looking at it, then the Carpenters Club button, then
+  every entry as a word. There are no icons because no icon set exists for this
+  site and inventing one would mean drawing art that is not ours.
+
+  The Panel button is the only staff-only thing here, and it is drawn from the
+  rank the route worked out, never from anything the browser sends.
 %>
 <aside class="fb-side">
-  <a class="fb-side__brand" href="/home"><%= site.name %></a>
+  <% if (authState === 'member' && typeof viewer !== 'undefined' && viewer && viewer.username) { %>
+    <a class="fb-side__who" href="/my-page"><%= viewer.username %></a>
+  <% } else { %>
+    <a class="fb-side__who" href="/home"><%= site.name %></a>
+  <% } %>
+
   <a class="fb-side__upgrade" href="/carpenters-club">Upgrade Now</a>
 
   <nav class="fb-side__nav" aria-label="Main navigation">
