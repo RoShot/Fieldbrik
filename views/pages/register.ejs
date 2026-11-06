@@ -1,0 +1,163 @@
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: extraCss, bodyClass: bodyClass }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-join">
+  <%# The skyline is drawn here rather than loaded from a file: two layers of
+      flat buildings, so the page carries no artwork it does not own. %>
+  <svg class="fb-join__skyline" viewBox="0 0 960 320" preserveAspectRatio="xMidYMax slice"
+       aria-hidden="true" focusable="false">
+    <g fill="#1a5c9a">
+      <rect x="0" y="168" width="52" height="152"/>
+      <rect x="52" y="204" width="34" height="116"/>
+      <rect x="86" y="152" width="60" height="168"/>
+      <rect x="146" y="186" width="26" height="134"/>
+      <rect x="172" y="162" width="44" height="158"/>
+      <rect x="216" y="210" width="30" height="110"/>
+      <rect x="246" y="176" width="58" height="144"/>
+      <rect x="304" y="198" width="36" height="122"/>
+      <rect x="340" y="156" width="50" height="164"/>
+      <rect x="390" y="188" width="28" height="132"/>
+      <rect x="418" y="170" width="54" height="150"/>
+      <rect x="472" y="206" width="32" height="114"/>
+      <rect x="504" y="160" width="46" height="160"/>
+      <rect x="550" y="190" width="30" height="130"/>
+      <rect x="580" y="178" width="56" height="142"/>
+      <rect x="636" y="200" width="34" height="120"/>
+      <rect x="670" y="150" width="50" height="170"/>
+      <rect x="720" y="184" width="28" height="136"/>
+      <rect x="748" y="172" width="54" height="148"/>
+      <rect x="802" y="204" width="32" height="116"/>
+      <rect x="834" y="158" width="46" height="162"/>
+      <rect x="880" y="192" width="34" height="128"/>
+      <rect x="914" y="166" width="46" height="154"/>
+    </g>
+    <g fill="#093561">
+      <rect x="0" y="232" width="40" height="88"/>
+      <rect x="40" y="258" width="52" height="62"/>
+      <rect x="92" y="240" width="34" height="80"/>
+      <rect x="126" y="266" width="48" height="54"/>
+      <rect x="174" y="236" width="30" height="84"/>
+      <rect x="204" y="254" width="44" height="66"/>
+      <rect x="248" y="262" width="36" height="58"/>
+      <rect x="284" y="244" width="52" height="76"/>
+      <rect x="336" y="270" width="30" height="50"/>
+      <rect x="366" y="250" width="46" height="70"/>
+      <rect x="412" y="264" width="38" height="56"/>
+      <rect x="450" y="246" width="32" height="74"/>
+      <rect x="482" y="268" width="50" height="52"/>
+      <rect x="532" y="252" width="34" height="68"/>
+      <rect x="566" y="266" width="42" height="54"/>
+      <rect x="608" y="242" width="30" height="78"/>
+      <rect x="638" y="260" width="48" height="60"/>
+      <rect x="686" y="272" width="36" height="48"/>
+      <rect x="722" y="254" width="44" height="66"/>
+      <rect x="766" y="266" width="30" height="54"/>
+      <rect x="796" y="258" width="50" height="62"/>
+      <rect x="846" y="270" width="34" height="50"/>
+      <rect x="880" y="256" width="44" height="64"/>
+      <rect x="924" y="268" width="36" height="52"/>
+    </g>
+  </svg>
+  <div class="fb-join__fog" aria-hidden="true"></div>
+
+  <div class="fb-join__inner">
+    <div class="fb-join__lede">
+      <h1 class="fb-join__title">Join the builders</h1>
+      <p class="fb-join__sub">and explore their creations</p>
+    </div>
+
+    <div class="fb-join__cols">
+      <figure class="fb-join__showcase">
+        <svg class="fb-join__scene" viewBox="0 0 320 180" role="img"
+             aria-label="A small scene built from bricks">
+          <defs>
+            <linearGradient id="fbSceneSky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#8ecbf2"/>
+              <stop offset="1" stop-color="#e9f6fe"/>
+            </linearGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#fbSceneSky)"/>
+          <path d="M0 112l44-26 38 16 42-24 40 22 36-18 40 20 38-16 42 22v12H0z" fill="#6fae66"/>
+          <rect y="120" width="320" height="60" fill="#7cc63f"/>
+          <rect y="120" width="320" height="6" fill="#8fd955"/>
+          <rect x="40" y="118" width="76" height="30" fill="#79bf3c"/>
+          <rect x="40" y="118" width="76" height="6" fill="#a3dd6a"/>
+          <rect x="126" y="132" width="54" height="22" fill="#e8a52c"/>
+          <rect x="126" y="132" width="54" height="5" fill="#f7c25c"/>
+          <rect x="196" y="112" width="84" height="38" fill="#4f8fd6"/>
+          <rect x="196" y="112" width="84" height="6" fill="#7cb0ea"/>
+          <rect x="214" y="82" width="18" height="30" fill="#c0392b"/>
+          <rect x="214" y="82" width="18" height="5" fill="#e05a4a"/>
+          <rect x="238" y="88" width="18" height="24" fill="#c0392b"/>
+          <rect x="238" y="88" width="18" height="4" fill="#e05a4a"/>
+        </svg>
+        <figcaption>What will you build?</figcaption>
+      </figure>
+
+      <form class="fb-join__panel" method="post" action="/register">
+        <p class="fb-join__tabs">
+          <span class="fb-join__tab is-active">Sign up</span>
+          <span class="fb-join__tab-sep">|</span>
+          <a class="fb-join__tab" href="/login">Login</a>
+        </p>
+
+        <% if (error) { %>
+          <p class="fb-join__error"><%= error %></p>
+        <% } %>
+
+        <label class="fb-join__label" for="birth-month">Birthday</label>
+        <div class="fb-join__birthday">
+          <select id="birth-month" name="birth-month" required>
+            <option value="">Month</option>
+            <% months.forEach(function (name, index) { %>
+              <option value="<%= index + 1 %>"<%= values && String(values.birthMonth) === String(index + 1) ? ' selected' : '' %>><%= name %></option>
+            <% }); %>
+          </select>
+          <select id="birth-day" name="birth-day" required aria-label="Day">
+            <option value="">Day</option>
+            <% days.forEach(function (day) { %>
+              <option value="<%= day %>"<%= values && String(values.birthDay) === String(day) ? ' selected' : '' %>><%= day %></option>
+            <% }); %>
+          </select>
+          <select id="birth-year" name="birth-year" required aria-label="Year">
+            <option value="">Year</option>
+            <% years.forEach(function (year) { %>
+              <option value="<%= year %>"<%= values && String(values.birthYear) === String(year) ? ' selected' : '' %>><%= year %></option>
+            <% }); %>
+          </select>
+        </div>
+        <p class="fb-join__hint">Enter your birthday for a personalised experience.<br>It will not be given to any third party.</p>
+
+        <span class="fb-join__label">Gender</span>
+        <div class="fb-join__genders">
+          <label><input type="radio" name="gender" value="male" required<%= values && values.gender === 'male' ? ' checked' : '' %>> Male</label>
+          <label><input type="radio" name="gender" value="female"<%= values && values.gender === 'female' ? ' checked' : '' %>> Female</label>
+        </div>
+
+        <label class="fb-join__label" for="signup-username">Username</label>
+        <input id="signup-username" name="username" type="text" maxlength="20"
+               autocomplete="username" required
+               value="<%= values ? values.username : '' %>">
+        <p class="fb-join__hint">3 to 20 letters, numbers and underscores. No spaces.</p>
+
+        <label class="fb-join__label" for="signup-password">Password</label>
+        <input id="signup-password" name="password" type="password" minlength="8"
+               maxlength="72" autocomplete="new-password" required>
+        <p class="fb-join__hint">8 characters or more. Longer is better than complicated.</p>
+
+        <label class="fb-join__label" for="signup-confirm">Confirm Password</label>
+        <input id="signup-confirm" name="confirm" type="password" minlength="8"
+               maxlength="72" autocomplete="new-password" required>
+
+        <button class="fb-join__submit" type="submit">Sign Up</button>
+
+        <p class="fb-join__fineprint">By creating an account you agree to the
+          <a href="/terms">Terms of Service</a> and the <a href="/privacy">Privacy Policy</a>.</p>
+      </form>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

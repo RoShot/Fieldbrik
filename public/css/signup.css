@@ -1,0 +1,291 @@
+/* ==========================================================================
+   Sign-up page.
+
+   Loaded only by views/pages/register.ejs, and scoped to body.fb-signup so
+   nothing here can reach another page. Rules live in this file rather than in
+   fieldbrik.css because this is the one screen that does not use the header
+   banner: the wordmark carries the top of the page instead.
+   ========================================================================== */
+
+body.fb-signup {
+  background: #16497e;
+}
+
+/* The area past the end of the document belongs to the same city. */
+html:has(> body.fb-signup) {
+  background: #16497e;
+}
+
+/* The maroon band stays, the artwork does not. */
+.fb-signup .fb-header__pattern {
+  display: none;
+}
+
+.fb-signup .fb-logo__text {
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #4a120d, 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.fb-signup .fb-logo__tag {
+  color: #f7ded9;
+}
+
+/* ---------- Hero ---------- */
+
+.fb-join {
+  position: relative;
+  overflow: hidden;
+  min-height: 600px;
+  padding: 24px 0 30px;
+  background: linear-gradient(180deg, #2f74b0 0%, #1d5893 40%, #16497e 72%, #2f628c 100%);
+  color: #ffffff;
+}
+
+.fb-join__skyline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Haze along the base of the city, so the footer edge reads as distance
+   rather than as a cut-off shape. */
+.fb-join__fog {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 30%;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(150, 186, 214, 0) 0%,
+    rgba(150, 186, 214, 0.28) 58%,
+    rgba(168, 199, 222, 0.55) 100%
+  );
+}
+
+.fb-join__inner {
+  position: relative;
+  width: 940px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 10px;
+}
+
+.fb-join__lede {
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+.fb-join__title {
+  margin: 0;
+  font: bold 34px/1.15 Arial, Helvetica, sans-serif;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.38);
+}
+
+.fb-join__sub {
+  margin: 2px 0 0;
+  font: bold 23px/1.2 Arial, Helvetica, sans-serif;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.38);
+}
+
+.fb-join__cols {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 44px;
+}
+
+/* ---------- Showcase ---------- */
+
+.fb-join__showcase {
+  margin: 0;
+  width: 320px;
+}
+
+.fb-join__scene {
+  display: block;
+  width: 320px;
+  height: 180px;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.fb-join__showcase figcaption {
+  margin-top: 12px;
+  text-align: center;
+  font: bold 19px/1.25 Arial, Helvetica, sans-serif;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.38);
+}
+
+/* ---------- Form panel ---------- */
+
+.fb-join__panel {
+  width: 300px;
+  padding: 12px 14px 16px;
+  border-radius: 4px;
+  background: rgba(3, 26, 52, 0.38);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.fb-join__tabs {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.fb-join__tab {
+  color: #ffffff;
+}
+
+.fb-join__tab:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.fb-join__tab.is-active {
+  font-weight: bold;
+}
+
+.fb-join__tab-sep {
+  margin: 0 5px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.fb-join__label {
+  display: block;
+  margin: 7px 0 3px;
+  font: bold 11px/1.3 Arial, Helvetica, sans-serif;
+  color: #ffffff;
+}
+
+.fb-join__tabs + .fb-join__label {
+  margin-top: 0;
+}
+
+.fb-join__panel input[type="text"],
+.fb-join__panel input[type="password"],
+.fb-join__panel select {
+  width: 100%;
+  height: 22px;
+  padding: 1px 4px;
+  border: 1px solid #8c9aa6;
+  border-radius: 2px;
+  background: #ffffff;
+  color: #222222;
+  font: 11px Arial, Helvetica, sans-serif;
+}
+
+.fb-join__birthday {
+  display: flex;
+  gap: 4px;
+}
+
+.fb-join__birthday select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fb-join__hint {
+  margin: 2px 0 0;
+  font-size: 9.5px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.fb-join__genders {
+  display: flex;
+  gap: 16px;
+  margin-top: 2px;
+}
+
+.fb-join__genders label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.fb-join__submit {
+  display: block;
+  width: 100%;
+  height: 30px;
+  margin-top: 12px;
+  border: 1px solid #2c6b0a;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #63b52c, #3f8f14);
+  color: #ffffff;
+  font: bold 15px/1 Arial, Helvetica, sans-serif;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.fb-join__submit:hover {
+  background: linear-gradient(180deg, #71c436, #4a9c19);
+}
+
+.fb-join__error {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  background: rgba(148, 22, 12, 0.62);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.fb-join__fineprint {
+  margin: 10px 0 0;
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.fb-join__fineprint a {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* The footer sits on the city rather than under it. */
+.fb-signup .fb-footer {
+  margin-top: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(3, 26, 52, 0.55);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.fb-signup .fb-footer__links {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.fb-signup .fb-footer a {
+  color: #ffffff;
+}
+
+.fb-signup .fb-footer__sep {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 760px) {
+  .fb-join__cols {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .fb-join__showcase {
+    width: 260px;
+  }
+
+  .fb-join__scene {
+    width: 260px;
+    height: 150px;
+  }
+
+  .fb-join__panel {
+    width: 300px;
+    max-width: 100%;
+  }
+}

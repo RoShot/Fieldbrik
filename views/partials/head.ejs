@@ -16,4 +16,6 @@
   <link rel="stylesheet" href="<%= extraCss %>">
   <% } %>
 </head>
-<body>
+<%# Pages that need a body class of their own pass one in; every other page
+    keeps a bare body element. %>
+<% if (typeof bodyClass !== 'undefined' && bodyClass) { %><body class="<%= bodyClass %>"><% } else { %><body><% } %>
