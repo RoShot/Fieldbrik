@@ -1,9 +1,10 @@
 /**
- * Account routes: one page, one form.
+ * Account routes: two pages, two forms.
  *
- * A visitor types a name and a password. A free name becomes an account; a name
- * that already exists is signed in when the password matches. That is both
- * registration and log-in, which is why there is one form and not two.
+ * Signing up and signing in are separate. The sign-up page asks for a name, a
+ * birthday, a gender and a password, and creates the account. The log-in page
+ * asks for a name and a password and does nothing else: it never falls through
+ * to creating an account, so a mistyped name cannot silently register somebody.
  *
  * The handlers are async because password hashing and every database call are.
  * Each route wrapper returns its promise: the Worker's router parks a returned
@@ -20,6 +21,21 @@ const router = Router();
 
 const COOKIE = accounts.SESSION_COOKIE;
 
+// The sign-up form's option lists. Built here rather than inside the template:
+// a `const` in a compiled view would collide with the local of the same name.
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const DAYS = Array.from({ length: 31 }, (unused, index) => index + 1);
+
+function yearOptions() {
+  const now = new Date().getUTCFullYear();
+  const out = [];
+  for (let year = now; year >= 1900; year -= 1) out.push(year);
+  return out;
+}
+
 function databaseMissing(req, res) {
   return res.status(503).render(
     'pages/error',
@@ -32,13 +48,32 @@ function databaseMissing(req, res) {
   );
 }
 
-function renderForm(req, res, status, error, values) {
+function renderLogin(req, res, status, error, values) {
   return res.status(status).render(
     'pages/login',
     pageContext(req, {
       pageTitle: 'Log In - FieldBrik',
       error: error || null,
       values: values || null,
+    })
+  );
+}
+
+function renderSignUp(req, res, status, error, values) {
+  return res.status(status).render(
+    'pages/register',
+    pageContext(req, {
+      pageTitle: 'Sign Up - FieldBrik',
+      error: error || null,
+      values: values || null,
+      // This page's own stylesheet: the sign-up screen is the one page that
+      // replaces the header banner with the wordmark, and those rules should not
+      // load anywhere else.
+      extraCss: '/css/signup.css',
+      bodyClass: 'fb-signup',
+      months: MONTH_NAMES,
+      days: DAYS,
+      years: yearOptions(),
     })
   );
 }
@@ -76,7 +111,7 @@ async function signIn(db, req, res, user) {
   return res.redirect('/my-page');
 }
 
-async function handleSignIn(req, res) {
+async function handleLogin(req, res) {
   if (!req.db) return databaseMissing(req, res);
 
   const body = req.body || {};
@@ -86,37 +121,75 @@ async function handleSignIn(req, res) {
 
   const existing = await accounts.findByUsername(req.db, username);
 
-  if (existing) {
-    // The name is taken, so this is a log-in: only the password is checked, and
-    // a wrong one is refused. It never falls through to registering.
-    //
-    // The limit is tested before the password, so a locked name is refused
-    // without spending a PBKDF2 derivation on it.
-    const blocked = await loginThrottle.check(req.db, { username, ip });
+  // A name nobody holds gets the same answer as a wrong password, and costs the
+  // same derivation inside authenticate(), so the form cannot be used to work
+  // out which names exist.
+  if (!existing) {
+    return renderLogin(req, res, 400, 'That username and password do not match.', { username });
+  }
 
-    if (blocked) {
-      return renderForm(
-        req,
-        res,
-        429,
-        `Too many failed attempts with that name. Try again in ${blocked.minutes} minutes.`,
-        { username }
-      );
-    }
+  // The limit is tested before the password, so a locked name is refused
+  // without spending a PBKDF2 derivation on it.
+  const blocked = await loginThrottle.check(req.db, { username, ip });
 
-    try {
-      const user = await accounts.authenticate(req.db, { username, password });
-      await loginThrottle.clear(req.db, { username });
-      return await signIn(req.db, req, res, user);
-    } catch (error) {
-      if (!(error instanceof accounts.AccountError)) throw error;
-
-      await loginThrottle.record(req.db, { username, ip });
-      return renderForm(req, res, 400, error.message, { username });
-    }
+  if (blocked) {
+    return renderLogin(
+      req,
+      res,
+      429,
+      `Too many failed attempts with that name. Try again in ${blocked.minutes} minutes.`,
+      { username }
+    );
   }
 
   try {
+    const user = await accounts.authenticate(req.db, { username, password });
+    await loginThrottle.clear(req.db, { username });
+    return await signIn(req.db, req, res, user);
+  } catch (error) {
+    if (!(error instanceof accounts.AccountError)) throw error;
+
+    await loginThrottle.record(req.db, { username, ip });
+    return renderLogin(req, res, 400, error.message, { username });
+  }
+}
+
+async function handleRegister(req, res) {
+  if (!req.db) return databaseMissing(req, res);
+
+  const body = req.body || {};
+  const username = String(body.username || '').trim();
+
+  // Carried back into the form when something is refused, so a member does not
+  // have to re-pick a birthday because the password was too short.
+  const values = {
+    username,
+    birthMonth: String(body['birth-month'] || ''),
+    birthDay: String(body['birth-day'] || ''),
+    birthYear: String(body['birth-year'] || ''),
+    gender: String(body.gender || ''),
+  };
+
+  try {
+    const profile = accounts.validateProfile({
+      birthMonth: values.birthMonth,
+      birthDay: values.birthDay,
+      birthYear: values.birthYear,
+      gender: values.gender,
+    });
+
+    const taken = await accounts.findByUsername(req.db, username);
+
+    if (taken) {
+      return renderSignUp(
+        req,
+        res,
+        400,
+        'That username is already taken. Choose another, or log in instead.',
+        values
+      );
+    }
+
     const email = String(body.email || '').trim();
 
     // A poisoned account's address is blacklisted, so the same email cannot be
@@ -129,21 +202,28 @@ async function handleSignIn(req, res) {
         .first();
 
       if (blockedEmail) {
-        return renderForm(
+        return renderSignUp(
           req,
           res,
           400,
           'That email address cannot be used for a new account.',
-          { username }
+          values
         );
       }
     }
 
-    const created = await accounts.register(req.db, { username, password, email });
+    const created = await accounts.register(req.db, {
+      username,
+      password: body.password,
+      confirm: body.confirm,
+      email,
+      profile,
+    });
+
     return await signIn(req.db, req, res, created);
   } catch (error) {
     if (error instanceof accounts.AccountError) {
-      return renderForm(req, res, 400, error.message, { username });
+      return renderSignUp(req, res, 400, error.message, values);
     }
     throw error;
   }
@@ -160,10 +240,16 @@ async function handleLogout(req, res) {
   return res.redirect('/');
 }
 
-router.post('/login', (req, res, next) => handleSignIn(req, res).catch(next));
+// The sign-up page. Ahead of the page router, which still redirects this path to
+// the old combined form.
+router.get('/register', (req, res) => {
+  if (req.viewer) return res.redirect('/my-page');
+  return renderSignUp(req, res, 200, null, null);
+});
 
-// Links and bookmarks from the two-form version still post here.
-router.post('/register', (req, res, next) => handleSignIn(req, res).catch(next));
+router.post('/login', (req, res, next) => handleLogin(req, res).catch(next));
+
+router.post('/register', (req, res, next) => handleRegister(req, res).catch(next));
 
 router.post('/logout', (req, res, next) => handleLogout(req, res).catch(next));
 
