@@ -2,8 +2,11 @@
   The left column of the app layout.
 
   It opens with whoever is looking at it, then the Carpenters Club button, then
-  every entry as a word. There are no icons because no icon set exists for this
-  site and inventing one would mean drawing art that is not ours.
+  the account entries with their icons, then the site entries under a rule.
+
+  Events is drawn greyed and is not a link: there is no events feature, and a
+  link to nothing is worse than a word that says so. Groups is left out for the
+  same reason - there are no groups on this site yet.
 
   The Panel button is the only staff-only thing here, and it is drawn from the
   rank the route worked out, never from anything the browser sends.
@@ -18,9 +21,22 @@
   <a class="fb-side__upgrade" href="/carpenters-club">Upgrade Now</a>
 
   <nav class="fb-side__nav" aria-label="Main navigation">
-    <% nav.primary.forEach(function (link) { %>
-      <a class="fb-side__link<%= link.active ? ' is-active' : '' %>" href="<%= link.href %>"<%= link.active ? ' aria-current="page"' : '' %>><%= link.label %></a>
-    <% }); %>
+    <a class="fb-side__link<%= currentPath === '/home' ? ' is-active' : '' %>" href="/home"><%- include('icon', { name: 'home' }) %><span>Home</span></a>
+    <a class="fb-side__link<%= currentPath === '/my-page' ? ' is-active' : '' %>" href="/my-page"><%- include('icon', { name: 'person' }) %><span>Profile</span></a>
+    <a class="fb-side__link<%= currentPath === '/messages' ? ' is-active' : '' %>" href="/messages"><%- include('icon', { name: 'message' }) %><span>Messages</span></a>
+    <a class="fb-side__link<%= currentPath === '/friends' ? ' is-active' : '' %>" href="/friends"><%- include('icon', { name: 'friends' }) %><span>Friends</span></a>
+    <a class="fb-side__link<%= currentPath === '/character' ? ' is-active' : '' %>" href="/character"><%- include('icon', { name: 'character' }) %><span>Character</span></a>
+    <a class="fb-side__link<%= currentPath === '/inventory' ? ' is-active' : '' %>" href="/inventory"><%- include('icon', { name: 'bag' }) %><span>Inventory</span></a>
+    <a class="fb-side__link<%= currentPath === '/earnings' ? ' is-active' : '' %>" href="/earnings"><%- include('icon', { name: 'coin' }) %><span>Money</span></a>
+    <a class="fb-side__link<%= currentPath === '/news' ? ' is-active' : '' %>" href="/news"><%- include('icon', { name: 'blog' }) %><span>Blog</span></a>
+    <span class="fb-side__link is-off"><%- include('icon', { name: 'calendar' }) %><span>Events</span></span>
+
+    <span class="fb-side__rule" aria-hidden="true"></span>
+
+    <a class="fb-side__link<%= currentPath === '/catalog' ? ' is-active' : '' %>" href="/catalog"><%- include('icon', { name: 'grid' }) %><span>Catalog</span></a>
+    <a class="fb-side__link<%= currentPath === '/carpenters-club' ? ' is-active' : '' %>" href="/carpenters-club"><%- include('icon', { name: 'star' }) %><span>Carpenters Club</span></a>
+    <a class="fb-side__link<%= currentPath === '/parents' ? ' is-active' : '' %>" href="/parents"><%- include('icon', { name: 'parents' }) %><span>Parents</span></a>
+    <a class="fb-side__link<%= currentPath === '/help' ? ' is-active' : '' %>" href="/help"><%- include('icon', { name: 'help' }) %><span>Help</span></a>
   </nav>
 
   <% if (authState === 'guest') { %>
