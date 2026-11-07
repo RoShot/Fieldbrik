@@ -1,0 +1,37 @@
+/* ==========================================================================
+   The site banner under the strip.
+
+   One full-width band of flat colour with a hairline above and below, and the
+   text centred in it — the technical-notice strip of the period. The colours
+   come from the row staff saved, so the panel owns them and this file only owns
+   the shape.
+   ========================================================================== */
+
+.fb-banner2009 {
+  display: block;
+  padding: 9px 12px;
+  border-top: 1px solid #b8b8b8;
+  border-bottom: 1px solid #a9a9a9;
+  background: #efefef;
+  color: #1e1e1e;
+  font: bold 12px/1.45 Verdana, Arial, Helvetica, sans-serif;
+  letter-spacing: 0.2px;
+  text-align: center;
+  word-wrap: break-word;
+}
+
+.fb-banner2009 a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.fb-banner2009[hidden] {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .fb-banner2009 {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+}

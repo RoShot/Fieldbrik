@@ -89,3 +89,9 @@
     </div>
   </nav>
 <% } %>
+
+<%# The banner staff post in the panel: a band of colour under the strip, with
+    the text centred in it. Drawn by js/banner.js from the newest enabled row, so
+    a page never waits on a second query to paint. Empty and hidden otherwise. %>
+<div class="fb-banner2009" id="fb-site-banner" role="status" hidden></div>
+<script src="/js/banner.js" defer></script>
