@@ -1,14 +1,16 @@
 /**
- * Designed but not built: Groups, Advertising, Ambassadors and the Share
- * FieldBrik pages.
+ * The member strip's pages: the four that are designed but not built, plus the
+ * Share FieldBrik invitation form.
  *
- * The classic My FieldBrik strip carried all of these, so the strip carries them
- * too. Each one opens a page that says what it will do and what is missing,
- * rather than a 404 or a button that pretends to work. The copy is the scope
- * agreed for this build; none of it is stored yet.
+ * Groups, Advertising, Ambassadors and the referral leaderboard each open a page
+ * that says what they will do and what is missing, rather than a 404 or a button
+ * that pretends to work. The copy is the scope agreed for this build; none of it
+ * is stored yet.
  *
- * These are separate routes rather than one page with a query string so the
- * links in the menu are stable and each page has its own title.
+ * Share FieldBrik is a real form: the address and the message are checked on the
+ * server and the page reports what happened. What it cannot do is deliver the
+ * email, because no mail service is connected to this build; the page says that
+ * plainly and hands over the link instead of claiming an invitation was sent.
  */
 
 const { Router } = require('../lib/router');
@@ -55,30 +57,6 @@ const PAGES = {
     note: 'Nothing is tracked yet: sign-ups are not credited to anybody, so there is no figure to show.',
   },
 
-  '/share': {
-    title: 'Share FieldBrik',
-    summary:
-      'Sharing is how a member brings a friend in, and how a member who wants more from the site finds the paid membership.',
-    planned: [
-      'Inviting a friend with a link that credits the invitation to you',
-      'A referral leaderboard once invitations are counted',
-      'A way to pass on the membership page to somebody who wants it',
-    ],
-    note: 'The three parts of the classic Share menu are separate pages: Please Upgrade Me opens Carpenters Club, and the other two are listed here.',
-  },
-
-  '/share/invite': {
-    title: 'Invite A Friend',
-    summary:
-      'Inviting a friend sends them a link to FieldBrik that credits the new account to you when they sign up.',
-    planned: [
-      'A personal link per member',
-      'A note on the new account saying who invited them',
-      'The invitation counted on the inviter’s profile',
-    ],
-    note: 'No invitation is recorded yet, so no link exists to send. Sign-ups are open to anybody without one.',
-  },
-
   '/share/referrals': {
     title: 'Referral Leaderboards',
     summary:
@@ -92,7 +70,84 @@ const PAGES = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Share FieldBrik
+// ---------------------------------------------------------------------------
+
+const DEFAULT_MESSAGE = `Check out ${site.name}, this awesome free game I found on the internets!`;
+const MESSAGE_MAX = 1000;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function invitedValues(req) {
+  const body = req.body || {};
+  const name = String(body.name || '').trim();
+  const message = String(body.message || '').trim();
+
+  return {
+    name: name || (req.viewer ? req.viewer.username : ''),
+    email: String(body.email || '').trim(),
+    message: message || DEFAULT_MESSAGE,
+  };
+}
+
+function renderShare(req, res, values, result) {
+  return res.render(
+    'pages/share',
+    pageContext(req, {
+      pageTitle: `Share ${site.name} with a Friend - ${site.name}`,
+      extraCss: '/css/share2009.css',
+      bodyClass: 'fb-share-page',
+      values,
+      result,
+      inviteLink: `https://${site.domain}/`,
+    })
+  );
+}
+
 const router = Router();
+
+router.get('/share', (req, res) => {
+  return renderShare(req, res, invitedValues(req), null);
+});
+
+// The strip's Share menu still points at the old invitation page. It is the same
+// form, so send the link to it rather than keeping a second placeholder alive.
+router.get('/share/invite', (req, res) => res.redirect('/share'));
+
+// The button checks the form and reports the truth: this build cannot send mail,
+// so an accepted form hands back the link rather than claiming a delivery.
+router.post('/share', (req, res) => {
+  const values = invitedValues(req);
+
+  if (!values.email) {
+    return renderShare(req, res, values, {
+      ok: false,
+      text: 'Add the email address of the friend you want to invite.',
+    });
+  }
+
+  if (!EMAIL.test(values.email)) {
+    return renderShare(req, res, values, {
+      ok: false,
+      text: `That does not look like an email address. Check the address and try again.`,
+    });
+  }
+
+  if (values.message.length > MESSAGE_MAX) {
+    return renderShare(req, res, values, {
+      ok: false,
+      text: `Keep the message under ${MESSAGE_MAX} characters; this one is ${values.message.length}.`,
+    });
+  }
+
+  return renderShare(req, res, values, {
+    ok: true,
+    text:
+      'The address and the message are fine, but nothing was sent: no mail service is connected to ' +
+      'this build, so invitations cannot be emailed yet. Copy the link below and send it yourself. ' +
+      'The address is not stored anywhere.',
+  });
+});
 
 Object.keys(PAGES).forEach((path) => {
   router.get(path, (req, res) => {

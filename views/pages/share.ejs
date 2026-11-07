@@ -1,0 +1,70 @@
+<%#
+  Share FieldBrik with a Friend, built to the 2009 reference.
+
+  The reference was a plain form: your name, an address, a message, with a line
+  of explanation beside each field, and a Send Invite button under the box.
+
+  The form is real: it checks the address and the message on the server and says
+  what happened. What it cannot do is send the email. There is no mail service
+  connected to this build, so the page says so plainly and gives the member the
+  link to pass on instead. Nothing is stored: no address typed here is kept,
+  which the page states under the button.
+%>
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-share2009">
+  <div class="fb-container">
+    <h1 class="fb-share2009__title">Share <%= site.name %> with a Friend</h1>
+    <p class="fb-share2009__lede">Fill out the form to share <%= site.name %> with a friend who's not already
+      a member of the site.</p>
+
+    <% if (result) { %>
+      <p class="fb-share2009__result fb-share2009__result--<%= result.ok ? 'ok' : 'bad' %>"><%= result.text %></p>
+    <% } %>
+
+    <form class="fb-share2009__form" method="post" action="/share">
+      <div class="fb-share2009__row">
+        <label class="fb-share2009__label" for="share-name">Your Name:</label>
+        <div class="fb-share2009__field">
+          <input id="share-name" name="name" type="text" maxlength="60" value="<%= values.name %>"
+            placeholder="Your <%= site.name %> name">
+        </div>
+        <p class="fb-share2009__hint">This will identify you to a friend who may not recognise your
+          <%= site.name %> account name.</p>
+      </div>
+
+      <div class="fb-share2009__row">
+        <label class="fb-share2009__label" for="share-email">Email:</label>
+        <div class="fb-share2009__field">
+          <input id="share-email" name="email" type="email" maxlength="120" value="<%= values.email %>" required>
+        </div>
+        <p class="fb-share2009__hint"><%= site.name %> takes your privacy and the privacy of your friends
+          seriously. <a href="/privacy">View our privacy policy.</a></p>
+      </div>
+
+      <div class="fb-share2009__row">
+        <label class="fb-share2009__label" for="share-message">Message:</label>
+        <div class="fb-share2009__field">
+          <textarea id="share-message" name="message" rows="9" maxlength="1000"><%= values.message %></textarea>
+        </div>
+        <p class="fb-share2009__hint">Feel free to include a note to your friend before sending. We'll include
+          some information and a link back to <%= site.name %>.</p>
+      </div>
+
+      <div class="fb-share2009__send">
+        <button class="fb-share2009__btn" type="submit">Send Invite</button>
+      </div>
+    </form>
+
+    <p class="fb-share2009__fine">
+      Sending is not connected to a mail service in this build, so the button checks the form and then gives you
+      the link to pass on yourself. The address is not stored.
+      The invitation link is <strong><%= inviteLink %></strong>.
+    </p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

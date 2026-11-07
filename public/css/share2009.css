@@ -1,0 +1,159 @@
+/* ==========================================================================
+   Share FieldBrik with a Friend, to the 2009 reference.
+
+   A white form card on the sky: a letter-spaced title, a short lede, and three
+   rows of label / field / hint. The fields are dashed like the sign-in boxes of
+   the period, and the button sits at the right under the card.
+   ========================================================================== */
+
+body.fb-share-page {
+  background-color: #cfe4f4;
+}
+
+.fb-share2009 {
+  padding: 14px 0 26px;
+}
+
+.fb-share2009 .fb-container {
+  width: 940px;
+}
+
+.fb-share2009__title {
+  margin: 0 0 6px;
+  color: #3d3d3d;
+  font: bold 15px/1.3 Arial, Helvetica, sans-serif;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+}
+
+.fb-share2009__lede {
+  margin: 0 0 10px;
+  color: #333333;
+  font: 11px/1.6 Arial, Helvetica, sans-serif;
+}
+
+.fb-share2009__result {
+  margin: 0 0 10px;
+  padding: 6px 8px;
+  border: 1px solid #b7a76a;
+  background: #fdf6dc;
+  color: #2b2410;
+  font: 11px/1.55 Arial, Helvetica, sans-serif;
+}
+
+.fb-share2009__result--bad {
+  border-color: #c08a83;
+  background: #fbeae8;
+  color: #5a1d16;
+}
+
+/* ---------- The form card ---------- */
+
+.fb-share2009__form {
+  padding: 14px 16px 12px;
+  border: 1px solid #8d9aa4;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.fb-share2009__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0 0 12px;
+}
+
+.fb-share2009__label {
+  flex: 0 0 90px;
+  width: 90px;
+  padding-top: 3px;
+  color: #2f2f2f;
+  font: bold 11px/1.5 Arial, Helvetica, sans-serif;
+  text-align: left;
+}
+
+.fb-share2009__field {
+  flex: 0 0 350px;
+  width: 350px;
+}
+
+.fb-share2009__field input,
+.fb-share2009__field textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 5px;
+  border: 1px dashed #7f7f7f;
+  border-radius: 0;
+  background: #ffffff;
+  color: #1e1e1e;
+  font: 12px/1.45 Arial, Helvetica, sans-serif;
+}
+
+.fb-share2009__field textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+
+.fb-share2009__hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding-top: 3px;
+  color: #444444;
+  font: 11px/1.5 Arial, Helvetica, sans-serif;
+}
+
+.fb-share2009__hint a {
+  color: #003a70;
+  text-decoration: underline;
+}
+
+/* ---------- The button ---------- */
+
+.fb-share2009__send {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 -16px -12px;
+  padding: 8px 16px;
+  border-top: 1px solid #c9d3db;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.fb-share2009__btn {
+  padding: 4px 16px;
+  border: 1px solid #8d9aa4;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #fdfdfd, #e4e8ec 55%, #d3dae0);
+  color: #1e1e1e;
+  font: 11px/1.4 Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+
+.fb-share2009__btn:hover {
+  background: linear-gradient(180deg, #ffffff, #edf1f4 55%, #dce3e8);
+}
+
+.fb-share2009__fine {
+  margin: 10px 0 0;
+  color: #454545;
+  font: 10px/1.6 Arial, Helvetica, sans-serif;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 980px) {
+  .fb-share2009 .fb-container {
+    width: auto;
+  }
+
+  .fb-share2009__row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .fb-share2009__label,
+  .fb-share2009__field {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+}
