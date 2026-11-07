@@ -1,6 +1,7 @@
 /**
- * The member strip's pages: the four that are designed but not built, plus the
- * Share FieldBrik invitation form.
+ * The member strip's pages, and the site banner: the four that are designed but
+ * not built, the Share FieldBrik invitation form, and the panel page that posts
+ * the banner.
  *
  * Groups, Advertising, Ambassadors and the referral leaderboard each open a page
  * that says what they will do and what is missing, rather than a 404 or a button
@@ -11,11 +12,19 @@
  * server and the page reports what happened. What it cannot do is deliver the
  * email, because no mail service is connected to this build; the page says that
  * plainly and hands over the link instead of claiming an invitation was sent.
+ *
+ * Banners are real: staff at settings.write (rank 240) write a row on
+ * /admin/banners, and /banners/current answers with the newest enabled one so
+ * every page can draw the strip under the header without a second query blocking.
  */
 
 const { Router } = require('../lib/router');
+
 const site = require('../config/site');
 const pageContext = require('../services/pageContext');
+const permissions = require('../services/permissions');
+const adminService = require('../services/admin');
+const banners = require('../services/banners');
 
 const PAGES = {
   '/groups': {
@@ -148,6 +157,192 @@ router.post('/share', (req, res) => {
       'The address is not stored anywhere.',
   });
 });
+
+// ---------------------------------------------------------------------------
+// The site banner
+// ---------------------------------------------------------------------------
+
+/**
+ * What the strip needs, and nothing else: no ids, no operator notes.
+ *
+ * No file extension in the path on purpose: a request for a dotted path is
+ * treated as an asset first, and an asset that is not there never reaches the
+ * router.
+ */
+router.get('/banners/current', (req, res) => {
+  return (async () => {
+    if (!req.db) return res.json({ banner: null });
+
+    const banner = await banners.active(req.db);
+
+    res.setHeader('cache-control', 'no-store');
+    return res.json({
+      banner: banner
+        ? { text: banner.text, bg: banner.bg, fg: banner.fg, link: banner.link }
+        : null,
+    });
+  })().catch(() => res.json({ banner: null }));
+});
+
+function notAllowed(req, res, code, message) {
+  return res.status(code).render(
+    'pages/error',
+    pageContext(req, { pageTitle: 'Not allowed', statusCode: code, message })
+  );
+}
+
+/**
+ * The panel gate, the same five checks the other panel routers apply. Settings
+ * are the highest thing in the panel besides roles and deletions, so the
+ * capability is settings.write rather than "any staff".
+ */
+function settingsOnly(handler) {
+  return function guarded(req, res, next) {
+    return (async () => {
+      if (!req.viewer) return res.redirect('/login');
+
+      if (!req.db) {
+        return notAllowed(
+          req,
+          res,
+          503,
+          'The administration panel needs the database, which is not attached in this runtime.'
+        );
+      }
+
+      const role = await permissions.roleOf(req.db, req.viewer.id);
+
+      if (!role || role.rank < permissions.MIN_STAFF) {
+        return notAllowed(
+          req,
+          res,
+          403,
+          'This area is for FieldBrik staff. If you believe you should have access, contact a member of the team.'
+        );
+      }
+
+      if (!permissions.can(role, 'settings.write')) {
+        return notAllowed(req, res, 403, 'Your role cannot change site settings.');
+      }
+
+      req.admin = { role };
+      return handler(req, res);
+    })().catch(next);
+  };
+}
+
+const DONE = {
+  created: 'Banner saved.',
+  shown: 'Banner switched on.',
+  hidden: 'Banner switched off.',
+  removed: 'Banner deleted.',
+};
+
+const FAILED = {
+  text: 'Banner text needs to be between 2 and 200 characters.',
+  bg: 'The background needs to be a hex colour, like #efefef.',
+  fg: 'The text colour needs to be a hex colour, like #1e1e1e.',
+  link: 'A link must be a path on this site (/news) or a full https address.',
+  nobanner: 'No banner has that id.',
+};
+
+function noticeFor(query) {
+  if (query && DONE[query.done]) return DONE[query.done];
+  if (query && FAILED[query.failed]) return FAILED[query.failed];
+  return '';
+}
+
+/** Panel locals. The Banners entry in the side menu comes from sidebar.ejs. */
+function panelView(req, extra) {
+  return Object.assign(
+    {
+      site,
+      viewer: req.viewer,
+      admin: req.admin.role,
+      currentPath: req.path,
+      adminNav: adminService.nav(req.admin.role, req.path, req.query),
+      pageTitle: 'Site banners - FieldBrik',
+    },
+    extra || {}
+  );
+}
+
+const BLANK_FORM = { text: '', bg: '#efefef', fg: '#1e1e1e', link: '', enabled: true };
+
+router.get(
+  '/admin/banners',
+  settingsOnly((req, res) => {
+    return (async () => {
+      const [overview, saved] = await Promise.all([
+        adminService.overview(req.db),
+        banners.list(req.db),
+      ]);
+
+      const shown = saved.find((entry) => entry.enabled) || null;
+
+      return res.render(
+        'admin/banners',
+        panelView(req, {
+          adminStatus: overview.status,
+          banners: saved,
+          shownId: shown ? shown.id : 0,
+          form: BLANK_FORM,
+          notice: noticeFor(req.query),
+        })
+      );
+    })();
+  })
+);
+
+router.post(
+  '/admin/banners',
+  settingsOnly((req, res) => {
+    return (async () => {
+      const body = req.body || {};
+
+      const result = await banners.create(req.db, {
+        text: body.text,
+        bg: body.bg || body.bg_hex,
+        fg: body.fg || body.fg_hex,
+        link: body.link,
+        enabled: String(body.enabled) === '1',
+        actorId: req.viewer.id,
+      });
+
+      const key = result.ok ? 'done' : 'failed';
+      return res.redirect(`/admin/banners?${key}=${encodeURIComponent(result.code)}`);
+    })();
+  })
+);
+
+router.post(
+  '/admin/banners/:id/status',
+  settingsOnly((req, res) => {
+    return (async () => {
+      const body = req.body || {};
+
+      const result = await banners.setEnabled(req.db, {
+        id: Number(req.params.id) || 0,
+        enabled: String(body.enabled) === '1',
+      });
+
+      const key = result.ok ? 'done' : 'failed';
+      return res.redirect(`/admin/banners?${key}=${encodeURIComponent(result.code)}`);
+    })();
+  })
+);
+
+router.post(
+  '/admin/banners/:id/delete',
+  settingsOnly((req, res) => {
+    return (async () => {
+      const result = await banners.remove(req.db, { id: Number(req.params.id) || 0 });
+
+      const key = result.ok ? 'done' : 'failed';
+      return res.redirect(`/admin/banners?${key}=${encodeURIComponent(result.code)}`);
+    })();
+  })
+);
 
 Object.keys(PAGES).forEach((path) => {
   router.get(path, (req, res) => {
