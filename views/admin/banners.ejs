@@ -1,0 +1,184 @@
+<%#
+  Site banners, in the panel.
+
+  The form is a live preview: the two colour fields are a colour picker and a
+  hex box that follow each other, and the strip above them redraws as they
+  change, so nobody has to save a banner to find out it is unreadable.
+
+  The newest enabled banner is the one the site shows, which the page states
+  rather than leaving the operator to guess.
+%>
+<%- include('../partials/head', { pageTitle: pageTitle, extraCss: '/css/admin.css?v=1' }) %>
+<link rel="stylesheet" href="/css/admin-mod.css">
+
+<div class="fb-admin">
+  <div class="fb-admin__bar">
+    <div class="fb-admin__brand">
+      <a class="fb-admin__logo" href="/admin">FieldBrik</a>
+      <span class="fb-admin__logo-tag">Administration</span>
+    </div>
+    <div class="fb-admin__who">
+      <strong><%= viewer.username %></strong> &middot; <%= admin.name %> (rank <%= admin.rank %>) &middot;
+      <a href="/">Back to the site</a>
+    </div>
+    <%- include('status', { adminStatus: adminStatus }) %>
+  </div>
+
+  <div class="fb-admin__body">
+    <%- include('sidebar', { adminNav: adminNav }) %>
+
+    <main class="fb-admin__main">
+      <% if (notice) { %>
+        <div class="fb-notice fb-notice--admin"><p><strong><%= notice %></strong></p></div>
+      <% } %>
+
+      <div class="fb-panel">
+        <h1 class="fb-panel__title fb-panel__title--blue">Site banner</h1>
+        <div class="fb-panel__body">
+          <p>The banner runs under the member strip, on every page that carries it. The newest banner
+            that is switched on is the one that shows.</p>
+
+          <p class="fb-admin__muted">Preview:</p>
+          <div class="fb-banner-preview" id="fb-banner-preview"
+            style="background: <%= form.bg %>; color: <%= form.fg %>;">Preview text</div>
+
+          <form method="post" action="/admin/banners" class="fb-admin__form">
+            <div class="fb-mod__field">
+              <label for="fb-banner-text">Text</label>
+              <input id="fb-banner-text" name="text" type="text" maxlength="200" required
+                value="<%= form.text %>" placeholder="FieldBrik is currently experiencing technical difficulties.">
+              <p class="fb-admin__muted">Between 2 and 200 characters. Shown as text, never as markup.</p>
+            </div>
+
+            <div class="fb-mod__field">
+              <label for="fb-banner-bg">Background colour</label>
+              <div class="fb-colour">
+                <input id="fb-banner-bg" name="bg" type="color" value="<%= form.bg %>">
+                <input id="fb-banner-bg-hex" name="bg_hex" type="text" maxlength="7" value="<%= form.bg %>"
+                  placeholder="#efefef" pattern="#[0-9a-fA-F]{6}">
+              </div>
+              <p class="fb-admin__muted">Pick a colour, or type a hex value. The two follow each other.</p>
+            </div>
+
+            <div class="fb-mod__field">
+              <label for="fb-banner-fg">Text colour</label>
+              <div class="fb-colour">
+                <input id="fb-banner-fg" name="fg" type="color" value="<%= form.fg %>">
+                <input id="fb-banner-fg-hex" name="fg_hex" type="text" maxlength="7" value="<%= form.fg %>"
+                  placeholder="#1e1e1e" pattern="#[0-9a-fA-F]{6}">
+              </div>
+              <p class="fb-admin__muted">Red, yellow, green, anything. Pale backgrounds need dark text.</p>
+            </div>
+
+            <div class="fb-mod__field">
+              <label for="fb-banner-link">Link (optional)</label>
+              <input id="fb-banner-link" name="link" type="text" maxlength="200" value="<%= form.link %>"
+                placeholder="/news or https://example.com">
+              <p class="fb-admin__muted">A path on this site, or a full https address. Left empty, the
+                banner is plain text.</p>
+            </div>
+
+            <div class="fb-mod__field">
+              <label class="fb-check">
+                <input type="checkbox" name="enabled" value="1" <%= form.enabled ? 'checked' : '' %>>
+                Show it on the site as soon as it is saved
+              </label>
+            </div>
+
+            <button class="fb-btn fb-btn--primary" type="submit">Save banner</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Saved banners</h2>
+        <div class="fb-panel__body fb-panel__body--flush">
+          <table class="fb-table fb-table--admin">
+            <thead>
+              <tr>
+                <th scope="col">Banner</th>
+                <th scope="col">Where it points</th>
+                <th scope="col">Saved</th>
+                <th scope="col">Status</th>
+                <th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (banners.length === 0) { %>
+                <tr><td colspan="5" class="fb-table__last">No banner has been saved yet.</td></tr>
+              <% } %>
+              <% banners.forEach(function (banner) { %>
+                <tr>
+                  <td>
+                    <span class="fb-banner-preview" style="background: <%= banner.bg %>; color: <%= banner.fg %>;"><%= banner.text %></span>
+                  </td>
+                  <td><%= banner.link || 'nowhere' %></td>
+                  <td><%= banner.createdAt %></td>
+                  <td>
+                    <% if (banner.enabled && banner.id === shownId) { %>showing
+                    <% } else if (banner.enabled) { %>on, not the newest
+                    <% } else { %>off<% } %>
+                  </td>
+                  <td>
+                    <form class="fb-inline" method="post" action="/admin/banners/<%= banner.id %>/status">
+                      <input type="hidden" name="enabled" value="<%= banner.enabled ? '0' : '1' %>">
+                      <button class="fb-btn" type="submit"><%= banner.enabled ? 'Switch off' : 'Switch on' %></button>
+                    </form>
+                    <form class="fb-inline" method="post" action="/admin/banners/<%= banner.id %>/delete">
+                      <button class="fb-btn" type="submit">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="fb-admin__note">
+        Only the newest switched-on banner is drawn, so switching on an older one does nothing until the
+        newer ones are off. Every banner is kept until it is deleted: the list is the record of what the
+        site has said.
+      </p>
+    </main>
+  </div>
+</div>
+
+<script>
+  // The picker and the hex box are two views of one value.
+  (function () {
+    var preview = document.getElementById('fb-banner-preview');
+    var bg = document.getElementById('fb-banner-bg');
+    var bgHex = document.getElementById('fb-banner-bg-hex');
+    var fg = document.getElementById('fb-banner-fg');
+    var fgHex = document.getElementById('fb-banner-fg-hex');
+    var text = document.getElementById('fb-banner-text');
+
+    function sync() {
+      preview.style.background = bgHex.value || bg.value;
+      preview.style.color = fgHex.value || fg.value;
+      preview.textContent = text.value || 'Preview text';
+    }
+
+    function pair(picker, hex) {
+      picker.addEventListener('input', function () {
+        hex.value = picker.value;
+        sync();
+      });
+      hex.addEventListener('input', function () {
+        if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) {
+          picker.value = hex.value;
+          sync();
+        }
+      });
+    }
+
+    pair(bg, bgHex);
+    pair(fg, fgHex);
+    text.addEventListener('input', sync);
+    sync();
+  })();
+</script>
+
+</body>
+</html>
