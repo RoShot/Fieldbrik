@@ -1,0 +1,236 @@
+/* ==========================================================================
+   One catalog item, to the 2009 reference.
+
+   Grey page, a centred title in a band, the picture on the left in a white box,
+   the details on the right inside a dashed border, and a commentary box under
+   the pair of them. Hard corners, 1px lines, 11px type throughout.
+   ========================================================================== */
+
+body.fb-item-page {
+  background-color: #e9e7e2;
+  background-image: linear-gradient(180deg, #efede8 0, #e4e1db 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: #222222;
+}
+
+.fb-item2009 {
+  padding: 12px 0 26px;
+}
+
+.fb-item2009 .fb-container {
+  width: 940px;
+}
+
+/* ---------- Title band ---------- */
+
+.fb-item2009__title {
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border: 1px solid #b9b6b0;
+  background: linear-gradient(180deg, #ececec, #dcdad5);
+  color: #1e1e1e;
+  font: 22px/1.3 Arial, Helvetica, sans-serif;
+  text-align: center;
+}
+
+.fb-item2009__notice {
+  margin: 0 0 10px;
+  padding: 5px 8px;
+  border: 1px solid #b7a76a;
+  background: #fdf6dc;
+  font: 11px/1.5 Arial, Helvetica, sans-serif;
+}
+
+/* ---------- The two boxes ---------- */
+
+.fb-item2009__cols {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.fb-item2009__shot {
+  flex: 0 0 320px;
+  width: 320px;
+  border: 1px solid #6f6f6f;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.fb-item2009__image {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #8f8f8f;
+  background-color: #d8d6d1;
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.12));
+}
+
+.fb-item2009__image img {
+  max-width: 88%;
+  max-height: 88%;
+  display: block;
+}
+
+/* The dashed detail panel, as the reference drew it. */
+.fb-item2009__panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px dashed #7d7d7d;
+  background: #ffffff;
+  padding: 10px 12px 12px;
+}
+
+.fb-item2009__kind {
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed #c9c9c9;
+  color: #333333;
+  font: bold 13px/1.3 Arial, Helvetica, sans-serif;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.fb-item2009__mini {
+  width: 64px;
+  height: 64px;
+  margin: 0 0 8px;
+  border: 1px solid #9a9a9a;
+  background-color: var(--thumb, #d8d6d1);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+.fb-item2009__mini img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.fb-item2009__line {
+  margin: 0 0 2px;
+  color: #222222;
+  font: 11px/1.55 Arial, Helvetica, sans-serif;
+}
+
+.fb-item2009__line a {
+  color: #003a70;
+}
+
+.fb-item2009__label {
+  margin: 8px 0 2px;
+  color: #333333;
+  font: 11px/1.5 Arial, Helvetica, sans-serif;
+}
+
+.fb-item2009__desc {
+  max-height: 120px;
+  overflow: auto;
+  padding: 4px 6px;
+  border: 1px solid #cfcfcf;
+  background: #fbfbfb;
+  color: #222222;
+  font: 11px/1.5 Arial, Helvetica, sans-serif;
+}
+
+/* ---------- Buying ---------- */
+
+.fb-item2009__buy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.fb-item2009__btn {
+  padding: 5px 14px;
+  border: 1px solid #6d6d6d;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #fdfdfd, #e2e0db 55%, #d2cfc9);
+  color: #1e1e1e;
+  font: bold 11px/1.3 Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+
+.fb-item2009__btn:hover {
+  background: linear-gradient(180deg, #ffffff, #ecebe6 55%, #dcd9d3);
+}
+
+.fb-item2009__btn--tickets {
+  border-color: #4d7a2a;
+  background: linear-gradient(180deg, #d7ecb8, #a9cf72 55%, #8cb955);
+  color: #1c3308;
+}
+
+.fb-item2009__btn--tickets:hover {
+  background: linear-gradient(180deg, #e2f3c8, #b4d97f 55%, #96c25f);
+}
+
+.fb-item2009__btn--bucks {
+  border-color: #2b5a83;
+  background: linear-gradient(180deg, #c7e3f6, #8dbde0 55%, #6a9fc6);
+  color: #0d2a41;
+}
+
+.fb-item2009__btn--bucks:hover {
+  background: linear-gradient(180deg, #d7ecfb, #9bc8e8 55%, #78a9cd);
+}
+
+.fb-item2009__fine {
+  margin: 4px 0 0;
+  color: #666666;
+  font: 10px/1.5 Arial, Helvetica, sans-serif;
+}
+
+/* ---------- Commentary ---------- */
+
+.fb-item2009__comments {
+  margin-top: 14px;
+  border: 1px solid #6f6f6f;
+  background: #ffffff;
+}
+
+.fb-item2009__comments-tab {
+  display: inline-block;
+  margin: 0;
+  padding: 3px 14px;
+  border-right: 1px solid #6f6f6f;
+  border-bottom: 1px solid #6f6f6f;
+  background: linear-gradient(180deg, #ececec, #d8d5cf);
+  color: #1e1e1e;
+  font: 13px/1.4 Arial, Helvetica, sans-serif;
+}
+
+.fb-item2009__comments-text {
+  margin: 0;
+  padding: 22px 12px 26px;
+  color: #333333;
+  font: 11px/1.6 Arial, Helvetica, sans-serif;
+  text-align: center;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 980px) {
+  .fb-item2009 .fb-container {
+    width: auto;
+  }
+
+  .fb-item2009__cols {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .fb-item2009__shot {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .fb-item2009__image {
+    aspect-ratio: 4 / 3;
+  }
+}

@@ -1,121 +1,95 @@
-<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%#
+  One catalog item, built to the 2009 reference.
+
+  The reference had a picture on the left, a dashed panel on the right with the
+  item's kind, a small picture, creator and description, and a commentary box
+  underneath. This page keeps that arrangement and fills it with the row the
+  catalog reads: name, kind, creator, both prices, description and ownership.
+
+  What is not here, and why:
+    - "Favorited: 323 times" needs a favourites table. There is none, so there
+      is no count and no Favorite link.
+    - "Updated: 1 hour ago" needs a per-item change date. The catalog row keeps
+      created_at only, so nothing is claimed about when it last changed.
+    - "Report Abuse" on the reference pointed at an item report. Reports here
+      cover members and messages only, so the link is on the creator's profile,
+      where it works, rather than on the item where it would not.
+
+  Buying: both prices are buttons, exactly as the item is priced. The form sends
+  only which currency to spend; the amount is read from the item row on the
+  server, so a doctored form cannot buy a hat for one Ticket.
+%>
+<%- include('../partials/head', { pageTitle: pageTitle, bodyClass: 'fb-item-page' }) %>
+<link rel="stylesheet" href="/css/item2009.css?v=1">
 <%- include('../partials/header') %>
 
-<main class="fb-container fb-main">
-  <p class="fb-crumbs"><a href="/catalog">Catalog</a> &raquo; <%= item.name %></p>
+<main class="fb-item2009">
+  <div class="fb-container">
+    <h1 class="fb-item2009__title"><%= item.name %></h1>
 
-  <% if (notice) { %>
-    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
-  <% } %>
+    <% if (notice) { %>
+      <p class="fb-item2009__notice"><%= notice %></p>
+    <% } %>
 
-  <div class="fb-title-row">
-    <h1 class="fb-title"><%= item.name %></h1>
-    <span class="fb-pagecount"><%= item.category %></span>
-  </div>
-
-  <div class="fb-cols">
-    <div class="fb-col-main">
-      <section class="fb-panel">
-        <h2 class="fb-panel__title">Item details</h2>
-        <div class="fb-panel__body">
-          <div class="fb-item">
-            <span class="fb-item__thumb" style="--thumb: <%= item.thumb %>;" aria-hidden="true">
-              <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } %>
-            </span>
-
-            <div class="fb-item__body">
-              <p class="fb-item__prices">
-                <% if (item.tickets !== null) { %>
-                  <span class="fb-price--tickets">Tx: <%= item.tickets %></span>
-                <% } %>
-                <% if (item.bucks !== null) { %>
-                  <span class="fb-price--bucks">R$: <%= item.bucks %></span>
-                <% } %>
-                <% if (item.tickets === null && item.bucks === null) { %>
-                  <span class="fb-muted">Free</span>
-                <% } %>
-              </p>
-
-              <% if (item.description) { %>
-                <p class="fb-prose"><%= item.description %></p>
-              <% } %>
-
-              <table class="fb-table fb-table--kv">
-                <tbody>
-                  <tr>
-                    <th scope="row">Category</th>
-                    <td><a href="/catalog?category=<%= encodeURIComponent(item.category) %>"><%= item.category %></a></td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Creator</th>
-                    <td><a href="/people/<%= item.creator %>"><%= item.creator %></a></td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Availability</th>
-                    <td><%= item.tickets !== null ? 'Tickets' : '' %><%= item.tickets !== null && item.bucks !== null ? ' and ' : '' %><%= item.bucks !== null ? 'Bucks' : '' %><%= item.tickets === null && item.bucks === null ? 'Free' : '' %></td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Your account</th>
-                    <td><%= item.owned ? (item.equipped ? 'Owned, currently worn' : 'Owned') : 'Not owned' %></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+    <div class="fb-item2009__cols">
+      <section class="fb-item2009__shot">
+        <div class="fb-item2009__image" style="--thumb: <%= item.thumb %>;">
+          <% if (item.image) { %>
+            <img src="<%= item.image %>" alt="<%= item.name %>">
+          <% } %>
         </div>
       </section>
 
-      <section class="fb-panel">
-        <h2 class="fb-panel__title"><%= item.owned ? 'Wear it' : 'Buy it' %></h2>
-        <div class="fb-panel__body">
-          <% if (item.owned) { %>
-            <p>This item is on your account.</p>
-            <form method="post" action="/inventory/<%= item.id %>/<%= item.equipped ? 'remove' : 'wear' %>">
-              <button class="fb-btn fb-btn--primary" type="submit"><%= item.equipped ? 'Take it off' : 'Wear it' %></button>
-            </form>
-            <p class="fb-panel__more"><a href="/inventory">Your inventory</a></p>
-          <% } else if (!signedIn) { %>
-            <p><a href="/login">Sign in</a> to buy this item. Prices are per account, so nothing can be bought from a signed-out page.</p>
-          <% } else { %>
-            <p class="fb-muted">You have <%= balance.tickets %> Tickets and <%= balance.bucks %> Bucks.</p>
-            <form class="fb-buyform" method="post" action="/catalog/<%= item.id %>/buy">
-              <% if (item.tickets !== null) { %>
-                <label class="fb-buyform__option">
-                  <input type="radio" name="currency" value="tickets" checked>
-                  <%= item.tickets %> Tickets
-                </label>
-              <% } %>
-              <% if (item.bucks !== null) { %>
-                <label class="fb-buyform__option">
-                  <input type="radio" name="currency" value="bucks"<%= item.tickets === null ? ' checked' : '' %>>
-                  <%= item.bucks %> Bucks
-                </label>
-              <% } %>
-              <button class="fb-btn fb-btn--primary" type="submit">Buy</button>
-            </form>
-            <p class="fb-admin__note">The price is read from the item on the server, so the form cannot send a different one.</p>
-          <% } %>
+      <section class="fb-item2009__panel">
+        <h2 class="fb-item2009__kind"><%= site.name %> <%= item.category %></h2>
+
+        <div class="fb-item2009__mini" style="--thumb: <%= item.thumb %>;">
+          <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } %>
         </div>
+
+        <p class="fb-item2009__line">Creator:
+          <a href="/people/<%= encodeURIComponent(item.creator) %>"><%= item.creator %></a></p>
+        <p class="fb-item2009__line">Kind:
+          <a href="/catalog?category=<%= encodeURIComponent(item.category) %>"><%= item.category %></a></p>
+        <p class="fb-item2009__line">Your account:
+          <%= item.owned ? (item.equipped ? 'Owned, worn now' : 'Owned') : 'Not owned' %></p>
+
+        <p class="fb-item2009__label">Description:</p>
+        <div class="fb-item2009__desc"><%= item.description || 'No description was given for this item.' %></div>
+
+        <% if (item.owned) { %>
+          <p class="fb-item2009__line">This item is on your account.</p>
+          <form class="fb-item2009__buy" method="post" action="/inventory/<%= item.id %>/<%= item.equipped ? 'remove' : 'wear' %>">
+            <button class="fb-item2009__btn" type="submit"><%= item.equipped ? 'Take it off' : 'Wear it' %></button>
+          </form>
+          <p class="fb-item2009__line"><a href="/inventory">Your inventory</a></p>
+        <% } else if (!signedIn) { %>
+          <p class="fb-item2009__line"><a href="/login">Log in</a> to buy this item. Prices are per account,
+            so nothing can be bought from a signed-out page.</p>
+        <% } else { %>
+          <% if (balance) { %>
+            <p class="fb-item2009__line">You have <%= balance.tickets %> Tickets and <%= balance.bucks %> Bucks.</p>
+          <% } %>
+          <form class="fb-item2009__buy" method="post" action="/catalog/<%= item.id %>/buy">
+            <% if (item.tickets !== null) { %>
+              <button class="fb-item2009__btn fb-item2009__btn--tickets" type="submit"
+                name="currency" value="tickets">Buy with <%= item.tickets %> Tickets</button>
+            <% } %>
+            <% if (item.bucks !== null) { %>
+              <button class="fb-item2009__btn fb-item2009__btn--bucks" type="submit"
+                name="currency" value="bucks">Buy with <%= item.bucks %> Bucks</button>
+            <% } %>
+          </form>
+          <p class="fb-item2009__fine">The price is read from the item on the server, so the form cannot
+            send one of its own. Buying writes a ledger entry and puts the item in your inventory.</p>
+        <% } %>
       </section>
     </div>
 
-    <aside class="fb-col-side">
-      <section class="fb-panel">
-        <h2 class="fb-panel__title">By this creator</h2>
-        <div class="fb-panel__body">
-          <% if (moreByCreator.length === 0) { %>
-            <p class="fb-muted">Nothing else listed.</p>
-          <% } else { %>
-            <ul class="fb-facets__list">
-              <% moreByCreator.forEach(function (entry) { %>
-                <li><a href="/catalog/<%= entry.id %>"><%= entry.name %></a></li>
-              <% }); %>
-            </ul>
-          <% } %>
-          <p class="fb-panel__more"><a href="/catalog?creator=<%= encodeURIComponent(item.creator) %>">See all</a></p>
-        </div>
-      </section>
-    </aside>
+    <section class="fb-item2009__comments">
+      <h2 class="fb-item2009__comments-tab">Commentary</h2>
+      <p class="fb-item2009__comments-text">Commentary for this item has been disabled.</p>
+    </section>
   </div>
 </main>
 
