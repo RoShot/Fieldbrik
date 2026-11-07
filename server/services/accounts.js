@@ -482,6 +482,19 @@ async function loadViewer(db, user) {
 
   const avatar = await db.prepare('SELECT * FROM avatars WHERE user_id = ?').bind(user.id).first();
 
+  // The staff role travels with the viewer so the top bar can decide whether to
+  // draw its Admin link. The floor is rank 100 (Developer and up); the rank is
+  // read from the role table, never taken from a cookie or a form.
+  const role = await db
+    .prepare(
+      `SELECT r.rank
+         FROM user_roles ur
+         JOIN roles r ON r.key = ur.role_key
+        WHERE ur.user_id = ?`
+    )
+    .bind(user.id)
+    .first();
+
   const [badges, games, items, friendships] = await Promise.all([
     db.prepare('SELECT COUNT(*) AS n FROM user_badges WHERE user_id = ?').bind(user.id).first(),
     db.prepare('SELECT COUNT(*) AS n FROM games WHERE creator_id = ? AND published = 1').bind(user.id).first(),
@@ -495,12 +508,16 @@ async function loadViewer(db, user) {
       .first(),
   ]);
 
-  return toViewer(user, avatar, {
+  const viewer = toViewer(user, avatar, {
     friends: friendships ? friendships.n : 0,
     badges: badges ? badges.n : 0,
     games: games ? games.n : 0,
     items: items ? items.n : 0,
   });
+
+  viewer.staffRank = role ? Number(role.rank) || 0 : 0;
+
+  return viewer;
 }
 
 module.exports = {
