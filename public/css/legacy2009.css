@@ -25,22 +25,36 @@
   --fb09-head-bottom: #2f5f8c;
   --fb09-paper: #ffffff;
   --fb09-wash: #eef5fa;
+
+  /* The pale sky behind the page. Kept in one place because the front page's
+     route still tags its body with the old app class, which sets a white
+     background of its own. */
+  --fb09-sky:
+    radial-gradient(38px 16px at 12% 140px, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(52px 20px at 30% 96px, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(44px 18px at 68% 150px, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(60px 22px at 88% 104px, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 72%),
+    linear-gradient(180deg, #a9d3f0 0, #cfe6f7 260px, #eaf5fd 100%);
 }
 
 body {
   margin: 0;
   padding: 0;
   background-color: #cfe4f4;
-  background-image:
-    radial-gradient(38px 16px at 12% 140px, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%),
-    radial-gradient(52px 20px at 30% 96px, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 72%),
-    radial-gradient(44px 18px at 68% 150px, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 70%),
-    radial-gradient(60px 22px at 88% 104px, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 72%),
-    linear-gradient(180deg, #a9d3f0 0, #cfe6f7 260px, #eaf5fd 100%);
+  background-image: var(--fb09-sky);
   background-repeat: no-repeat;
   background-attachment: fixed;
   color: #1e1e1e;
   font: 12px/1.45 Arial, Helvetica, sans-serif;
+}
+
+/* The front page still carries the old app body class, whose sheet paints the
+   body white. The sky belongs to the page, not to that class, so it wins here. */
+body.fb-app {
+  background-color: #cfe4f4;
+  background-image: var(--fb09-sky);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 a {
