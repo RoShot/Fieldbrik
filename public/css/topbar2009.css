@@ -1,0 +1,267 @@
+/* ==========================================================================
+   The top bar and its two strips.
+
+   Layout is the 2009 reference: the account at the left of the band, the
+   wordmark centred, the white account box at the right; under it the grey-blue
+   section strip; under that, for a signed-in member, the red My FieldBrik strip.
+
+   The band art is this site's own public/img/banner2.png, darkened so white
+   type stays readable over it. The red strip uses /img/subnav.png when that
+   file exists and falls back to the same red gradient the reference shows, so
+   dropping the image in is all it takes to use it - a missing file paints
+   nothing and the gradient underneath shows through.
+   ========================================================================== */
+
+.fb-header {
+  min-height: 0;
+  height: 78px;
+  border-bottom: 1px solid #24455f;
+  background-color: #1c3f5c;
+  background-image:
+    linear-gradient(180deg, rgba(6, 28, 46, 0.5), rgba(6, 28, 46, 0.1) 45%, rgba(4, 20, 34, 0.55)),
+    url('/img/banner2.png');
+  background-size: auto, cover;
+  background-position: center, center 45%;
+  background-repeat: no-repeat, no-repeat;
+  overflow: hidden;
+}
+
+.fb-header__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 78px;
+  min-height: 0;
+  padding: 0;
+}
+
+/* ---------- Who is signed in ---------- */
+
+.fb-who2009 {
+  flex: 0 0 218px;
+  width: 218px;
+  color: #ffffff;
+  font: 11px/1.5 Arial, Helvetica, sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.fb-who2009__line {
+  margin: 0;
+}
+
+.fb-who2009__line--dim {
+  color: #d3e4f2;
+  font-size: 10px;
+}
+
+.fb-who2009 a {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.fb-who2009 a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Wordmark, set in type ---------- */
+
+.fb-wordmark2009 {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  color: #e2271f;
+  font: italic 900 40px/1 "Arial Black", Arial, Helvetica, sans-serif;
+  letter-spacing: -1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow:
+    -2px -2px 0 #2b2b2b,
+    2px -2px 0 #2b2b2b,
+    -2px 2px 0 #2b2b2b,
+    2px 2px 0 #2b2b2b,
+    0 3px 5px rgba(0, 0, 0, 0.55);
+}
+
+.fb-wordmark2009:hover {
+  color: #f13a30;
+  text-decoration: none;
+}
+
+/* ---------- The white account box ---------- */
+
+.fb-account2009 {
+  flex: 0 0 208px;
+  width: 208px;
+  padding: 3px 7px;
+  border: 1px solid #45596a;
+  background: #ffffff;
+  color: #1e1e1e;
+  font: 11px/1.55 Arial, Helvetica, sans-serif;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.fb-account2009__line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.fb-account2009__line strong {
+  font-weight: bold;
+}
+
+.fb-account2009 a {
+  color: #14429b;
+}
+
+/* ---------- Section strip ---------- */
+
+.fb-nav {
+  background: linear-gradient(180deg, #93aabc 0, #7b91a4 55%, #6a7f92 100%);
+  border-bottom: 1px solid #4e6172;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.fb-nav__inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  height: 30px;
+  min-height: 30px;
+}
+
+.fb-tab {
+  padding: 0 9px;
+  color: #ffffff;
+  font: bold 14px/30px Arial, Helvetica, sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+}
+
+.fb-tab:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.fb-tab.is-active {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.fb-tab__sep {
+  color: #eef4f9;
+  font: 13px/30px Arial, Helvetica, sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.fb-navsearch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 0 2px 0 0;
+}
+
+.fb-navsearch input {
+  width: 120px;
+  height: 18px;
+  padding: 1px 4px;
+  font-size: 11px;
+}
+
+.fb-navsearch .fb-btn {
+  padding: 1px 7px;
+}
+
+/* ---------- My FieldBrik strip ---------- */
+
+.fb-submenu {
+  border-bottom: 1px solid #5e1c19;
+  background-color: #8d2b26;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.14)),
+    url('/img/subnav.png'),
+    linear-gradient(180deg, #b93a31 0, #9b2f2a 48%, #74221f 100%);
+  background-size: auto, cover, auto;
+  background-position: center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+}
+
+.fb-submenu__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 24px;
+}
+
+.fb-submenu__list li {
+  display: flex;
+  align-items: center;
+}
+
+.fb-submenu__list a {
+  padding: 4px 2px;
+  color: #ffe9e6;
+  font: bold 11px/1 Arial, Helvetica, sans-serif;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+}
+
+.fb-submenu__list a:hover,
+.fb-submenu__list a.subMenuItemselected {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.fb-submenu__list .Separator {
+  color: #d99a93;
+  font: 11px/1 Arial, Helvetica, sans-serif;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 980px) {
+  .fb-header,
+  .fb-header__row {
+    height: auto;
+    min-height: 0;
+  }
+
+  .fb-header__row {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 0;
+  }
+
+  .fb-who2009,
+  .fb-account2009 {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .fb-wordmark2009 {
+    order: -1;
+    flex: 1 0 100%;
+    font-size: 30px;
+  }
+
+  .fb-nav__inner {
+    height: auto;
+    padding: 2px 0;
+  }
+
+  .fb-tab {
+    font-size: 12px;
+    line-height: 26px;
+  }
+
+  .fb-submenu__list a {
+    font-size: 10px;
+  }
+}

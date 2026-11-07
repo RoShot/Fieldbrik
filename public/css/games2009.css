@@ -1,0 +1,218 @@
+/* ==========================================================================
+   The Games page.
+
+   The 2009 listing is plain: white page, a narrow Browse / Time column at the
+   left, and three places across in the rest, each with its picture, its name in
+   bold blue, and two or three lines of small grey-black facts underneath.
+
+   Only facts this database holds are printed on a card: when a place last
+   changed, who made it, and how many visits it has if that is above zero.
+   Visits are not counted yet, so there is no "players online" line - the old
+   site could count them because it had a client to count.
+   ========================================================================== */
+
+body.fb-games-page {
+  background-color: #ffffff;
+  background-image: none;
+  color: #222222;
+}
+
+.fb-games2009 {
+  padding: 12px 0 28px;
+}
+
+.fb-games2009 .fb-container {
+  width: 940px;
+}
+
+.fb-games2009__title {
+  margin: 0 0 12px;
+  color: #222222;
+  font: 27px/1.15 Arial, Helvetica, sans-serif;
+}
+
+.fb-games2009__body {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+}
+
+/* ---------- Browse / Time column ---------- */
+
+.fb-browse2009 {
+  flex: 0 0 132px;
+  width: 132px;
+}
+
+.fb-browse2009__head {
+  margin: 0 0 4px;
+  color: #333333;
+  font: 13px/1.3 Arial, Helvetica, sans-serif;
+}
+
+.fb-browse2009__list {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.fb-browse2009__list li {
+  margin: 0 0 2px;
+}
+
+.fb-browse2009__list a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 0;
+  color: #1c4fa1;
+  font: 12px/1.45 Arial, Helvetica, sans-serif;
+}
+
+.fb-browse2009__list a:hover {
+  text-decoration: underline;
+}
+
+.fb-browse2009__list a.is-on {
+  color: #111111;
+  font-weight: bold;
+}
+
+/* The little pink marker the classic list put beside the chosen facet. */
+.fb-browse2009__pip {
+  display: none;
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border: 1px solid #bd7b7b;
+  background: #e8a3a3;
+}
+
+.fb-browse2009__list a.is-on .fb-browse2009__pip {
+  display: inline-block;
+}
+
+.fb-browse2009__note {
+  margin: 14px 0 0;
+  color: #6b6b6b;
+  font: 10px/1.5 Arial, Helvetica, sans-serif;
+}
+
+/* ---------- The grid ---------- */
+
+.fb-games2009__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fb-games2009__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.fb-games2009__heading {
+  margin: 0;
+  color: #222222;
+  font: bold 13px/1.3 Arial, Helvetica, sans-serif;
+}
+
+.fb-games2009__pages {
+  margin: 0;
+  color: #333333;
+  font: 11px/1.3 Arial, Helvetica, sans-serif;
+}
+
+.fb-games2009__pages a {
+  color: #1c4fa1;
+}
+
+.fb-games2009__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fb-game2009__thumb {
+  display: block;
+  aspect-ratio: 3 / 2;
+  border: 1px solid #9aa7b2;
+  background-color: var(--thumb, #b9d3e6);
+  background-image: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0) 52%,
+    rgba(0, 0, 0, 0.18)
+  );
+}
+
+.fb-game2009__thumb:hover {
+  border-color: #3f6d96;
+}
+
+.fb-game2009__name {
+  display: block;
+  margin: 4px 0 1px;
+  color: #1c4fa1;
+  font: bold 11px/1.35 Arial, Helvetica, sans-serif;
+}
+
+.fb-game2009__meta {
+  margin: 0;
+  color: #333333;
+  font: 10px/1.45 Arial, Helvetica, sans-serif;
+}
+
+.fb-game2009__meta a {
+  color: #1c4fa1;
+}
+
+.fb-games2009__empty {
+  margin: 10px 0;
+  color: #444444;
+  font: 11px/1.6 Arial, Helvetica, sans-serif;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 980px) {
+  .fb-games2009 .fb-container {
+    width: auto;
+  }
+
+  .fb-games2009__body {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .fb-browse2009 {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .fb-browse2009__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 14px;
+    margin-bottom: 8px;
+  }
+
+  .fb-browse2009__note {
+    margin-top: 4px;
+  }
+
+  .fb-games2009__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .fb-games2009__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
