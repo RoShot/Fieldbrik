@@ -15,6 +15,12 @@
   <% if (typeof extraCss !== 'undefined' && extraCss) { %>
   <link rel="stylesheet" href="<%= extraCss %>">
   <% } %>
+  <%# The 2009 skin, loaded last so it wins over the base and any page sheet.
+      The admin panel keeps its own look, so it is skipped there. %>
+  <% var isAdminPage = (typeof extraCss !== 'undefined' && extraCss && String(extraCss).indexOf('admin') !== -1); %>
+  <% if (!isAdminPage) { %>
+  <link rel="stylesheet" href="/css/legacy2009.css?v=1">
+  <% } %>
 </head>
 <%# Pages that need a body class of their own pass one in; every other page
     keeps a bare body element. %>

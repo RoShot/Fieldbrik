@@ -32,6 +32,22 @@ const site = {
     { key: 'help', label: 'Help', href: '/help' },
   ],
 
+  // The section strip, in the 2009 order: My FieldBrik | Games | Catalog |
+  // People | Carpenters Club | Forum | News | Parents | Help. Labels and order
+  // come from the classic site; the hrefs are this site's real pages, so Games
+  // points at the front page, where the places are listed.
+  nav2009: [
+    { key: 'my-page', label: 'My FieldBrik', href: '/my-page' },
+    { key: 'games', label: 'Games', href: '/home' },
+    { key: 'catalog', label: 'Catalog', href: '/catalog' },
+    { key: 'people', label: 'People', href: '/people' },
+    { key: 'carpenters-club', label: 'Carpenters Club', href: '/carpenters-club' },
+    { key: 'forum', label: 'Forum', href: '/forum' },
+    { key: 'news', label: 'News', href: '/news' },
+    { key: 'parents', label: 'Parents', href: '/parents' },
+    { key: 'help', label: 'Help', href: '/help' },
+  ],
+
   // Signed-in shortcuts, used by the profile sidebar and quick-link lists.
   userNav: [
     { key: 'my-page', label: 'My Page', href: '/my-page' },
