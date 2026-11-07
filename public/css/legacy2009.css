@@ -1,0 +1,635 @@
+/* ==========================================================================
+   2009 skin.
+
+   The classic site: a banner band across the top with the name at the left and
+   the account at the right, a dark strip under it carrying the section links,
+   and a centred column of boxes on a pale sky. Everything is small type, hard
+   corners, 1px borders and two or three blues.
+
+   This file loads after fieldbrik.css and only re-skins. It changes no markup
+   contract: the same .fb-panel / .fb-btn / .fb-title classes get the 2009
+   treatment, so every page picks it up at once.
+
+   No artwork is used. The sky behind the page is drawn with gradients, and the
+   banner is a blue band with the name set in type, because this site has no
+   banner art and does not copy anybody else's.
+   ========================================================================== */
+
+:root {
+  --fb09-navy: #062a4d;
+  --fb09-navy-2: #0a3a68;
+  --fb09-blue: #1b4f80;
+  --fb09-link: #003a70;
+  --fb09-edge: #9cb6ca;
+  --fb09-head-top: #5a8ab5;
+  --fb09-head-bottom: #2f5f8c;
+  --fb09-paper: #ffffff;
+  --fb09-wash: #eef5fa;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #cfe4f4;
+  background-image:
+    radial-gradient(38px 16px at 12% 140px, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(52px 20px at 30% 96px, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(44px 18px at 68% 150px, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(60px 22px at 88% 104px, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 72%),
+    linear-gradient(180deg, #a9d3f0 0, #cfe6f7 260px, #eaf5fd 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: #1e1e1e;
+  font: 12px/1.45 Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: var(--fb09-link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #14395c;
+}
+
+/* The classic column was a fixed width with a hard border; boxes inside it. */
+.fb-container {
+  width: 1000px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+/* ---------- Banner band ---------- */
+
+.fb-header {
+  background: linear-gradient(180deg, #0a3d6d, #062a4d 76%, #05203a);
+  border-bottom: 1px solid #031a30;
+  color: #ffffff;
+  min-height: 72px;
+}
+
+.fb-header__pattern {
+  display: none;
+}
+
+.fb-header__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 8px 0;
+  box-sizing: border-box;
+}
+
+.fb-logo {
+  flex: 0 0 auto;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.fb-logo:hover {
+  text-decoration: none;
+}
+
+/* Period logotype: heavy italic capitals with a hard shadow, sitting on the
+   band the way the old wordmark did. Set in type - no logo art. */
+.fb-logo__text {
+  display: block;
+  font: italic 900 27px/1 "Arial Black", Arial, Helvetica, sans-serif;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #02182c, 2px 2px 0 rgba(2, 24, 44, 0.55);
+}
+
+.fb-logo__tag {
+  display: block;
+  margin-top: 3px;
+  font: 700 10px/1.25 Arial, Helvetica, sans-serif;
+  letter-spacing: 0.4px;
+  color: #a9cbe6;
+}
+
+/* ---------- The guest login box, up in the band ---------- */
+
+.fb-login {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 6px 8px;
+  border: 1px solid #4d7ba6;
+  background: rgba(3, 22, 39, 0.35);
+  font-size: 11px;
+}
+
+.fb-login__title {
+  font-weight: bold;
+  color: #d7e8f6;
+  margin-right: 2px;
+}
+
+.fb-login input {
+  width: 118px;
+  padding: 2px 4px;
+  border: 1px solid #6d94b8;
+  background: #ffffff;
+  color: #1e1e1e;
+  font: 11px Arial, Helvetica, sans-serif;
+}
+
+.fb-login__btn {
+  padding: 2px 10px;
+  border: 1px solid #7ea6c8;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #d9e6f1, #a9c4d9);
+  color: #0b2b47;
+  font: bold 11px Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+
+.fb-login__btn:hover {
+  background: linear-gradient(180deg, #e6eff7, #bcd3e4);
+}
+
+/* ---------- The member account block ---------- */
+
+.fb-currency {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 5px 9px;
+  border: 1px solid #4d7ba6;
+  background: rgba(3, 22, 39, 0.35);
+  font-size: 11px;
+  color: #dbeaf7;
+}
+
+.fb-currency__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.fb-currency__row strong {
+  color: #ffffff;
+}
+
+.fb-play {
+  margin-left: auto;
+  padding: 5px 16px;
+  border: 1px solid #2f6413;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #8cc84f, #4f8f25);
+  color: #ffffff;
+  font: bold 12px Arial, Helvetica, sans-serif;
+  letter-spacing: 0.5px;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.fb-play:hover {
+  text-decoration: none;
+  background: linear-gradient(180deg, #9ad65c, #58a02a);
+}
+
+/* ---------- Section strip ---------- */
+
+.fb-nav {
+  background: linear-gradient(180deg, #0e4677, #093a64);
+  border-bottom: 1px solid #052440;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.fb-nav__inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-height: 26px;
+}
+
+.fb-tab {
+  display: inline-block;
+  padding: 4px 10px;
+  color: #ffffff;
+  font: bold 11px/1 Arial, Helvetica, sans-serif;
+  white-space: nowrap;
+}
+
+.fb-tab:hover {
+  background: #10507f;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.fb-tab.is-active {
+  background: #10507f;
+  color: #ffffff;
+}
+
+.fb-tab__sep {
+  color: #5b86a9;
+  font-size: 10px;
+}
+
+/* The small search at the right end of the strip. */
+.fb-navsearch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 2px 2px 0;
+}
+
+.fb-navsearch input {
+  width: 140px;
+  height: 18px;
+  padding: 1px 4px;
+  font-size: 11px;
+}
+
+.fb-navsearch .fb-btn {
+  padding: 1px 7px;
+}
+
+/* ---------- Page column ---------- */
+
+.fb-main {
+  padding: 12px 0 24px;
+}
+
+/* Two columns, the way every classic page was built. */
+.fb-cols {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.fb-col-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fb-col-side {
+  flex: 0 0 200px;
+  width: 200px;
+}
+
+/* ---------- Boxes ---------- */
+
+.fb-title {
+  margin: 0 0 8px;
+  font: bold 20px/1.2 Arial, Helvetica, sans-serif;
+  color: #14395c;
+}
+
+.fb-subtitle {
+  margin: 0 0 8px;
+  font: bold 13px/1.3 Arial, Helvetica, sans-serif;
+  color: #14395c;
+}
+
+.fb-panel {
+  margin: 0 0 10px;
+  border: 1px solid var(--fb09-edge);
+  background: var(--fb09-paper);
+}
+
+.fb-panel__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 8px;
+  border-bottom: 1px solid #274f76;
+  background: linear-gradient(180deg, var(--fb09-head-top), var(--fb09-head-bottom));
+  color: #ffffff;
+  font: bold 12px/1.35 Arial, Helvetica, sans-serif;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.fb-panel__title--blue {
+  background: linear-gradient(180deg, #6f9dc4, #3a6c98);
+}
+
+.fb-panel__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fb-panel__body {
+  padding: 8px;
+}
+
+.fb-panel__body--flush {
+  padding: 0;
+}
+
+.fb-panel__body--center {
+  text-align: center;
+}
+
+.fb-panel__strip {
+  padding: 4px 8px;
+  border-top: 1px solid #dbe6ef;
+  background: var(--fb09-wash);
+  font-size: 11px;
+}
+
+.fb-panel__more {
+  font-weight: normal;
+  font-size: 10px;
+  white-space: nowrap;
+  color: #d7e8f6;
+  text-shadow: none;
+}
+
+.fb-panel__more:hover {
+  color: #ffffff;
+}
+
+/* ---------- Buttons ---------- */
+
+.fb-btn {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1px solid #8ba7bd;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #fbfdff, #e3edf5);
+  color: #14395c;
+  font: bold 11px/1.4 Arial, Helvetica, sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.fb-btn:hover {
+  background: linear-gradient(180deg, #ffffff, #d3e3f0);
+  text-decoration: none;
+}
+
+.fb-btn:active {
+  background: linear-gradient(180deg, #dce9f4, #c6d9e8);
+}
+
+.fb-btn--primary {
+  border-color: #2f6413;
+  background: linear-gradient(180deg, #8cc84f, #4f8f25);
+  color: #ffffff;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.fb-btn--primary:hover {
+  background: linear-gradient(180deg, #9ad65c, #58a02a);
+  color: #ffffff;
+}
+
+/* ---------- Forms ---------- */
+
+input[type='text'],
+input[type='password'],
+input[type='email'],
+input[type='search'],
+input[type='number'],
+select,
+textarea {
+  border: 1px solid #9cb6ca;
+  border-radius: 1px;
+  background: #ffffff;
+  color: #1e1e1e;
+  font: 12px Arial, Helvetica, sans-serif;
+  padding: 2px 4px;
+}
+
+/* ---------- Tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+  padding: 3px 6px;
+  border: 1px solid #b6cddd;
+  background: #dbe8f3;
+  color: #14395c;
+  font-size: 11px;
+  text-align: left;
+}
+
+td {
+  padding: 3px 6px;
+  border: 1px solid #d7e4ee;
+  font-size: 11px;
+}
+
+/* ---------- Footer ---------- */
+
+.fb-footer {
+  margin-top: 20px;
+  padding: 10px 0 18px;
+  border-top: 1px solid #b6cddd;
+  background: rgba(255, 255, 255, 0.6);
+  color: #4c5f70;
+  font-size: 10px;
+  text-align: center;
+}
+
+.fb-footer p {
+  margin: 2px 0;
+}
+
+.fb-footer__links {
+  margin-top: 6px !important;
+}
+
+.fb-footer__sep {
+  margin: 0 4px;
+  color: #9db3c4;
+}
+
+/* ---------- Facets and list rows ---------- */
+
+.fb-facets__heading {
+  margin: 0 0 4px;
+  padding: 3px 6px;
+  background: var(--fb09-wash);
+  border-bottom: 1px solid #dbe6ef;
+  font: bold 11px/1.4 Arial, Helvetica, sans-serif;
+  color: #14395c;
+}
+
+.fb-facets__list {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+}
+
+.fb-facets__list li {
+  padding: 2px 6px;
+}
+
+/* ---------- Place tiles, as the classic games list drew them ---------- */
+
+.fb-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fb-tile__thumb {
+  display: block;
+  aspect-ratio: 4 / 3;
+  border: 1px solid #8aa9c2;
+  background-color: var(--thumb, #b9d3e6);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.18));
+}
+
+.fb-tile__thumb:hover {
+  border-color: #3f6d96;
+}
+
+.fb-tile__name {
+  display: block;
+  margin: 3px 0 0;
+  font: bold 11px/1.35 Arial, Helvetica, sans-serif;
+  color: var(--fb09-link);
+}
+
+.fb-tile__meta {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #55697a;
+}
+
+/* Friends in the side column: one to a row, avatar on the left. */
+.fb-friends {
+  display: block;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fb-friend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  margin: 0 0 6px;
+  text-align: left;
+}
+
+.fb-friend:last-child {
+  margin-bottom: 0;
+}
+
+.fb-friend__name {
+  display: block;
+  margin: 0;
+  font: bold 11px/1.35 Arial, Helvetica, sans-serif;
+  color: var(--fb09-link);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fb-friend__state {
+  display: block;
+  font-size: 10px;
+  line-height: 1.3;
+  color: #5c6f7f;
+}
+
+.fb-friend__dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 3px;
+  border-radius: 50%;
+  background: #a8b8c4;
+  vertical-align: middle;
+}
+
+.fb-friend__dot.is-online {
+  background: #2f9b1f;
+}
+
+/* Notes and legal text sit under the boxes, not inside them. */
+.fb-app__empty {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #3f4f5d;
+}
+
+.fb-app__note {
+  margin: 0 0 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--fb09-edge);
+  background: #f4f9fd;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #3f4f5d;
+}
+
+.fb-app__legal {
+  margin: 0;
+  font-size: 10px;
+  color: #5c6f7f;
+}
+
+/* ---------- Narrow screens ----------
+   The classic column was fixed width; on a phone the same boxes stack. */
+
+@media (max-width: 1040px) {
+  .fb-container {
+    width: auto;
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .fb-header__row {
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .fb-login,
+  .fb-currency,
+  .fb-play,
+  .fb-navsearch {
+    margin-left: 0;
+  }
+
+  .fb-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .fb-cols {
+    flex-direction: column;
+  }
+
+  .fb-col-main,
+  .fb-col-side {
+    flex: 0 0 auto;
+    width: auto;
+  }
+}

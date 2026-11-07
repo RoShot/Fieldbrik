@@ -1,90 +1,68 @@
-<%- include('../partials/head', { pageTitle: pageTitle, extraCss: extraCss, bodyClass: bodyClass }) %>
-<%- include('../partials/appbar') %>
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
 
-<div class="fb-shell">
-  <%- include('../partials/sidebar') %>
-
-  <main class="fb-app__main">
-    <div class="fb-app__inner">
-      <h1 class="fb-app__title">Home</h1>
-
-      <% if (query) { %>
-        <p class="fb-app__query">Places matching &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a></p>
-      <% } %>
-
-      <%# ---------- Friends ---------- %>
-      <div class="fb-row">
-        <h2 class="fb-row__title">My Friends (<%= friendTotal %>)</h2>
-        <a class="fb-row__more" href="/friends">See All &rsaquo;</a>
+<main class="fb-container fb-main">
+  <% if (query) { %>
+    <div class="fb-panel">
+      <div class="fb-panel__body">
+        Places matching &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a>
       </div>
+    </div>
+  <% } %>
 
-      <% if (authState === 'guest') { %>
-        <p class="fb-app__empty"><a href="/login">Sign in</a> to see your friends, keep building and pick up where you left off.</p>
-      <% } else if (friends.length === 0) { %>
-        <p class="fb-app__empty">No friends yet. <a href="/people">Find people</a> and send a friend request; they show up here once it is accepted.</p>
-      <% } else { %>
-        <ul class="fb-friends">
-          <% friends.forEach(function (friend) { %>
-            <li class="fb-friend">
-              <a href="/people/<%= encodeURIComponent(friend.username) %>">
-                <%- include('../partials/avatar', { avatar: friend.avatar, size: 'md' }) %>
-              </a>
-              <a class="fb-friend__name" href="/people/<%= encodeURIComponent(friend.username) %>">
-                <span class="fb-friend__dot<%= friend.online ? ' is-online' : '' %>" aria-hidden="true"></span><%= friend.username %>
-              </a>
-              <span class="fb-friend__state"><%= friend.online ? 'Online' : 'Offline' %></span>
-            </li>
-          <% }); %>
-        </ul>
-      <% } %>
-
+  <div class="fb-cols">
+    <div class="fb-col-main">
       <%# ---------- Continue ---------- %>
-      <div class="fb-row">
-        <h2 class="fb-row__title">Continue</h2>
-        <a class="fb-row__more" href="/places/mine">See All &rsaquo;</a>
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Continue
+          <a class="fb-panel__more" href="/places/mine">See All &raquo;</a>
+        </h2>
+        <div class="fb-panel__body">
+          <% if (authState === 'guest') { %>
+            <p class="fb-app__empty"><a href="/login">Sign in</a> to build a place of your own.</p>
+          <% } else if (continuePlaces.length === 0) { %>
+            <p class="fb-app__empty">You have not made a place yet. <a href="/places/new">Build your first one</a>.</p>
+          <% } else { %>
+            <ul class="fb-tiles">
+              <% continuePlaces.forEach(function (place) { %>
+                <li>
+                  <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                  <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
+                  <p class="fb-tile__meta"><%= place.published ? 'Published' : 'Draft' %></p>
+                </li>
+              <% }); %>
+            </ul>
+          <% } %>
+        </div>
       </div>
-
-      <% if (authState === 'guest') { %>
-        <p class="fb-app__empty"><a href="/login">Sign in</a> to build a place of your own.</p>
-      <% } else if (continuePlaces.length === 0) { %>
-        <p class="fb-app__empty">You have not made a place yet. <a href="/places/new">Build your first one</a>.</p>
-      <% } else { %>
-        <ul class="fb-tiles">
-          <% continuePlaces.forEach(function (place) { %>
-            <li>
-              <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
-              <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
-              <p class="fb-tile__meta"><%= place.published ? 'Published' : 'Draft' %></p>
-            </li>
-          <% }); %>
-        </ul>
-      <% } %>
 
       <%# ---------- Recommended ---------- %>
-      <div class="fb-row">
-        <h2 class="fb-row__title">Recommended For You</h2>
-        <a class="fb-row__more" href="/places/new">Build a place &rsaquo;</a>
-      </div>
-
-      <% if (recommended.length === 0) { %>
-        <p class="fb-app__empty">
-          <% if (query) { %>
-            Nothing matches &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a>.
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Recommended For You
+          <a class="fb-panel__more" href="/places/new">Build a place &raquo;</a>
+        </h2>
+        <div class="fb-panel__body">
+          <% if (recommended.length === 0) { %>
+            <p class="fb-app__empty">
+              <% if (query) { %>
+                Nothing matches &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a>.
+              <% } else { %>
+                No places are published yet. Every place here is made by a member, so this list stays empty until somebody publishes one.
+              <% } %>
+            </p>
           <% } else { %>
-            No places are published yet. Every place here is made by a member, so this row stays empty until somebody publishes one.
+            <ul class="fb-tiles">
+              <% recommended.forEach(function (place) { %>
+                <li>
+                  <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                  <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
+                  <p class="fb-tile__meta">By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
+                </li>
+              <% }); %>
+            </ul>
           <% } %>
-        </p>
-      <% } else { %>
-        <ul class="fb-tiles">
-          <% recommended.forEach(function (place) { %>
-            <li>
-              <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
-              <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
-              <p class="fb-tile__meta">By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
-            </li>
-          <% }); %>
-        </ul>
-      <% } %>
+        </div>
+      </div>
 
       <p class="fb-app__note">
         <strong>A place is a listing, not a world.</strong>
@@ -97,9 +75,48 @@
         <%= site.name %> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/about">About</a> &middot; <a href="/help">Help</a>
       </p>
     </div>
-  </main>
-</div>
 
-<script type="module" src="/js/avatar-stage.js"></script>
+    <div class="fb-col-side">
+      <%# ---------- Friends ---------- %>
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">My Friends (<%= friendTotal %>)
+          <a class="fb-panel__more" href="/friends">See All &raquo;</a>
+        </h2>
+        <div class="fb-panel__body">
+          <% if (authState === 'guest') { %>
+            <p class="fb-app__empty"><a href="/login">Sign in</a> to see your friends.</p>
+          <% } else if (friends.length === 0) { %>
+            <p class="fb-app__empty">No friends yet. <a href="/people">Find people</a> and send a request; they appear here once it is accepted.</p>
+          <% } else { %>
+            <ul class="fb-friends">
+              <% friends.forEach(function (friend) { %>
+                <li class="fb-friend">
+                  <a href="/people/<%= encodeURIComponent(friend.username) %>">
+                    <%- include('../partials/avatar', { avatar: friend.avatar, size: 'xs' }) %>
+                  </a>
+                  <span>
+                    <a class="fb-friend__name" href="/people/<%= encodeURIComponent(friend.username) %>"><%= friend.username %></a>
+                    <span class="fb-friend__state"><span class="fb-friend__dot<%= friend.online ? ' is-online' : '' %>" aria-hidden="true"></span><%= friend.online ? 'Online' : 'Offline' %></span>
+                  </span>
+                </li>
+              <% }); %>
+            </ul>
+          <% } %>
+        </div>
+      </div>
+
+      <%# ---------- Membership ---------- %>
+      <div class="fb-panel">
+        <h2 class="fb-panel__title">Carpenters Club</h2>
+        <div class="fb-panel__body fb-panel__body--center">
+          <p>Members keep more places and get a cut of what they sell.</p>
+          <p><a class="fb-btn fb-btn--primary" href="/carpenters-club">Upgrade Now</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
 </body>
 </html>
