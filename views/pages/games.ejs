@@ -1,0 +1,92 @@
+<%#
+  The Games page, built to the 2009 reference.
+
+  Left: the Browse and Time facets, with the chosen one marked the way the
+  classic list marked it. Right: three places across, each with its picture, its
+  name, and what is known about it.
+
+  Facts only. The reference printed "Played: 1,133 times today" and "25 players
+  online"; this site counts neither, because counting them needs the client that
+  plays a place. A card therefore shows when the place last changed, who made
+  it, and its visits only once there are any.
+%>
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%- include('../partials/header') %>
+
+<main class="fb-games2009">
+  <div class="fb-container">
+    <h1 class="fb-games2009__title">Games</h1>
+
+    <div class="fb-games2009__body">
+      <aside class="fb-browse2009">
+        <h2 class="fb-browse2009__head">Browse</h2>
+        <ul class="fb-browse2009__list">
+          <% browseFacets.forEach(function (facet) { %>
+            <li>
+              <a class="<%= facet.active ? 'is-on' : '' %>" href="<%= facet.href %>">
+                <span class="fb-browse2009__pip" aria-hidden="true"></span><%= facet.label %>
+              </a>
+            </li>
+          <% }); %>
+        </ul>
+
+        <h2 class="fb-browse2009__head">Time</h2>
+        <ul class="fb-browse2009__list">
+          <% timeFacets.forEach(function (facet) { %>
+            <li>
+              <a class="<%= facet.active ? 'is-on' : '' %>" href="<%= facet.href %>">
+                <span class="fb-browse2009__pip" aria-hidden="true"></span><%= facet.label %>
+              </a>
+            </li>
+          <% }); %>
+        </ul>
+
+        <p class="fb-browse2009__note">Visits are not counted yet, so places are ordered by when they were
+          last changed rather than by how many people have played them.</p>
+      </aside>
+
+      <section class="fb-games2009__main">
+        <div class="fb-games2009__top">
+          <h2 class="fb-games2009__heading"><%= heading %></h2>
+          <p class="fb-games2009__pages">
+            Pages:
+            <% if (prevHref) { %><a href="<%= prevHref %>">&lt;&lt; Back</a><% } %>
+            <% if (prevHref && nextHref) { %>&nbsp;<% } %>
+            <% if (nextHref) { %><a href="<%= nextHref %>">Next &gt;&gt;</a><% } %>
+            <% if (!prevHref && !nextHref) { %>1 of 1<% } %>
+          </p>
+        </div>
+
+        <% if (tiles.length === 0) { %>
+          <p class="fb-games2009__empty">
+            <% if (query) { %>
+              Nothing published matches &ldquo;<%= query %>&rdquo;. <a href="/games">Show every place</a>.
+            <% } else { %>
+              No place has been published in this time yet. <a href="/games?time=">All-time</a> shows every place,
+              and <a href="/places/new">building one</a> takes a name and a description.
+            <% } %>
+          </p>
+        <% } else { %>
+          <ul class="fb-games2009__grid">
+            <% tiles.forEach(function (place) { %>
+              <li>
+                <a class="fb-game2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                <a class="fb-game2009__name" href="/games/<%= place.slug %>"><%= place.name %></a>
+                <p class="fb-game2009__meta">Updated: <%= place.updatedLabel %></p>
+                <p class="fb-game2009__meta">Creator:
+                  <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
+                <% if (place.visits > 0) { %>
+                  <p class="fb-game2009__meta">Played: <%= place.visits.toLocaleString('en-US') %> times</p>
+                <% } %>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
+      </section>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

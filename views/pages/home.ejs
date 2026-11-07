@@ -22,12 +22,12 @@
   <%# ---------- Banner strip ---------- %>
   <div class="fb-front__banner">
     <% if (authState === 'member' && typeof viewer !== 'undefined' && viewer && viewer.username) { %>
-      <a class="fb-front__banner-login" href="/my-page"><%= viewer.username %></a>
+      <a class="fb-front__banner-login" href="/home"><%= viewer.username %></a>
     <% } else { %>
       <a class="fb-front__banner-login" href="/login">Login</a>
     <% } %>
 
-    <a class="fb-front__wordmark" href="/home"><%= site.name %></a>
+    <a class="fb-front__wordmark" href="/"><%= site.name %></a>
 
     <% if (recommended.length > 0) { %>
       <a class="fb-front__playnow" href="/games/<%= recommended[0].slug %>" title="Opens the place page. The FieldBrik client is not built yet.">PLAY NOW</a>
@@ -47,7 +47,7 @@
   <% if (query) { %>
     <div class="fb-box" style="margin-top:10px">
       <div class="fb-box__body">
-        Places matching &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a>
+        Places matching &ldquo;<%= query %>&rdquo;. <a href="/">Clear the search</a>
       </div>
     </div>
   <% } %>
