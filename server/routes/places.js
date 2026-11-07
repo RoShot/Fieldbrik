@@ -1,14 +1,18 @@
 /**
- * Places: the front page, a place page, and the pages that create and edit one.
+ * Places: the Games listing, a place page, and the pages that create and edit
+ * one.
  *
- * This router owns /home, /games and GET / because the page router still answers
- * them from the phase 1 fixture list, and routes/pages.js is far too large to
- * upload as one file.
+ * This router owns /games because the page router still answers it from the
+ * phase 1 fixture list, and routes/pages.js is far too large to upload as one
+ * file. It also takes over GET / and GET /my-page for the same reason: both of
+ * them read the fixture place list, and the home page's Cool Places row and My
+ * Page's place panel now show real published places, so every link from either
+ * one resolves to a real page.
  *
- * The front page and the old Games listing were two versions of the same screen,
- * so they are now one page at /home: / and /games both redirect there. Everything
- * on it reads D1 - the member's friendships, the member's own places, and every
- * published place - so there is no fixture left on the front of the site.
+ * The home page no longer reads fixtures at all: its news panel comes from the
+ * news service, its platform figures are counted from D1, and its online list is
+ * real presence. My Page's "View Public Profile" link is the signed-in member's
+ * own profile rather than a fixture account.
  *
  * Mounted before the page router, so everything it does not answer - /people,
  * /forum, /catalog and the rest - still falls through.
@@ -46,8 +50,8 @@ function profileLinksFor(viewer) {
 const DONE = {
   created: 'Place created. Publish it when you are ready for other members to see it.',
   saved: 'Place saved.',
-  published: 'Place published. It is on the front page now.',
-  unpublished: 'Place unpublished. It is off the front page; the page still exists for you.',
+  published: 'Place published. It is in the Games list now.',
+  unpublished: 'Place unpublished. It is out of the Games list; the page still exists for you.',
 };
 
 const FAILED = {
@@ -68,58 +72,170 @@ function noticeFor(query) {
   return FAILED[failed] || FAILED.refused;
 }
 
-// ---------- The front page ----------
+/**
+ * The figures in the home page's Platform panel.
+ *
+ * Four counts, each of something that exists: open accounts, accounts seen in
+ * the last five minutes, published places, and catalog items currently on sale.
+ * A fresh database honestly reports zeros.
+ */
+async function platformStats(db) {
+  const row = await db
+    .prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM users WHERE closed_at IS NULL) AS members,
+         (SELECT COUNT(*) FROM users
+           WHERE closed_at IS NULL
+             AND last_seen_at IS NOT NULL
+             AND last_seen_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-5 minutes')) AS online,
+         (SELECT COUNT(*) FROM games WHERE published = 1) AS games,
+         (SELECT COUNT(*) FROM catalog_items WHERE on_sale = 1) AS items`
+    )
+    .first();
 
-// One front page. Everything that still links to / lands on it.
-router.get('/', (req, res) => res.redirect('/home'));
+  return {
+    members: Number(row && row.members) || 0,
+    online: Number(row && row.online) || 0,
+    games: Number(row && row.games) || 0,
+    itemsListed: Number(row && row.items) || 0,
+  };
+}
 
-// A link to the old listing is a link to the front page; a search term travels
-// with it rather than being dropped.
-router.get('/games', (req, res) => {
-  const query = String(req.query.q || '').trim();
-  return res.redirect(query ? `/home?q=${encodeURIComponent(query)}` : '/home');
-});
+/** Keeps a facet link on the same query string without losing the selection. */
+function facetHref(current, changes) {
+  const params = new URLSearchParams();
+
+  Object.entries({ ...current, ...changes }).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') params.set(key, value);
+  });
+
+  const query = params.toString();
+  return query ? `/games?${query}` : '/games';
+}
+
+// ---------- The Games listing ----------
+
+/** Browse order. Visits are not counted, so there is no popularity order. */
+const GAME_BROWSE = {
+  updated: {
+    label: 'Recently Updated',
+    compare: (a, b) => b.updated.localeCompare(a.updated) || b.id - a.id,
+  },
+  newest: {
+    label: 'Newest',
+    compare: (a, b) => b.created.localeCompare(a.created) || b.id - a.id,
+  },
+};
+
+/** Time windows, counted back from today on the day a place last changed. */
+const GAME_TIME = {
+  now: { label: 'Now', days: 0 },
+  day: { label: 'Past Day', days: 1 },
+  week: { label: 'Past Week', days: 7 },
+  month: { label: 'Past Month', days: 31 },
+  all: { label: 'All-time', days: null },
+};
+
+const GAMES_PER_PAGE = 9;
+
+/** The date `days` before today, in the shape the places service stores. */
+function dayBefore(days) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Whole days since a stored date, in words. */
+function updatedLabel(value) {
+  const then = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(then.getTime())) return 'unknown';
+
+  const days = Math.floor((Date.now() - then.getTime()) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return '1 day ago';
+  if (days < 30) return `${days} days ago`;
+
+  const months = Math.floor(days / 30);
+  return months === 1 ? '1 month ago' : `${months} months ago`;
+}
+
+/** A facet or page link, keeping the current selection. */
+function gamesHref(current, changes) {
+  const params = new URLSearchParams();
+  const merged = Object.assign({}, current, changes);
+
+  Object.keys(merged).forEach((key) => {
+    const value = merged[key];
+    if (value === undefined || value === null || value === '') return;
+    if (key === 'page' && Number(value) === 1) return;
+    params.set(key, value);
+  });
+
+  const query = params.toString();
+  return query ? `/games?${query}` : '/games';
+}
 
 /**
- * The front page: friends, your own places, and every published place.
+ * The Games listing: every published place, nine to a page.
  *
- * Friends are the viewer's accepted friendships. Continue is the viewer's own
- * places, drafts included, because a half-built place is exactly the thing to
- * pick up again. The grid is every published place, and the search box filters
- * it by name or creator.
- *
- * canOpenPanel comes from the role table on every request, so the sidebar's
- * Panel button appears for Intern and above and for nobody else. The panel
- * gates itself as well; this only decides whether the door is drawn.
+ * The facets are the reference's Browse and Time groups, wired to the facts this
+ * database has: the order a place last changed in, and the day it last changed.
  */
-router.get('/home', (req, res, next) => {
+router.get('/games', (req, res, next) => {
   return (async () => {
-    const db = req.db;
-    const viewer = req.viewer;
     const query = String(req.query.q || '').trim();
+    const browseKey = GAME_BROWSE[String(req.query.sort || '')] ? String(req.query.sort) : 'updated';
+    const timeKey = GAME_TIME[String(req.query.time || '')] ? String(req.query.time) : 'all';
+    const wanted = Math.max(1, Number(req.query.page) || 1);
 
-    const [friends, ownPlaces, recommended] = db
-      ? await Promise.all([
-          viewer ? people.friendsOf(db, viewer.id) : [],
-          viewer ? places.mine(db, viewer.id) : [],
-          places.list(db, { query }),
-        ])
-      : [[], [], []];
+    const published = req.db ? await places.list(req.db, { query }) : [];
 
-    const role = viewer && db ? await permissions.roleOf(db, viewer.id) : null;
+    const days = GAME_TIME[timeKey].days;
+    const since = days === null ? null : dayBefore(days);
+    const inWindow = since ? published.filter((place) => place.updated >= since) : published;
+
+    const sorted = inWindow.slice().sort(GAME_BROWSE[browseKey].compare);
+    const totalPages = Math.max(1, Math.ceil(sorted.length / GAMES_PER_PAGE));
+    const page = Math.min(wanted, totalPages);
+    const start = (page - 1) * GAMES_PER_PAGE;
+    const tiles = sorted.slice(start, start + GAMES_PER_PAGE).map((place) =>
+      Object.assign({}, place, { updatedLabel: updatedLabel(place.updated) })
+    );
+
+    const current = {
+      q: query,
+      sort: browseKey === 'updated' ? '' : browseKey,
+      time: timeKey === 'all' ? '' : timeKey,
+    };
+
+    const browseFacets = Object.keys(GAME_BROWSE).map((key) => ({
+      label: GAME_BROWSE[key].label,
+      active: browseKey === key,
+      href: gamesHref(current, { sort: key === 'updated' ? '' : key, page: 1 }),
+    }));
+
+    const timeFacets = Object.keys(GAME_TIME).map((key) => ({
+      label: GAME_TIME[key].label,
+      active: timeKey === key,
+      href: gamesHref(current, { time: key === 'all' ? '' : key, page: 1 }),
+    }));
 
     return res.render(
-      'pages/home',
+      'pages/games',
       pageContext(req, {
-        pageTitle: `${site.name} - Home`,
-        extraCss: '/css/app.css',
-        bodyClass: 'fb-app',
+        pageTitle: `Games - ${site.name}`,
+        extraCss: '/css/games2009.css',
+        bodyClass: 'fb-games-page',
         query,
-        friends: friends.slice(0, 9),
-        friendTotal: viewer ? viewer.stats.friends : 0,
-        continuePlaces: ownPlaces.slice(0, 5),
-        recommended: recommended.slice(0, 10),
-        canOpenPanel: permissions.can(role, 'admin.open'),
+        tiles,
+        total: sorted.length,
+        page,
+        totalPages,
+        heading: `${GAME_BROWSE[browseKey].label} (${GAME_TIME[timeKey].label})`,
+        browseFacets,
+        timeFacets,
+        prevHref: page > 1 ? gamesHref(current, { page: page - 1 }) : null,
+        nextHref: page < totalPages ? gamesHref(current, { page: page + 1 }) : null,
       })
     );
   })().catch(next);
@@ -322,6 +438,100 @@ router.post('/places/:id/status', (req, res, next) => {
   })().catch(next);
 });
 
+// ---------- The home page and My Page ----------
+
+/**
+ * The home page: Cool Places, Latest News, the platform figures and the online
+ * list, all from the database. There is no fixture left on this page.
+ */
+// The two pages are separate again: / is the front door, /home is the member's
+// own page. They shared one screen for a pass; the Games listing now has an
+// address of its own, so the home screen goes back to being a home screen.
+
+/**
+ * The front page at /: every published place, in the 2009 arrangement.
+ *
+ * The search box filters the grid by name or creator. canOpenPanel comes from
+ * the role table on every request, so the panel door is drawn for staff only;
+ * the panel gates itself as well.
+ */
+router.get('/', (req, res, next) => {
+  return (async () => {
+    const db = req.db;
+    const viewer = req.viewer;
+    const query = String(req.query.q || '').trim();
+
+    const [friends, ownPlaces, recommended] = db
+      ? await Promise.all([
+          viewer ? people.friendsOf(db, viewer.id) : [],
+          viewer ? places.mine(db, viewer.id) : [],
+          places.list(db, { query }),
+        ])
+      : [[], [], []];
+
+    const role = viewer && db ? await permissions.roleOf(db, viewer.id) : null;
+
+    return res.render(
+      'pages/home',
+      pageContext(req, {
+        pageTitle: `${site.name} - ${site.tagline.join(' ')}`,
+        extraCss: '/css/app.css',
+        bodyClass: 'fb-app',
+        query,
+        friends: friends.slice(0, 9),
+        friendTotal: viewer ? viewer.stats.friends : 0,
+        continuePlaces: ownPlaces.slice(0, 5),
+        recommended: recommended.slice(0, 10),
+        canOpenPanel: permissions.can(role, 'admin.open'),
+      })
+    );
+  })().catch(next);
+});
+
+/**
+ * The member home, drawn by /home and by /my-page.
+ *
+ * /home is the member's own page, the way the classic site's My Home was. The
+ * address /my-page stays because every link and every panel still uses it, and
+ * both draw the same view from the same rows.
+ */
+async function renderMemberHome(req, res, title) {
+  const db = req.db;
+  const viewer = req.viewer;
+
+  const [heldBadges, warnings, friends, newest] = db
+    ? await Promise.all([
+        people.badgesFor(db, viewer.id),
+        notices.warnings(db, viewer.id),
+        people.friendsOf(db, viewer.id),
+        places.featured(db, 3),
+      ])
+    : [[], [], [], []];
+
+  return res.render(
+    'pages/my-page',
+    pageContext(req, {
+      pageTitle: `${title} - ${site.name}`,
+      authState: 'member',
+      viewer,
+      friends: friends.slice(0, 6),
+      friendTotal: viewer.stats.friends,
+      newestPlaces: newest,
+      heldBadges,
+      warnings,
+      profileLinks: profileLinksFor(viewer),
+    })
+  );
+}
+
+// A guest has no home of their own, so /home sends them to the front door rather
+// than to a sign-in form they did not ask for. /my-page, which members reach
+// from their own links, still asks them to sign in.
+router.get('/home', (req, res, next) => {
+  if (!req.viewer) return res.redirect('/');
+  return renderMemberHome(req, res, 'Home').catch(next);
+});
+
 /**
  * My Page.
  *
@@ -331,36 +541,8 @@ router.post('/places/:id/status', (req, res, next) => {
  * friendships, so every avatar on the page opens a real profile.
  */
 router.get('/my-page', (req, res, next) => {
-  return (async () => {
-    if (!req.viewer) return res.redirect('/login');
-
-    const db = req.db;
-    const viewer = req.viewer;
-
-    const [heldBadges, warnings, friends, newest] = db
-      ? await Promise.all([
-          people.badgesFor(db, viewer.id),
-          notices.warnings(db, viewer.id),
-          people.friendsOf(db, viewer.id),
-          places.featured(db, 3),
-        ])
-      : [[], [], [], []];
-
-    return res.render(
-      'pages/my-page',
-      pageContext(req, {
-        pageTitle: `My Page - ${site.name}`,
-        authState: 'member',
-        viewer,
-        friends: friends.slice(0, 6),
-        friendTotal: viewer.stats.friends,
-        newestPlaces: newest,
-        heldBadges,
-        warnings,
-        profileLinks: profileLinksFor(viewer),
-      })
-    );
-  })().catch(next);
+  if (!req.viewer) return res.redirect('/login');
+  return renderMemberHome(req, res, 'My Page').catch(next);
 });
 
 module.exports = router;
