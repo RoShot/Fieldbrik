@@ -1,45 +1,125 @@
-<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%#
+  Privacy Policy, in the 2009 shape: a letter-spaced title on the sky, then
+  bold section headings with plain paragraphs and bullets. No panels, no cards.
+
+  Everything a paragraph claims here has to be true of the build: guest
+  browsing, one session cookie, hashed passwords, sign-in records, moderation
+  records, and no payment details anywhere. Nothing is described as collected
+  unless a table actually collects it.
+%>
+<%- include('../partials/head', { pageTitle: pageTitle, bodyClass: 'fb-privacy-page' }) %>
+<link rel="stylesheet" href="/css/legal2009.css?v=1">
 <%- include('../partials/header') %>
 
-<main class="fb-container fb-main">
-  <div class="fb-content">
-    <h1 class="fb-title fb-title--small">Privacy Policy</h1>
+<main class="fb-legal2009">
+  <div class="fb-container">
+    <h1 class="fb-legal2009__title">FieldBrik Privacy Policy</h1>
+    <p class="fb-legal2009__note">
+      Draft, pending legal review. This describes what FieldBrik collects and why, in the terms the
+      site is actually built to. Last edited 7 November 2026.
+    </p>
 
-    <div class="fb-notice">
-      <p><strong>Draft, pending legal review.</strong></p>
-      <p>This describes what FieldBrik collects and why, in the terms the site is actually built to. It is not yet a final policy and will be reviewed before the site takes real registrations. Last edited 2 November 2026.</p>
-    </div>
+    <h2 class="fb-legal2009__head">About FieldBrik</h2>
+    <p>FieldBrik is an online social building site. FieldBrik works like this:</p>
+    <ul class="fb-legal2009__list">
+      <li>a user creates a character, which is their identity on FieldBrik: a name, a description and
+        an avatar they colour themselves</li>
+      <li>users interact through place pages, personal messaging kept on this site, the forum, friends
+        lists and catalogs; there is no chat inside a game yet, because the client that would play a
+        place does not exist</li>
+      <li>users build places out of parts and publish them; a published place has its own page and
+        appears in Games</li>
+      <li>users search games, read the catalog and look at other members' pages, and a signed-out
+        visitor can do all of that without an account</li>
+      <li>users earn Tickets by taking part and may hold Bucks; both are recorded as ledger entries on
+        the account</li>
+      <li>users buy catalog items with either currency, and the item is added to their inventory</li>
+      <li>nothing on FieldBrik is paid for: there is no checkout, and no card or bank details are
+        collected anywhere on the site</li>
+    </ul>
 
-    <div class="fb-prose">
-      <h2>What is collected</h2>
-      <ul class="fb-list">
-        <li><strong>At registration:</strong> a username, an email address and a password. The password is stored only as a one-way hash and is never readable by staff.</li>
-        <li><strong>When you use the site:</strong> the places you build, the items you own, the messages you send, your friends, and the colours you choose for your avatar.</li>
-        <li><strong>Sign-in records:</strong> the time of a sign-in and the browser and network address it came from, kept so a session can be ended and misuse investigated.</li>
-        <li><strong>Moderation records:</strong> warnings and restrictions, with the reason and the staff member who issued them.</li>
-      </ul>
+    <h2 class="fb-legal2009__head">Requested Information</h2>
+    <p>
+      Visitors may browse as guests. A guest can read places, the catalog, the forum, news and members'
+      pages, and stays anonymous while doing it: no name, no address, no message and no place of their
+      own.
+    </p>
+    <p>
+      An account is needed to save anything, publish a place, send a message or take part in the
+      economy. Creating one asks for three things: a username, an email address and a password. The
+      password is stored only as a one-way hash, so it cannot be read back by staff or by anybody who
+      copies the database.
+    </p>
+    <p>
+      The username is public: it is shown on a member's page, on the places and catalog items they
+      made, and on the messages they send. The email address is never shown to other members. A name
+      that would look like FieldBrik staff, or that is abusive, is refused by the server at sign-up,
+      however the form is sent.
+    </p>
+    <p>
+      Signing in is recorded: the time of the attempt, whether it worked, and the network address it
+      came from. That record is what lets a session be ended and misuse investigated. Sessions are
+      held in a cookie, described below.
+    </p>
 
-      <h2>What is not collected</h2>
-      <p>No payment details are stored on this site. No advertising or tracking networks are embedded. No location, contact list or device data is read.</p>
+    <h2 class="fb-legal2009__head">What Is Not Collected</h2>
+    <p>
+      No payment details, no advertising or tracking network, no location, no contact list and no
+      device data. There is no third-party analytics script on any page, and no profile of what a
+      member reads is built to sell.
+    </p>
 
-      <h2>Why it is collected</h2>
-      <p>To run your account, show your profile, deliver messages, keep the economy honest, and enforce the <a href="/terms">Terms of Service</a>. Moderation records exist so that a restriction cannot be evaded by creating a new account.</p>
+    <h2 class="fb-legal2009__head">Why It Is Collected</h2>
+    <p>
+      To run the account, show the member's page, deliver messages, keep the economy honest and
+      enforce the <a href="/terms">Terms of Service</a>. Moderation records exist so that a
+      restriction cannot be escaped by making a new account.
+    </p>
 
-      <h2>Cookies</h2>
-      <p>One cookie, and only one: the session cookie that keeps you signed in. It is marked HttpOnly so scripts on the page cannot read it, and it is invalidated when you sign out or when the session ends.</p>
+    <h2 class="fb-legal2009__head">Cookies</h2>
+    <p>
+      One cookie, and only one: the session cookie that keeps a member signed in. It is marked
+      HttpOnly, so a script on the page cannot read it, and it stops working when the member signs out
+      or the session ends.
+    </p>
 
-      <h2>Who can see what</h2>
-      <p>Your username, avatar, description, badges and public creations are visible to anyone. Your email address is never shown to other members. Private messages are readable by you and the recipient, and by staff only when a message is reported or a safety investigation requires it.</p>
+    <h2 class="fb-legal2009__head">Who Can See What</h2>
+    <p>
+      A username, avatar, description, badges and published places are visible to anyone. An email
+      address is visible to nobody but the account it belongs to. Private messages are readable by the
+      sender and the recipient, and by staff only when a message is reported or a safety investigation
+      needs it. Reports are never shown to the member they are about.
+    </p>
 
-      <h2>How long it is kept</h2>
-      <p>Account data is kept while the account exists. When an account is deleted, profile content is removed and identifying fields are cleared; moderation and transaction records are retained in a form that no longer identifies you, because deleting them would let restrictions and currency records be erased on request.</p>
+    <h2 class="fb-legal2009__head">Moderation Records</h2>
+    <p>
+      A warning, a restriction or a ban is recorded with its reason, when it was issued, when it ends
+      and which staff member issued it. The account it applies to can see it. It is kept after the
+      restriction lifts, because a pattern of behaviour is what moderation acts on.
+    </p>
 
-      <h2>Parents</h2>
-      <p>The <a href="/parents">Parents</a> section explains what an account involves, what is asked for at sign-up, and how to ask for an account to be closed.</p>
+    <h2 class="fb-legal2009__head">How Long It Is Kept</h2>
+    <p>
+      Account data is kept while the account exists. When an account is closed, profile content is
+      removed and the identifying fields are cleared. Moderation and ledger records are retained in a
+      form that no longer identifies the member, because deleting them on request would let a ban or a
+      currency record be erased.
+    </p>
 
-      <h2>Contact</h2>
-      <p>Privacy requests go through the <a href="/support">support page</a>.</p>
-    </div>
+    <h2 class="fb-legal2009__head">Parents</h2>
+    <p>
+      The <a href="/parents">Parents</a> page explains what an account involves, what is asked for at
+      sign-up, and how to ask for an account to be closed.
+    </p>
+
+    <h2 class="fb-legal2009__head">Changes</h2>
+    <p>
+      When this policy changes, the date at the top of the page changes with it. A change that widens
+      what is collected will be announced on the site before it takes effect.
+    </p>
+
+    <h2 class="fb-legal2009__head">Contact</h2>
+    <p>Privacy requests go through the <a href="/support">support page</a>.</p>
   </div>
 </main>
 

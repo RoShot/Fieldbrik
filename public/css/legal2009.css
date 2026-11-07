@@ -1,0 +1,75 @@
+/* ==========================================================================
+   Written pages (privacy, and anything else shaped like it) to the 2009
+   reference: sky-blue page, a letter-spaced title, bold section headings, and
+   plain paragraphs and bullets. No cards, no panels, no rounded corners.
+   ========================================================================== */
+
+body.fb-privacy-page {
+  background-color: #a9d6f4;
+  background-image:
+    linear-gradient(180deg, #8fc9ef 0, #b6ddf7 45%, #cfe9fb 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+.fb-legal2009 {
+  padding: 14px 0 30px;
+}
+
+.fb-legal2009 .fb-container {
+  width: 940px;
+}
+
+.fb-legal2009__title {
+  margin: 0 0 4px;
+  color: #23415c;
+  font: bold 17px/1.4 Arial, Helvetica, sans-serif;
+  letter-spacing: 2.6px;
+  text-transform: uppercase;
+}
+
+.fb-legal2009__note {
+  margin: 0 0 18px;
+  color: #3a566f;
+  font: italic 11px/1.6 Arial, Helvetica, sans-serif;
+}
+
+.fb-legal2009__head {
+  margin: 22px 0 6px;
+  color: #1b2f42;
+  font: bold 13px/1.4 Arial, Helvetica, sans-serif;
+  letter-spacing: 0.2px;
+}
+
+.fb-legal2009 p {
+  margin: 0 0 10px;
+  color: #1c2a36;
+  font: 12px/1.75 Arial, Helvetica, sans-serif;
+}
+
+.fb-legal2009 a {
+  color: #0b4f7d;
+  text-decoration: underline;
+}
+
+.fb-legal2009__list {
+  margin: 0 0 12px;
+  padding-left: 22px;
+  color: #1c2a36;
+  font: 12px/1.75 Arial, Helvetica, sans-serif;
+}
+
+.fb-legal2009__list li {
+  margin: 0 0 3px;
+}
+
+@media (max-width: 980px) {
+  .fb-legal2009 .fb-container {
+    width: auto;
+  }
+
+  .fb-legal2009__title {
+    font-size: 15px;
+    letter-spacing: 1.6px;
+  }
+}
