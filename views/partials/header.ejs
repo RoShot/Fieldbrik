@@ -30,7 +30,6 @@
 
     <div class="fb-account2009">
       <% if (authState === 'member' && viewer && viewer.username) { %>
-        <a class="fb-account2009__line" href="/messages">Messages</a>
         <span class="fb-account2009__line">
           <%- include('currency-icon', { kind: 'bucks' }) %>
           <strong><%= viewer.currency.bucks.toLocaleString('en-US') %></strong> <%= site.currency.premium %>
@@ -73,8 +72,16 @@
       <ul class="fb-submenu__list">
         <% site.subnav2009.forEach(function (link, index) { %>
           <% var href = link.href || ('/people/' + encodeURIComponent(viewer.username)); %>
-          <li>
+          <li<%= link.items ? ' class="has-items"' : '' %>>
             <a class="<%= (typeof currentPath !== 'undefined' && currentPath === href) ? 'subMenuItemselected' : '' %>" href="<%= href %>"><%= link.label %></a>
+            <% if (link.items) { %>
+              <%# Share FieldBrik opened a small menu of its own on the classic site. %>
+              <ul class="fb-submenu__drop">
+                <% link.items.forEach(function (item) { %>
+                  <li><a href="<%= item.href %>"><%= item.label %></a></li>
+                <% }); %>
+              </ul>
+            <% } %>
             <% if (index < site.subnav2009.length - 1) { %><span class="Separator">&nbsp;|&nbsp;</span><% } %>
           </li>
         <% }); %>

@@ -193,6 +193,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -200,8 +201,48 @@
 }
 
 .fb-submenu__list li {
+  position: relative;
   display: flex;
   align-items: center;
+}
+
+/* Share FieldBrik carries the classic sub-menu of its own. */
+.fb-submenu__list > li.has-items > a::after {
+  content: '\25BE';
+  margin-left: 3px;
+  font-size: 8px;
+  vertical-align: 1px;
+}
+
+.fb-submenu__drop {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: -8px;
+  z-index: 30;
+  min-width: 178px;
+  margin: 0;
+  padding: 3px 0;
+  list-style: none;
+  border: 1px solid #5e1c19;
+  background: linear-gradient(180deg, #a8342d 0, #8a2b26 60%, #74221f 100%);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.fb-submenu__drop li {
+  display: block;
+}
+
+.fb-submenu__drop a {
+  display: block;
+  padding: 4px 10px;
+  font-size: 10px;
+  text-align: left;
+}
+
+.fb-submenu__list > li.has-items:hover > .fb-submenu__drop,
+.fb-submenu__list > li.has-items:focus-within > .fb-submenu__drop {
+  display: block;
 }
 
 .fb-submenu__list a {
@@ -261,7 +302,16 @@
     line-height: 26px;
   }
 
+  .fb-submenu__list {
+    justify-content: flex-start;
+  }
+
   .fb-submenu__list a {
     font-size: 10px;
+  }
+
+  .fb-submenu__drop {
+    position: static;
+    min-width: 0;
   }
 }

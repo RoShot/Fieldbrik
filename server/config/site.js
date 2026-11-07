@@ -49,12 +49,13 @@ const site = {
     { key: 'help', label: 'Help', href: '/help' },
   ],
 
-  // The My FieldBrik strip under the section strip, for signed-in members.
-  // Labels are the classic ones. Only pages that exist are listed: the classic
-  // menu's Groups, Advertising, Ambassadors and Share entries have nothing
-  // behind them here yet, and a link that goes nowhere is worse than no link.
-  // Profile has no fixed href because it is the viewer's own profile; the
-  // header fills that one in.
+  // The My FieldBrik strip under the section strip, for signed-in members,
+  // centred. This is the classic menu in full. Profile has no fixed href
+  // because it is the viewer's own profile; the header fills that one in.
+  //
+  // Groups, Advertising, Ambassadors and Share FieldBrik are in the strip
+  // because the classic strip carried them. Each opens a real page that states
+  // its scope and what is missing, so nothing here is a link to nowhere.
   subnav2009: [
     { key: 'home', label: 'Home', href: '/home' },
     { key: 'inbox', label: 'Inbox', href: '/messages' },
@@ -64,7 +65,21 @@ const site = {
     { key: 'character', label: 'Character', href: '/character' },
     { key: 'places', label: 'Places', href: '/places/mine' },
     { key: 'stuff', label: 'Stuff', href: '/inventory' },
+    { key: 'groups', label: 'Groups', href: '/groups' },
     { key: 'money', label: 'Money', href: '/earnings' },
+    { key: 'advertising', label: 'Advertising', href: '/advertising' },
+    { key: 'ambassadors', label: 'Ambassadors', href: '/ambassadors' },
+    {
+      key: 'share',
+      label: 'Share FieldBrik',
+      href: '/share',
+      // The classic Share entry opened a small menu of its own.
+      items: [
+        { label: 'Please Upgrade Me', href: '/carpenters-club' },
+        { label: 'Invite A Friend', href: '/share/invite' },
+        { label: 'Referral Leaderboards', href: '/share/referrals' },
+      ],
+    },
   ],
 
   // Signed-in shortcuts, used by the profile sidebar and quick-link lists.
