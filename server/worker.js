@@ -30,6 +30,7 @@ import earningsModule from './routes/earnings.js';
 import mailboxModule from './routes/mailbox.js';
 import reportsModule from './routes/reports.js';
 import newsModule from './routes/news.js';
+import pendingModule from './routes/pending.js';
 import placesModule from './routes/places.js';
 import site from './config/site.js';
 import accounts from './services/accounts.js';
@@ -47,6 +48,7 @@ const earningsRoutes = earningsModule.default || earningsModule;
 const mailboxRoutes = mailboxModule.default || mailboxModule;
 const reportsRoutes = reportsModule.default || reportsModule;
 const newsRoutes = newsModule.default || newsModule;
+const pendingRoutes = pendingModule.default || pendingModule;
 const placesRoutes = placesModule.default || placesModule;
 
 const COOKIE = 'fb_session';
@@ -358,6 +360,13 @@ async function handlePage(request, url, env) {
   // which still answers /news from the phase 1 fixture list.
   if (!failure && !state.answered) {
     failure = await runRouter(newsRoutes, req, res);
+  }
+
+  // Designed-but-unbuilt member pages: /groups, /advertising, /ambassadors and
+  // the three Share FieldBrik pages. They sit in the member strip, so they must
+  // answer with a page rather than a 404.
+  if (!failure && !state.answered) {
+    failure = await runRouter(pendingRoutes, req, res);
   }
 
   // Places own /games, the place pages and the create/edit forms, plus GET /

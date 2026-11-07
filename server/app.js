@@ -15,6 +15,7 @@ const earningsRoutes = require('./routes/earnings');
 const mailboxRoutes = require('./routes/mailbox');
 const reportsRoutes = require('./routes/reports');
 const newsRoutes = require('./routes/news');
+const pendingRoutes = require('./routes/pending');
 const placesRoutes = require('./routes/places');
 const pageRoutes = require('./routes/pages');
 
@@ -68,6 +69,11 @@ app.use('/', mailboxRoutes);
 // News: the archive, the article pages and /admin/news. Mounted before the page
 // router, which still answers /news from the phase 1 fixtures.
 app.use('/', newsRoutes);
+
+// Designed-but-unbuilt pages: /groups, /advertising, /ambassadors and the three
+// Share FieldBrik pages. They sit in the member strip, so they have to answer
+// with a page rather than a 404.
+app.use('/', pendingRoutes);
 
 // Places: /games, the place pages and the create/edit forms, plus GET / and
 // GET /my-page, which read the fixture place list until this pass. Before the
