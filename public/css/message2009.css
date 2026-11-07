@@ -1,0 +1,260 @@
+/* ==========================================================================
+   The private message box, to the 2009 reference.
+
+   A letter-spaced heading, then one frame holding two columns: the sender and
+   the subject on the left, the message in its own scrolling box on the right.
+   Reply / Delete / Cancel sit under the frame, right-aligned.
+   ========================================================================== */
+
+body.fb-message-page {
+  background-color: #dfe7ee;
+  background-image: linear-gradient(180deg, #eef3f7 0, #dbe4ec 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+.fb-pm2009 {
+  padding: 12px 0 28px;
+}
+
+.fb-pm2009 .fb-container {
+  width: 880px;
+}
+
+.fb-pm2009__title {
+  margin: 0 0 10px;
+  color: #232323;
+  font: bold 16px/1.3 Arial, Helvetica, sans-serif;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+}
+
+.fb-pm2009__notice {
+  margin: 0 0 10px;
+  padding: 5px 8px;
+  border: 1px solid #b7a76a;
+  background: #fdf6dc;
+  color: #2b2410;
+  font: 11px/1.5 Arial, Helvetica, sans-serif;
+}
+
+/* ---------- The frame ---------- */
+
+.fb-pm2009__frame {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #6f6f6f;
+  background: #ffffff;
+}
+
+.fb-pm2009__who {
+  flex: 0 0 150px;
+  width: 150px;
+  padding-right: 8px;
+  border-right: 1px solid #d6d6d6;
+  text-align: center;
+}
+
+.fb-pm2009__date {
+  margin: 0 0 8px;
+  color: #444444;
+  font: 10px/1.45 Arial, Helvetica, sans-serif;
+  text-align: left;
+}
+
+.fb-pm2009__avatar {
+  width: 62px;
+  height: 78px;
+  margin: 0 auto 6px;
+  border: 1px solid #8f8f8f;
+  background-color: #d9d6d0;
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.55), rgba(0, 0, 0, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fb-pm2009__avatar span {
+  color: #5b564d;
+  font: bold 26px/1 Arial, Helvetica, sans-serif;
+}
+
+.fb-pm2009__name {
+  margin: 0 0 6px;
+  font: 11px/1.4 Arial, Helvetica, sans-serif;
+  word-wrap: break-word;
+}
+
+.fb-pm2009__name a {
+  color: #003a70;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.fb-pm2009__subject {
+  margin: 0 0 10px;
+  color: #333333;
+  font: 10px/1.45 Arial, Helvetica, sans-serif;
+  word-wrap: break-word;
+}
+
+.fb-pm2009__report {
+  margin: 0;
+  font: 10px/1.4 Arial, Helvetica, sans-serif;
+}
+
+.fb-pm2009__report a {
+  color: #7a3c00;
+  text-decoration: underline;
+}
+
+.fb-pm2009__report-ico {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 2px;
+  border: 1px solid #a9761f;
+  border-radius: 50%;
+  background: #f0c14b;
+  color: #553300;
+  font: bold 9px/12px Arial, Helvetica, sans-serif;
+  text-align: center;
+  vertical-align: -2px;
+}
+
+.fb-pm2009__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border: 1px dashed #7d7d7d;
+  background: #fdfdfd;
+  color: #1e1e1e;
+  font: 12px/1.6 Arial, Helvetica, sans-serif;
+  word-wrap: break-word;
+}
+
+.fb-pm2009__body p {
+  margin: 0 0 8px;
+}
+
+/* ---------- The buttons under the frame ---------- */
+
+.fb-pm2009__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.fb-pm2009__inline {
+  display: inline;
+  margin: 0;
+}
+
+.fb-pm2009__btn {
+  display: inline-block;
+  padding: 3px 16px;
+  border: 1px solid #8d9aa4;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #fdfdfd, #e4e8ec 55%, #d3dae0);
+  color: #1e1e1e;
+  font: 11px/1.5 Arial, Helvetica, sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.fb-pm2009__btn:hover {
+  background: linear-gradient(180deg, #ffffff, #edf1f4 55%, #dce3e8);
+}
+
+/* ---------- Compose ---------- */
+
+.fb-pm2009__compose {
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid #8d9aa4;
+  background: #ffffff;
+}
+
+.fb-pm2009__sub {
+  margin: 0 0 4px;
+  color: #232323;
+  font: bold 12px/1.4 Arial, Helvetica, sans-serif;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.fb-pm2009__hint,
+.fb-pm2009__fine {
+  margin: 0 0 8px;
+  color: #4a4a4a;
+  font: 10px/1.6 Arial, Helvetica, sans-serif;
+}
+
+.fb-pm2009__fine {
+  margin: 8px 0 0;
+}
+
+.fb-pm2009__fine a {
+  color: #003a70;
+}
+
+.fb-pm2009__label {
+  display: block;
+  margin: 0 0 3px;
+  color: #333333;
+  font: bold 11px/1.4 Arial, Helvetica, sans-serif;
+}
+
+.fb-pm2009__form textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  border: 1px dashed #7f7f7f;
+  border-radius: 0;
+  background: #ffffff;
+  color: #1e1e1e;
+  font: 12px/1.5 Arial, Helvetica, sans-serif;
+  resize: vertical;
+}
+
+.fb-pm2009__send {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 980px) {
+  .fb-pm2009 .fb-container {
+    width: auto;
+  }
+
+  .fb-pm2009__frame {
+    flex-direction: column;
+  }
+
+  .fb-pm2009__who {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0 0 8px;
+    border-right: 0;
+    border-bottom: 1px solid #d6d6d6;
+    text-align: left;
+  }
+
+  .fb-pm2009__avatar {
+    margin: 0 0 6px;
+  }
+
+  .fb-pm2009__body {
+    max-height: none;
+  }
+}

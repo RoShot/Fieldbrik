@@ -1,79 +1,97 @@
-<%- include('../partials/head', { pageTitle: pageTitle }) %>
+<%#
+  One private message, in the shape of the 2009 PM box.
+
+  Left of the frame: when it was sent, who sent it, the subject, and a report
+  link. Right of the frame: the message itself, in its own scrolling box with a
+  dashed border. Under it: Reply, Delete and Cancel.
+
+  Reply scrolls to the real form below, which posts to the same route it always
+  did; Delete posts the delete route; Cancel goes back to the inbox. None of the
+  three is decoration.
+%>
+<%- include('../partials/head', { pageTitle: pageTitle, bodyClass: 'fb-message-page' }) %>
+<link rel="stylesheet" href="/css/message2009.css?v=1">
 
 <%# Sent messages are drawn with outgoing set; the inbox is not. %>
 <% var isSent = (typeof outgoing !== 'undefined' && outgoing); %>
 <% var replyTo = isSent ? message.to : message.from; %>
+<% var other = isSent ? message.to : message.from; %>
+<% var backHref = isSent ? '/messages/sent' : '/messages'; %>
+<% var backLabel = isSent ? 'Sent Messages' : 'Messages'; %>
 
 <%- include('../partials/header') %>
 
-<main class="fb-container fb-main">
-  <p class="fb-crumbs">
-    <a href="<%= isSent ? '/messages/sent' : '/messages' %>"><%= isSent ? 'Sent Messages' : 'Messages' %></a>
-    &raquo; <%= message.subject %>
-  </p>
+<main class="fb-pm2009">
+  <div class="fb-container">
+    <h1 class="fb-pm2009__title">Private Message</h1>
 
-  <% if (typeof notice !== 'undefined' && notice) { %>
-    <div class="fb-notice"><p><strong><%= notice %></strong></p></div>
-  <% } %>
+    <% if (typeof notice !== 'undefined' && notice) { %>
+      <p class="fb-pm2009__notice"><%= notice %></p>
+    <% } %>
 
-  <div class="fb-title-row">
-    <h1 class="fb-title"><%= message.subject %></h1>
-    <% if (isSent) { %><span class="fb-pagecount"><%= message.read ? 'Opened' : 'Not opened yet' %></span><% } %>
-  </div>
+    <section class="fb-pm2009__frame">
+      <div class="fb-pm2009__who">
+        <p class="fb-pm2009__date"><%= message.date %></p>
 
-  <section class="fb-panel">
-    <h2 class="fb-panel__title">
-      <span class="fb-panel__title-row">
-        <span>From <a href="/people/<%= encodeURIComponent(message.from) %>"><%= message.from %></a></span>
-        <span><%= message.date %></span>
-      </span>
-    </h2>
-    <div class="fb-panel__body fb-prose">
-      <% message.body.forEach(function (paragraph) { %>
-        <p><%= paragraph %></p>
-      <% }); %>
-    </div>
-    <p class="fb-panel__strip">To <a href="/people/<%= encodeURIComponent(message.to) %>"><%= message.to %></a></p>
-  </section>
-
-  <section class="fb-panel">
-    <h2 class="fb-panel__title">Reply to <%= replyTo %></h2>
-    <div class="fb-panel__body">
-      <form class="fb-auth" method="post" action="/messages/<%= message.id %>/reply">
-        <div class="fb-auth__row fb-auth__row--top">
-          <label for="reply-body">Message</label>
-          <textarea id="reply-body" name="body" rows="4" maxlength="5000" required></textarea>
+        <div class="fb-pm2009__avatar" aria-hidden="true">
+          <span><%= String(other).slice(0, 1).toUpperCase() %></span>
         </div>
-        <div class="fb-auth__actions">
-          <button class="fb-btn fb-btn--primary" type="submit">Send Reply</button>
-        </div>
-      </form>
-    </div>
-    <p class="fb-panel__strip">
-      The reply goes back to <%= replyTo %>, because that is who this conversation is with.
-    </p>
-  </section>
 
-  <section class="fb-panel">
-    <h2 class="fb-panel__title">Delete</h2>
-    <div class="fb-panel__body">
-      <form method="post" action="/messages/<%= message.id %>/delete">
-        <button class="fb-btn" type="submit">Delete this message</button>
-      </form>
-      <p class="fb-admin__note">
-        Deleting removes your copy only. The other person's copy is theirs to keep or delete.
-      </p>
-      <% if (!isSent) { %>
-        <p class="fb-panel__more">
-          <a href="/reports/new?kind=message&amp;id=<%= message.id %>">Report this message</a>
+        <p class="fb-pm2009__name">
+          <a href="/people/<%= encodeURIComponent(other) %>"><%= other %></a>
         </p>
-      <% } %>
-    </div>
-  </section>
 
-  <p class="fb-panel__more">
-    <a href="<%= isSent ? '/messages/sent' : '/messages' %>">Back to <%= isSent ? 'sent messages' : 'the inbox' %></a>
-  </p>
+        <p class="fb-pm2009__subject"><%= isSent ? 'To: ' : 'RE: ' %><%= message.subject %></p>
+
+        <% if (!isSent) { %>
+          <p class="fb-pm2009__report">
+            <a href="/reports/new?kind=message&amp;id=<%= message.id %>">
+              <span class="fb-pm2009__report-ico" aria-hidden="true">!</span>
+              Report Abuse
+            </a>
+          </p>
+        <% } %>
+      </div>
+
+      <div class="fb-pm2009__body">
+        <% message.body.forEach(function (paragraph) { %>
+          <p><%= paragraph %></p>
+        <% }); %>
+      </div>
+    </section>
+
+    <div class="fb-pm2009__actions">
+      <a class="fb-pm2009__btn" href="#reply">Reply</a>
+      <form class="fb-pm2009__inline" method="post" action="/messages/<%= message.id %>/delete">
+        <button class="fb-pm2009__btn" type="submit">Delete</button>
+      </form>
+      <a class="fb-pm2009__btn" href="<%= backHref %>">Cancel</a>
+    </div>
+
+    <section class="fb-pm2009__compose" id="reply">
+      <h2 class="fb-pm2009__sub">Reply to <%= replyTo %></h2>
+      <p class="fb-pm2009__hint">
+        <% if (isSent) { %>
+          This message went to <%= replyTo %>. A reply goes back to them, because that is who the
+          conversation is with.
+        <% } else { %>
+          The reply goes to <%= replyTo %>, because that is who this conversation is with.
+        <% } %>
+      </p>
+      <form class="fb-pm2009__form" method="post" action="/messages/<%= message.id %>/reply">
+        <label class="fb-pm2009__label" for="reply-body">Message</label>
+        <textarea id="reply-body" name="body" rows="6" maxlength="5000" required></textarea>
+        <div class="fb-pm2009__send">
+          <button class="fb-pm2009__btn fb-pm2009__btn--primary" type="submit">Send Reply</button>
+          <a class="fb-pm2009__btn" href="<%= backHref %>">Cancel</a>
+        </div>
+      </form>
+      <p class="fb-pm2009__fine">
+        Deleting removes your copy only; the other person's copy is theirs to keep or delete.
+        <a href="<%= backHref %>">Back to <%= backLabel.toLowerCase() %></a>.
+      </p>
+    </section>
+  </div>
 </main>
 
 <%- include('../partials/footer') %>
