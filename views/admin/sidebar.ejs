@@ -1,4 +1,6 @@
-<%# Admin sidebar. Groups with nothing in them are not drawn - see services/admin.js. %>
+<%# Admin sidebar. Groups with nothing in them are not drawn - see services/admin.js.
+    Banners are appended here rather than in that list because they belong to one
+    page, and only a role that may write settings (rank 240) is offered the link. %>
 <aside class="fb-admin__side">
   <% adminNav.forEach(function (group) { %>
     <div class="fb-sidenav">
@@ -8,4 +10,11 @@
       <% }); %>
     </div>
   <% }); %>
+
+  <% if (typeof admin !== 'undefined' && admin && admin.rank >= 240) { %>
+    <div class="fb-sidenav">
+      <div class="fb-sidenav__title">Site</div>
+      <a class="fb-sidenav__link<%= (typeof currentPath !== 'undefined' && currentPath === '/admin/banners') ? ' is-active' : '' %>" href="/admin/banners"<%= (typeof currentPath !== 'undefined' && currentPath === '/admin/banners') ? ' aria-current="page"' : '' %>>Banners</a>
+    </div>
+  <% } %>
 </aside>
