@@ -1,121 +1,273 @@
-<%- include('../partials/head', { pageTitle: pageTitle }) %>
-<%- include('../partials/header') %>
+<%#
+  The front page, built to the 2009 reference the operator supplied.
 
-<main class="fb-container fb-main">
+  Same bone structure as the reference: a 916px column on a sky, a 40px banner
+  strip carrying this site's own banner art with the wordmark and PLAY NOW laid
+  over it, a blue nav bar, then rows of white boxes.
+
+  What is different, and why:
+    - The banner art is public/img/banner2.png, this site's own. The reference
+      banner is somebody else's artwork and is not used.
+    - The two wide boxes that were empty ad slots in the reference are filled
+      with real places from this database. Ad slots come back when members can
+      actually upload ads.
+    - The facts and news boxes carry statements that are true of this site. No
+      invented counts, prices or headlines.
+    - Parent Login points at the parents pages: there is no separate parent
+      login here, and a button that pretended otherwise would be a lie.
+%>
+<%- include('../partials/head', { pageTitle: pageTitle }) %>
+
+<div class="fb-front">
+  <%# ---------- Banner strip ---------- %>
+  <div class="fb-front__banner">
+    <% if (authState === 'member' && typeof viewer !== 'undefined' && viewer && viewer.username) { %>
+      <a class="fb-front__banner-login" href="/my-page"><%= viewer.username %></a>
+    <% } else { %>
+      <a class="fb-front__banner-login" href="/login">Login</a>
+    <% } %>
+
+    <a class="fb-front__wordmark" href="/home"><%= site.name %></a>
+
+    <% if (recommended.length > 0) { %>
+      <a class="fb-front__playnow" href="/games/<%= recommended[0].slug %>" title="Opens the place page. The FieldBrik client is not built yet.">PLAY NOW</a>
+    <% } else { %>
+      <a class="fb-front__playnow" href="/catalog" title="Nothing is published yet, so this opens the Catalog.">PLAY NOW</a>
+    <% } %>
+  </div>
+
+  <%# ---------- Nav strip ---------- %>
+  <nav class="fb-front__nav" aria-label="Site">
+    <% site.nav2009.forEach(function (link, index) { %>
+      <% if (index > 0) { %><span aria-hidden="true">|</span><% } %>
+      <a href="<%= link.href %>"><%= link.label %></a>
+    <% }); %>
+  </nav>
+
   <% if (query) { %>
-    <div class="fb-panel">
-      <div class="fb-panel__body">
+    <div class="fb-box" style="margin-top:10px">
+      <div class="fb-box__body">
         Places matching &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a>
       </div>
     </div>
   <% } %>
 
-  <div class="fb-cols">
-    <div class="fb-col-main">
-      <%# ---------- Continue ---------- %>
-      <div class="fb-panel">
-        <h2 class="fb-panel__title">Continue
-          <a class="fb-panel__more" href="/places/mine">See All &raquo;</a>
-        </h2>
-        <div class="fb-panel__body">
-          <% if (authState === 'guest') { %>
-            <p class="fb-app__empty"><a href="/login">Sign in</a> to build a place of your own.</p>
-          <% } else if (continuePlaces.length === 0) { %>
-            <p class="fb-app__empty">You have not made a place yet. <a href="/places/new">Build your first one</a>.</p>
-          <% } else { %>
-            <ul class="fb-tiles">
-              <% continuePlaces.forEach(function (place) { %>
-                <li>
-                  <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
-                  <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
-                  <p class="fb-tile__meta"><%= place.published ? 'Published' : 'Draft' %></p>
-                </li>
-              <% }); %>
-            </ul>
-          <% } %>
+  <%# ---------- Row 1: login, cool places, most visited ---------- %>
+  <div class="fb-front__row fb-front__row--1">
+    <% if (authState === 'member' && typeof viewer !== 'undefined' && viewer && viewer.username) { %>
+      <div class="fb-box">
+        <h2 class="fb-box__title">Welcome</h2>
+        <div class="fb-box__body">
+          <a href="/my-page" style="display:block;text-align:center">
+            <%- include('../partials/avatar', { avatar: viewer.avatar, size: 'sm' }) %>
+          </a>
+          <p style="margin:4px 0 6px;text-align:center;font:bold 11px Arial">
+            <a href="/my-page"><%= viewer.username %></a>
+          </p>
+          <a class="fb-btn2009" href="/my-page">My Page</a>
+          <a class="fb-btn2009" href="/places/mine">My Places</a>
+          <a class="fb-btn2009" href="/messages">Messages</a>
+          <a class="fb-btn2009" href="/inventory">Inventory</a>
         </div>
       </div>
+    <% } else { %>
+      <div class="fb-box">
+        <h2 class="fb-box__title">Member Login</h2>
+        <div class="fb-box__body">
+          <form class="fb-login2009" method="post" action="/login">
+            <label for="front-name">Character Name</label>
+            <input id="front-name" name="username" type="text" autocomplete="username" maxlength="20" required>
+            <label for="front-pass">Password</label>
+            <input id="front-pass" name="password" type="password" autocomplete="current-password" required>
+            <button class="fb-login2009__go" type="submit">Login</button>
+          </form>
 
-      <%# ---------- Recommended ---------- %>
-      <div class="fb-panel">
-        <h2 class="fb-panel__title">Recommended For You
-          <a class="fb-panel__more" href="/places/new">Build a place &raquo;</a>
-        </h2>
-        <div class="fb-panel__body">
-          <% if (recommended.length === 0) { %>
-            <p class="fb-app__empty">
-              <% if (query) { %>
-                Nothing matches &ldquo;<%= query %>&rdquo;. <a href="/home">Clear the search</a>.
-              <% } else { %>
-                No places are published yet. Every place here is made by a member, so this list stays empty until somebody publishes one.
-              <% } %>
-            </p>
-          <% } else { %>
-            <ul class="fb-tiles">
-              <% recommended.forEach(function (place) { %>
-                <li>
-                  <a class="fb-tile__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
-                  <a class="fb-tile__name" href="/games/<%= place.slug %>"><%= place.name %></a>
-                  <p class="fb-tile__meta">By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
-                </li>
-              <% }); %>
-            </ul>
-          <% } %>
+          <a class="fb-btn2009" href="/register">Register</a>
+
+          <a class="fb-btn2009" href="/parents" title="The parents pages: what this site is and how it is moderated.">Parent Login</a>
+
+          <a class="fb-login2009__forgot" href="/help">Forgot your password?</a>
         </div>
       </div>
+    <% } %>
 
-      <p class="fb-app__note">
-        <strong>A place is a listing, not a world.</strong>
-        Building and playing happen in the FieldBrik client, which is a separate project and not
-        built yet. Places have real pages and real owners; what they do not have is somewhere to
-        walk around in, so visits are not counted.
-      </p>
-
-      <p class="fb-app__legal">
-        <%= site.name %> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/about">About</a> &middot; <a href="/help">Help</a>
-      </p>
+    <div class="fb-box">
+      <h2 class="fb-box__title">Cool Places
+        <a href="/catalog">Catalog &raquo;</a>
+      </h2>
+      <div class="fb-box__body">
+        <% if (recommended.length === 0) { %>
+          <p class="fb-places2009__meta">Nothing is published yet. Places appear here as members publish them.</p>
+        <% } else { %>
+          <ul class="fb-places2009">
+            <% recommended.slice(0, 4).forEach(function (place) { %>
+              <li>
+                <a class="fb-places2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                <a class="fb-places2009__name" href="/games/<%= place.slug %>"><%= place.name %></a>
+                <p class="fb-places2009__meta">By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
+      </div>
     </div>
 
-    <div class="fb-col-side">
-      <%# ---------- Friends ---------- %>
-      <div class="fb-panel">
-        <h2 class="fb-panel__title">My Friends (<%= friendTotal %>)
-          <a class="fb-panel__more" href="/friends">See All &raquo;</a>
-        </h2>
-        <div class="fb-panel__body">
-          <% if (authState === 'guest') { %>
-            <p class="fb-app__empty"><a href="/login">Sign in</a> to see your friends.</p>
-          <% } else if (friends.length === 0) { %>
-            <p class="fb-app__empty">No friends yet. <a href="/people">Find people</a> and send a request; they appear here once it is accepted.</p>
-          <% } else { %>
-            <ul class="fb-friends">
-              <% friends.forEach(function (friend) { %>
-                <li class="fb-friend">
-                  <a href="/people/<%= encodeURIComponent(friend.username) %>">
-                    <%- include('../partials/avatar', { avatar: friend.avatar, size: 'xs' }) %>
-                  </a>
-                  <span>
-                    <a class="fb-friend__name" href="/people/<%= encodeURIComponent(friend.username) %>"><%= friend.username %></a>
-                    <span class="fb-friend__state"><span class="fb-friend__dot<%= friend.online ? ' is-online' : '' %>" aria-hidden="true"></span><%= friend.online ? 'Online' : 'Offline' %></span>
-                  </span>
-                </li>
-              <% }); %>
-            </ul>
-          <% } %>
-        </div>
-      </div>
-
-      <%# ---------- Membership ---------- %>
-      <div class="fb-panel">
-        <h2 class="fb-panel__title">Carpenters Club</h2>
-        <div class="fb-panel__body fb-panel__body--center">
-          <p>Members keep more places and get a cut of what they sell.</p>
-          <p><a class="fb-btn fb-btn--primary" href="/carpenters-club">Upgrade Now</a></p>
-        </div>
+    <div class="fb-box">
+      <h2 class="fb-box__title">Places to Visit
+        <a href="/places/mine">My Places &raquo;</a>
+      </h2>
+      <div class="fb-box__body">
+        <% if (recommended.length === 0) { %>
+          <p class="fb-places2009__meta">No places to list yet.</p>
+        <% } else { %>
+          <ul class="fb-places2009 fb-places2009--rows">
+            <% recommended.slice().sort(function (a, b) { return b.visits - a.visits; }).slice(0, 4).forEach(function (place) { %>
+              <li>
+                <a class="fb-places2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                <span class="fb-places2009__text">
+                  <a class="fb-places2009__name" href="/games/<%= place.slug %>"><%= place.name %></a>
+                  <span class="fb-places2009__meta"><%= place.published ? 'Published' : 'Draft' %> &middot; <%= place.creator %></span>
+                </span>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
       </div>
     </div>
   </div>
-</main>
+
+  <%# ---------- Row 2: the promo band and the facts ---------- %>
+  <div class="fb-front__row fb-front__row--2">
+    <div class="fb-promo">
+      <div class="fb-promo__text">
+        <span class="fb-promo__logo"><%= site.name %></span>
+        <p class="fb-promo__line">The free online building game.</p>
+      </div>
+      <% if (recommended.length > 0) { %>
+        <a class="fb-promo__cta" href="/games/<%= recommended[0].slug %>" title="Opens the place page. The FieldBrik client is not built yet.">
+          <span class="fb-promo__disc" aria-hidden="true"><span class="fb-promo__tri"></span></span>
+          Play Now
+        </a>
+      <% } else { %>
+        <a class="fb-promo__cta" href="/places/new">
+          <span class="fb-promo__disc" aria-hidden="true"><span class="fb-promo__tri"></span></span>
+          Build
+        </a>
+      <% } %>
+    </div>
+
+    <div class="fb-box">
+      <h2 class="fb-box__title fb-box__title--centre"><%= site.name %> Facts</h2>
+      <div class="fb-box__body">
+        <ul class="fb-facts">
+          <li>
+            <span class="fb-facts__ico" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="5" width="13" height="6" rx="1"></rect><path d="M5 5v6M8 5v6M11 5v6"></path></svg>
+            </span>
+            <span>Every place has a real owner and a real page. <a href="/places/new">Make one</a>.</span>
+          </li>
+          <li>
+            <span class="fb-facts__ico" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="3.5" width="13" height="9" rx="1"></rect><path d="M1.5 6.5h13"></path></svg>
+            </span>
+            <span><%= site.currency.premium %> are bought. <%= site.currency.earned %> are earned from what other members buy.</span>
+          </li>
+          <li>
+            <span class="fb-facts__ico" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6"></circle><path d="M8 5v6M6 6.4h2.6a1.2 1.2 0 0 1 0 2.4H7a1.2 1.2 0 0 0 0 2.4h2.8"></path></svg>
+            </span>
+            <span>Visits are not counted yet: the client that would play a place does not exist.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <%# ---------- Row 3: the featured place and the parents' corner ---------- %>
+  <div class="fb-front__row fb-front__row--3">
+    <div class="fb-box">
+      <% if (recommended.length === 0) { %>
+        <h2 class="fb-box__title fb-box__title--centre">Featured Place</h2>
+        <div class="fb-box__body">
+          <p class="fb-places2009__meta">No place is published yet, so there is nothing to feature. <a href="/places/new">Build the first one</a>.</p>
+        </div>
+      <% } else { %>
+        <% var featured = recommended[0]; %>
+        <h2 class="fb-box__title fb-box__title--centre">Featured Place: <%= featured.name %></h2>
+        <div class="fb-box__body">
+          <div class="fb-feature">
+            <a class="fb-feature__thumb" href="/games/<%= featured.slug %>" style="--thumb: <%= featured.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+            <div class="fb-feature__side">
+              <a class="fb-feature__play" href="/games/<%= featured.slug %>">Play This</a>
+              <p class="fb-feature__meta">Updated: <%= featured.updated %></p>
+              <p class="fb-feature__meta">Created: <%= featured.created %></p>
+              <p class="fb-feature__meta"><%= featured.published ? 'Published' : 'Draft' %></p>
+              <p class="fb-feature__creator">Creator:
+                <a href="/people/<%= encodeURIComponent(featured.creator) %>"><%= featured.creator %></a>
+              </p>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="fb-box">
+      <h2 class="fb-box__title fb-box__title--centre">
+        <span aria-hidden="true" style="margin-right:4px">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#1e1e1e" stroke-width="1.3" style="vertical-align:-2px"><circle cx="8" cy="5.5" r="2.6"></circle><path d="M2.9 13.6c0-2.5 2.3-4 5.1-4s5.1 1.5 5.1 4"></path></svg>
+        </span>
+        Parents&rsquo; Corner
+      </h2>
+      <div class="fb-box__body fb-parents">
+        <p><%= site.name %> is a kid-friendly place on the internet where your children can exercise their
+          creativity in a safe, moderated online environment.</p>
+        <div class="fb-parents__btns">
+          <a class="fb-btn2009" href="/parents/guide">Learn More</a>
+          <a class="fb-btn2009" href="/parents">Access Parent Account</a>
+        </div>
+        <a class="fb-parents__privacy" href="/privacy">Privacy Policy</a>
+        <span class="fb-parents__seal">Moderated community &middot; <%= site.version %></span>
+      </div>
+    </div>
+  </div>
+
+  <%# ---------- Row 4: more places, and the news ---------- %>
+  <div class="fb-front__row fb-front__row--4">
+    <div class="fb-box">
+      <h2 class="fb-box__title">More Places
+        <a href="/catalog">Browse the Catalog &raquo;</a>
+      </h2>
+      <div class="fb-box__body">
+        <% if (recommended.length <= 4) { %>
+          <p class="fb-places2009__meta">Everything published is already listed above.</p>
+        <% } else { %>
+          <ul class="fb-places2009">
+            <% recommended.slice(4, 8).forEach(function (place) { %>
+              <li>
+                <a class="fb-places2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                <a class="fb-places2009__name" href="/games/<%= place.slug %>"><%= place.name %></a>
+                <p class="fb-places2009__meta">By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
+      </div>
+      <a class="fb-feedback2009" href="/support">[ feedback ]</a>
+    </div>
+
+    <div class="fb-box">
+      <h2 class="fb-box__title fb-box__title--centre"><%= site.name %> News</h2>
+      <div class="fb-box__body fb-box__body--flush">
+        <ul class="fb-news2009">
+          <li>FieldBrik is in its <%= site.version %> build: places, catalog, forum and messages are live.</li>
+          <li>Sign-ups are open to everybody.</li>
+          <li>The client that plays a place is a separate project, still to come.</li>
+        </ul>
+        <a class="fb-news2009__all" href="/news">All news &raquo;</a>
+      </div>
+    </div>
+  </div>
+</div>
 
 <%- include('../partials/footer') %>
 </body>
