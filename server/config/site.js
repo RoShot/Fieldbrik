@@ -32,20 +32,39 @@ const site = {
     { key: 'help', label: 'Help', href: '/help' },
   ],
 
-  // The section strip, in the 2009 order: My FieldBrik | Games | Catalog |
-  // People | Carpenters Club | Forum | News | Parents | Help. Labels and order
-  // come from the classic site; the hrefs are this site's real pages, so Games
-  // points at the front page, where the places are listed.
+  // The section strip, in the 2009 order the reference top bar shows:
+  // My FieldBrik | Games | Catalog | Carpenters Club | Browse | Forum | News |
+  // Help. Labels and order come from that bar; the hrefs are this site's real
+  // pages. "Browse" is the member directory, which is what the classic Browse
+  // tab opened. Admin is not in this list: it is drawn by the header only for
+  // staff at rank 100 or above.
   nav2009: [
     { key: 'my-page', label: 'My FieldBrik', href: '/my-page' },
-    { key: 'games', label: 'Games', href: '/home' },
+    { key: 'games', label: 'Games', href: '/games' },
     { key: 'catalog', label: 'Catalog', href: '/catalog' },
-    { key: 'people', label: 'People', href: '/people' },
     { key: 'carpenters-club', label: 'Carpenters Club', href: '/carpenters-club' },
+    { key: 'people', label: 'Browse', href: '/people' },
     { key: 'forum', label: 'Forum', href: '/forum' },
     { key: 'news', label: 'News', href: '/news' },
-    { key: 'parents', label: 'Parents', href: '/parents' },
     { key: 'help', label: 'Help', href: '/help' },
+  ],
+
+  // The My FieldBrik strip under the section strip, for signed-in members.
+  // Labels are the classic ones. Only pages that exist are listed: the classic
+  // menu's Groups, Advertising, Ambassadors and Share entries have nothing
+  // behind them here yet, and a link that goes nowhere is worse than no link.
+  // Profile has no fixed href because it is the viewer's own profile; the
+  // header fills that one in.
+  subnav2009: [
+    { key: 'home', label: 'Home', href: '/home' },
+    { key: 'inbox', label: 'Inbox', href: '/messages' },
+    { key: 'account', label: 'Account', href: '/settings' },
+    { key: 'profile', label: 'Profile', href: null },
+    { key: 'friends', label: 'Friends', href: '/friends' },
+    { key: 'character', label: 'Character', href: '/character' },
+    { key: 'places', label: 'Places', href: '/places/mine' },
+    { key: 'stuff', label: 'Stuff', href: '/inventory' },
+    { key: 'money', label: 'Money', href: '/earnings' },
   ],
 
   // Signed-in shortcuts, used by the profile sidebar and quick-link lists.

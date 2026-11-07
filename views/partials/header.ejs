@@ -1,44 +1,49 @@
 <%#
-  The banner band and the section strip, on every page.
+  The top bar and the two strips, on every page but the front page.
 
-  The 2009 shape: a deep blue band with the name at the left, the account at the
-  right, and a darker strip beneath it carrying the section links, separated by
-  pipes. Guests get the small login box the classic site had up in the band; it
-  posts to /login, the same handler the log-in page uses, so it really signs you
-  in rather than pretending to.
+  Shape comes from the 2009 reference: the account at the left of the band, the
+  wordmark centred, a white account box at the right, the grey-blue section strip
+  underneath, and the red My FieldBrik strip below that for a signed-in member.
 
-  The name is set in type. This site has no banner artwork and does not copy
-  anybody else's, so the band carries the wordmark and the tagline only.
+  The band art is this site's own public/img/banner2.png. Nothing is copied from
+  anybody's artwork: the wordmark is set in type.
+
+  Admin is drawn only for staff at rank 100 (Developer) or above. The rank comes
+  from the role table with the viewer, so it is a fact about the account, not a
+  flag echoed back from a cookie.
 %>
 <header class="fb-header fb-header--<%= authState %>">
   <div class="fb-container fb-header__row">
-    <a class="fb-logo" href="/home">
-      <span class="fb-logo__text"><%= site.name %></span>
-      <span class="fb-logo__tag"><%= site.tagline[0] %> <%= site.tagline[1] %></span>
-    </a>
+    <div class="fb-who2009">
+      <% if (authState === 'member' && viewer && viewer.username) { %>
+        <p class="fb-who2009__line">Logged in as
+          <a href="/home"><strong><%= viewer.username %></strong></a> |
+          <a href="/logout">Logout</a></p>
+        <p class="fb-who2009__line fb-who2009__line--dim">Member since <%= viewer.joined %></p>
+      <% } else { %>
+        <p class="fb-who2009__line"><a href="/login">Log in</a> | <a href="/register">Sign up</a></p>
+        <p class="fb-who2009__line fb-who2009__line--dim">Building and playing are free.</p>
+      <% } %>
+    </div>
 
-    <% if (authState === 'guest') { %>
-      <form class="fb-login" method="post" action="/login">
-        <label class="fb-login__title" for="fb-login-name">Log In</label>
-        <input id="fb-login-name" name="username" type="text" placeholder="Character Name" autocomplete="username" maxlength="20" required>
-        <input name="password" type="password" placeholder="Password" autocomplete="current-password" required>
-        <button class="fb-login__btn" type="submit">Log In</button>
-      </form>
-      <a class="fb-tab" href="/register">Sign Up</a>
-    <% } else { %>
-      <div class="fb-currency">
-        <span class="fb-currency__row" title="<%= site.currency.premium %>">
+    <a class="fb-wordmark2009" href="/"><%= site.name %></a>
+
+    <div class="fb-account2009">
+      <% if (authState === 'member' && viewer && viewer.username) { %>
+        <a class="fb-account2009__line" href="/messages">Messages</a>
+        <span class="fb-account2009__line">
           <%- include('currency-icon', { kind: 'bucks' }) %>
           <strong><%= viewer.currency.bucks.toLocaleString('en-US') %></strong> <%= site.currency.premium %>
         </span>
-        <span class="fb-currency__row" title="<%= site.currency.earned %>">
+        <span class="fb-account2009__line">
           <%- include('currency-icon', { kind: 'tickets' }) %>
           <strong><%= viewer.currency.tickets.toLocaleString('en-US') %></strong> <%= site.currency.earned %>
         </span>
-        <a class="fb-tab" href="/my-page"><%= viewer.username %></a>
-        <a class="fb-tab" href="/settings">Settings</a>
-      </div>
-    <% } %>
+      <% } else { %>
+        <a class="fb-account2009__line" href="/register">Create an account</a>
+        <span class="fb-account2009__line">It takes a minute.</span>
+      <% } %>
+    </div>
   </div>
 </header>
 
@@ -49,9 +54,31 @@
       <a class="fb-tab<%= (typeof currentPath !== 'undefined' && currentPath === link.href) ? ' is-active' : '' %>" href="<%= link.href %>"><%= link.label %></a>
     <% }); %>
 
-    <form class="fb-navsearch" method="get" action="/home" role="search">
+    <% var staffRank = (authState === 'member' && viewer && viewer.staffRank) ? Number(viewer.staffRank) : 0; %>
+    <% if (staffRank >= 100) { %>
+      <span class="fb-tab__sep" aria-hidden="true">|</span>
+      <a class="fb-tab<%= (typeof currentPath !== 'undefined' && currentPath.indexOf('/admin') === 0) ? ' is-active' : '' %>" href="/admin">Admin</a>
+    <% } %>
+
+    <form class="fb-navsearch" method="get" action="/games" role="search">
       <input name="q" type="search" placeholder="Search" aria-label="Search places">
       <button class="fb-btn" type="submit">Go</button>
     </form>
   </div>
 </nav>
+
+<% if (authState === 'member' && viewer && viewer.username) { %>
+  <nav class="fb-submenu" aria-label="My FieldBrik">
+    <div class="fb-container">
+      <ul class="fb-submenu__list">
+        <% site.subnav2009.forEach(function (link, index) { %>
+          <% var href = link.href || ('/people/' + encodeURIComponent(viewer.username)); %>
+          <li>
+            <a class="<%= (typeof currentPath !== 'undefined' && currentPath === href) ? 'subMenuItemselected' : '' %>" href="<%= href %>"><%= link.label %></a>
+            <% if (index < site.subnav2009.length - 1) { %><span class="Separator">&nbsp;|&nbsp;</span><% } %>
+          </li>
+        <% }); %>
+      </ul>
+    </div>
+  </nav>
+<% } %>

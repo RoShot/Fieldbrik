@@ -20,6 +20,8 @@
   <% var isAdminPage = (typeof extraCss !== 'undefined' && extraCss && String(extraCss).indexOf('admin') !== -1); %>
   <% if (!isAdminPage) { %>
   <link rel="stylesheet" href="/css/legacy2009.css?v=1">
+  <%# The top bar and its strips, loaded after the skin so it wins. %>
+  <link rel="stylesheet" href="/css/topbar2009.css?v=1">
   <% } %>
 </head>
 <%# Pages that need a body class of their own pass one in; every other page
