@@ -39,10 +39,19 @@ five studs tall, with a two-dot-and-a-smile face made of small boxes. Movement i
 camera-relative and the body turns towards its direction of travel. Dragging the
 mouse looks around, and dragging right turns the view right.
 
-## 0.4 — Milestone 4: physics
+## 0.4 — Milestone 4: physics — done
 
 Gravity, jumping, ground and wall collision, friction, and the promise that the
 player cannot fall through the baseplate or get permanently stuck.
+
+Shipped with the player collided as a 1.8-by-5 box against every collidable part,
+resolved in each part's own space so rotated bricks work, and moved in slices of a
+fifth of a stud so a fast fall cannot pass through a thin brick. A jump peaks at
+about 4.6 studs, which clears the one-stud bricks and the steps but not the yellow
+pillar. Falling below the world puts the player back at spawn.
+
+Still missing from the era: stepping up small ledges, sliding on slopes, and any
+collision on the camera, which can still be zoomed inside a brick.
 
 ## 0.5 — Milestone 5: first playable build
 

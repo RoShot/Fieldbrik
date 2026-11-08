@@ -3,16 +3,16 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.3**: a window, a world of bricks, and a blocky avatar you can walk
-around in third person. There is no gravity, jumping or collision yet — that is
-Milestone 4 in `Documentation/ROADMAP.md`.
+This is **0.4**: a window, a world of bricks, and a blocky avatar you can walk,
+jump and climb around in third person. Gravity pulls it down, bricks stop it, and
+falling off the baseplate puts it back at the spawn point.
 
 ## Run it
 
 Download `FieldBrikPlayer.exe` from the repository's **Releases** page and
 double-click it. Nothing needs installing.
 
-Windows will warn you the first time ("Windows protected your PC"") because the
+Windows will warn you the first time ("Windows protected your PC") because the
 exe is not code-signed. Choose **More info → Run anyway**. That warning is about
 the missing signature, not about the file.
 
@@ -24,6 +24,7 @@ The window opens at 1024×768, can be resized, and closes with the title bar X o
 | Input | Action |
 | --- | --- |
 | W / A / S / D | Walk, relative to where the camera is looking |
+| Space | Jump (only when standing on something) |
 | Left-drag | Look around (drag right and the view turns right) |
 | Arrow keys | Look around without the mouse |
 | Q / E | Zoom out / in |
@@ -43,13 +44,31 @@ walk — and the body swings round to face the direction it is moving, which is 
 only "animation" of the era. The round studs on the top faces belong to the 2006
 pass and are not here yet.
 
+## Physics
+
+Gravity is 60 studs per second squared, walking speed is 16, and a jump leaves the
+ground at 24, which peaks about 4.6 studs up — enough to land on the red slab or
+the first step, not enough to get onto the yellow pillar in one go.
+
+The player is collided as a box, 1.8 studs across and 5 tall, not as the avatar's
+outline: it is what the bricks are, so every test is exact. Each part is resolved
+in its own space, by taking the player's eight corners into the brick's local
+frame and pushing out along the axis it overlaps least, so bricks rotated on any
+axis behave. Movement is cut into slices of at most a fifth of a stud, which is
+what stops a fast fall from passing through a one-stud-thick brick.
+
+You are stopped by walls rather than snagging on them, because the shallowest axis
+is the one that gets corrected. Land on something and the fall ends there; jump
+into the underside of a brick and the head stops against it. Fall below -60 and
+the client puts you back at the spawn point instead of dropping you forever.
+
 ## What is in the world
 
 The baseplate is an ordinary part (80×1×80 studs), not a special case, which is
-what lets the same drawing code handle it and what will let it be collided with
-later. On top of it are ten parts of different sizes, colours and angles: a red
-slab, a yellow pillar, a green wall, a white cube turned 30°, a grey plane tilted
-on two axes, a blue block, and three steps.
+what lets the same code draw it and collide with it. On top of it are ten parts of
+different sizes, colours and angles: a red slab, a yellow pillar, a green wall, a
+white cube turned 30°, a grey plane tilted on two axes, a blue block, and three
+steps.
 
 Each one is a `Part`: position, size, rotation in degrees, colour, and whether it
 collides. The renderer draws every part as the same unit cube scaled and moved by
@@ -84,13 +103,14 @@ player/
     Rendering/     Direct3D 11 device, depth buffer, cube mesh, shaders
     Camera/        third-person follow camera
     Characters/    the avatar's body and the player's movement
+    Physics/       collision against the bricks
     World/         the Part type and the test world
     Input/         keyboard and mouse state
   Documentation/   roadmap, milestone notes
 ```
 
-`Physics/`, `Objects/` and `Audio/` arrive with the milestones that need them,
-rather than as empty folders.
+`Objects/` and `Audio/` arrive with the milestones that need them, rather than as
+empty folders.
 
 ## Design notes
 
@@ -116,11 +136,12 @@ rather than as empty folders.
 
 ## Known issues
 
-- No gravity, no jumping, no collision. The avatar walks on the flat top of the
-  baseplate and is stopped at its edge; you can walk through bricks, and the
-  camera can end up inside one.
+- No stepping up: a one-stud brick in front of you is something to jump onto, not
+  to walk over. Slopes are stood on rather than walked up, and nothing slides.
+- The camera has no collision of its own, so it can still end up inside a brick
+  when you zoom in against one.
 - No walk animation, by design for this era. The body turns towards its direction
-  of travel and slides.
+  of travel and slides, and it does not change pose in mid-air.
 - No studs on the avatar's body parts yet.
 - Back faces are not culled (`CULL_NONE`). A closed box hides them anyway, so it
   is invisible today; winding will be settled when a mesh importer needs to agree

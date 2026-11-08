@@ -59,7 +59,7 @@ bool App::Initialise() {
   camera_.SetTarget(FocusPoint());
   camera_.SnapToTarget();
 
-  avatarParts_.reserve(16);
+  avatarParts_.reserve(8);
 
   initialised_ = true;
   SetTitle(0);
@@ -98,7 +98,7 @@ int App::Run() {
     // player across the baseplate or the camera across the world.
     const float delta = static_cast<float>(elapsed > 0.1 ? 0.1 : elapsed);
 
-    player_.Update(input_, camera_.Yaw(), delta);
+    player_.Update(input_, world_.Parts(), camera_.Yaw(), delta);
     camera_.SetTarget(FocusPoint());
     UpdateCamera(delta);
 
@@ -153,7 +153,7 @@ void App::UpdateCamera(float deltaSeconds) {
 
 void App::SetTitle(int framesPerSecond) {
   wchar_t buffer[256];
-  swprintf_s(buffer, L"FieldBrik Player 0.3 - %d x %d - %d parts - %d fps",
+  swprintf_s(buffer, L"FieldBrik Player 0.4 - %d x %d - %d parts - %d fps",
              window_.Width(), window_.Height(),
              world_.PartCount() + static_cast<int>(avatarParts_.size()),
              framesPerSecond);
