@@ -89,6 +89,7 @@ class Avatar {
   void MoveSit();
   void Advance(float deltaSeconds);
 
+
   DirectX::XMFLOAT3 feet_{0.0f, 0.0f, 0.0f};
   float facing_ = 0.0f;
 

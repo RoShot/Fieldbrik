@@ -13,7 +13,7 @@ namespace {
 constexpr XMFLOAT3 kSkinColour{0.96f, 0.80f, 0.19f};
 constexpr XMFLOAT3 kTorsoColour{0.06f, 0.41f, 0.67f};
 constexpr XMFLOAT3 kLegColour{0.64f, 0.74f, 0.28f};
-constexpr XMFLOAT3 kFaceColour{0.09f, 0.09f, 0.09f};
+
 
 constexpr float kRunHipRate = 0.55f;      // radians per 0.1 s tick, running
 constexpr float kRunHipAmplitude = 0.75f;  // radians, so about 43 degrees each way
@@ -53,19 +53,8 @@ constexpr BodyPart kBody[] = {
     {"Head", {0.0f, 4.0f, 0.0f}, {0.0f, 4.5f, 0.0f}, {2.0f, 1.0f, 1.0f},
      kSkinColour, JointId::Head, PartShape::RoundedHead},
 
-    // The face: two dots and a smile, sitting just proud of the front of the head
-    // so they cannot z-fight with it. They hang off the same pivot as the head, so
-    // they follow it if the neck ever moves.
-    {"Left eye", {0.0f, 4.0f, 0.0f}, {-0.42f, 4.62f, 0.52f}, {0.18f, 0.18f, 0.06f},
-     kFaceColour, JointId::Head},
-    {"Right eye", {0.0f, 4.0f, 0.0f}, {0.42f, 4.62f, 0.52f}, {0.18f, 0.18f, 0.06f},
-     kFaceColour, JointId::Head},
-    {"Mouth", {0.0f, 4.0f, 0.0f}, {0.0f, 4.28f, 0.52f}, {0.52f, 0.10f, 0.06f},
-     kFaceColour, JointId::Head},
-    {"Mouth left", {0.0f, 4.0f, 0.0f}, {-0.31f, 4.35f, 0.52f}, {0.12f, 0.10f, 0.06f},
-     kFaceColour, JointId::Head},
-    {"Mouth right", {0.0f, 4.0f, 0.0f}, {0.31f, 4.35f, 0.52f}, {0.12f, 0.10f, 0.06f},
-     kFaceColour, JointId::Head},
+    // The face is not geometry any more. It is the era's face image, drawn on the
+    // front of this head by the renderer, which is where it lives now.
 };
 
 // The pitch a part swings through, in body space. The sides are mirrored, which
@@ -118,7 +107,14 @@ void Avatar::MoveSwing(Pose pose) {
   float frequency = 1.0f;
   float climbFudge = 0.0f;
 
-  if (pose == Pose::Running) {
+  if (pose == Pose::Standing) {
+    // The script gives the idle shoulders a MaxVelocity of 0.15, which is why the
+    // arms came down out of a jump slowly instead of dropping: three radians at a
+    // eighth of a radian a tick is about two seconds. That slowness is most of
+    // what the landing hang looks like, so it is kept rather than smoothed.
+    rightShoulder_.rate = 0.15f;
+    leftShoulder_.rate = 0.15f;
+  } else if (pose == Pose::Running) {
     // The script lifts the shoulders' rate only once they are out past 1.5 rad,
     // which is what makes a held arm snap up and a swinging one ease out.
     rightShoulder_.rate = std::fabs(rightShoulder_.angle) > 1.5f ? 0.75f : 0.15f;
