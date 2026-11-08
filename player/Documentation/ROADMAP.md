@@ -163,9 +163,21 @@ The era's own images, drawn where the era drew them.
 - The stud geometry is gone: the meshes, the dynamic buffer and the two serverside
   batches that built them were deleted rather than left behind.
 
-Two things 0.9 deliberately leaves for the next milestone: the era's cursors in
-`content/textures/ui`, and `SurfacesStrip.png`, which is not read until the rule
-for choosing between the two strip lengths is settled.
+## 0.10 — Milestone 10: the cursors and a pose that should not happen — done
+
+- The era's cursors are the mouse cursor: the arrow, the hand while the camera is
+  dragged, and the resize arrow over the frame. They are decoded from the exe's
+  own resources by `Source/Window/Cursors.cpp`; anything that cannot be read falls
+  back to the system cursor of the same shape.
+- Being placed in the world is no longer a landing. `Spawn` settles onto the
+  ground and starts grounded, so the first frame cannot read as a fall that has
+  just ended, swing the arms up and bring them down over the next two seconds.
+- The window reports when it comes back to the foreground, and the frame clock
+  restarts there rather than counting the time spent in the background; a landing
+  pose held from before is dropped at the same moment.
+- `SurfacesStrip.png` is settled rather than read: it is the same four tiles at
+  half the block size, so one tile per stud samples the same pixels and the long
+  strip serves every face.
 
 ## The eras
 

@@ -38,6 +38,13 @@ constexpr int kSunResource = 170;
 constexpr int kMoonResource = 171;
 constexpr int kFlareResource = 172;
 
+// The era's cursors: the arrow, the hand while the camera is dragged, and the
+// resize arrow over the window's frame. They are read by Source/Window/Cursors.cpp
+// rather than the renderer, because a cursor is a Win32 object.
+constexpr int kArrowCursorResource = 180;
+constexpr int kDragCursorResource = 181;
+constexpr int kResizeCursorResource = 182;
+
 // Reads a resource compiled into this executable. Returns false, with `error`
 // saying what was missing, when the id is not in the image or is empty.
 bool ReadEmbedded(int id, std::vector<unsigned char>& bytes, std::wstring& error);

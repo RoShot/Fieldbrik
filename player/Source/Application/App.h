@@ -17,6 +17,7 @@
 #include "Characters/Player.h"
 #include "Input/Input.h"
 #include "Rendering/Renderer.h"
+#include "Window/Cursors.h"
 #include "Window/Window.h"
 #include "World/Part.h"
 #include "World/World.h"
@@ -59,6 +60,7 @@ class App {
   Window window_;
   Renderer renderer_;
   Input input_;
+  Cursors cursors_;
 
   World world_;
   Player player_;
@@ -73,6 +75,10 @@ class App {
   std::vector<Part> avatarParts_;
 
   bool initialised_ = false;
+
+  // Set when the window is activated again, so the loop can start its clock over
+  // instead of treating the time in the background as a frame.
+  bool clockReset_ = false;
 };
 
 }  // namespace fieldbrik

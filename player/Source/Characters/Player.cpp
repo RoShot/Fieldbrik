@@ -99,29 +99,35 @@ bool TryStepUp(const std::vector<Part>& parts, const XMFLOAT3& before, float ste
 
 }  // namespace
 
-void Player::Spawn(const XMFLOAT3& feetPosition) {
+void Player::Spawn(const XMFLOAT3& feetPosition, const std::vector<Part>& parts) {
   spawn_ = feetPosition;
   position_ = feetPosition;
   velocity_ = {0.0f, 0.0f, 0.0f};
-  grounded_ = false;
   landingHold_ = 0.0f;
 
   // Facing -Z, which is where most builds put their bricks. The camera starts
   // behind him, so the first frame reads as "you are standing here, the build is
   // in front".
   facing_ = 180.0f;
+
+  // Being placed is not a landing. Settle onto the ground before the first frame
+  // and start grounded, or the client treats the spawn as the end of a fall: it
+  // holds the jump pose for half a second and the arms swing up and back down
+  // before the player has moved at all.
+  XMFLOAT3 settled = position_;
+  const Contact contact = ResolvePlayer(parts, settled);
+  position_ = settled;
+  grounded_ = contact.grounded;
+  velocity_.y = 0.0f;
 }
 
 float Player::HorizontalSpeed() const {
   return std::sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
 }
 
-void Player::Respawn() {
-  position_ = spawn_;
-  velocity_ = {0.0f, 0.0f, 0.0f};
-  grounded_ = false;
-  landingHold_ = 0.0f;
-  facing_ = 180.0f;
+void Player::Respawn(const std::vector<Part>& parts) {
+  // The same treatment as a first spawn: being put back is not a landing either.
+  Spawn(spawn_, parts);
 }
 
 void Player::Update(const Input& input, const std::vector<Part>& parts,
@@ -258,7 +264,7 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
     facing_ += ShortestArc(facing_, desired) * blend;
   }
 
-  if (position_.y < kRespawnBelow) Respawn();
+  if (position_.y < kRespawnBelow) Respawn(parts);
 }
 
 }  // namespace fieldbrik

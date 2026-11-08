@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.21)
 # Built by .github/workflows/player-build.yml on every push that touches this
 # folder, and by hand with the commands in README.md.
 
-project(FieldBrikPlayer VERSION 0.9 LANGUAGES CXX)
+project(FieldBrikPlayer VERSION 0.10 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -121,6 +121,21 @@ foreach(pair "SUN;sun.jpg;170" "MOON;moon.jpg;171" "FLARE;lensflare.jpg;172")
   endif()
 endforeach()
 
+# The era's cursors. Three states exist in the client: the arrow, the hand while
+# the camera is dragged, and the resize arrow over the frame. The gun, its wait
+# variant and the spawn cursor belong to tools, and arrive with them.
+foreach(pair "Arrow;ArrowCursor.png;180" "Drag;DragCursor.png;181"
+            "Resize;ResizeCursor.png;182")
+  list(GET pair 0 cursor_role)
+  list(GET pair 1 cursor_file)
+  list(GET pair 2 cursor_id)
+
+  if(EXISTS "${PLAYER_TEXTURE_DIR}/ui/${cursor_file}")
+    file(REAL_PATH "${PLAYER_TEXTURE_DIR}/ui/${cursor_file}" cursor_path)
+    string(APPEND TEXTURE_RESOURCES "${cursor_id} 10 \"${cursor_path}\"\n")
+  endif()
+endforeach()
+
 list(LENGTH BRICK_TEXTURE_FILES texture_count)
 message(STATUS
   "FieldBrik Player: ${texture_count} brick texture(s), sky ${SKY_PRESENT}")
@@ -138,6 +153,7 @@ add_executable(FieldBrikPlayer WIN32
   Source/Application/main.cpp
   Source/Application/App.cpp
   Source/Window/Window.cpp
+  Source/Window/Cursors.cpp
   Source/Rendering/Renderer.cpp
   Source/Rendering/RendererHead.cpp
   Source/Rendering/RendererTextures.cpp

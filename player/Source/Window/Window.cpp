@@ -125,6 +125,23 @@ LRESULT Window::HandleMessage(UINT message, WPARAM wparam, LPARAM lparam) {
       return 0;
     }
 
+    case WM_SETCURSOR: {
+      // Answering every hit test here is what makes the frame's edges wear the
+      // era's resize arrow instead of the system one.
+      if (cursor_) {
+        ::SetCursor(cursor_(LOWORD(lparam)));
+        return TRUE;
+      }
+      break;
+    }
+
+    case WM_ACTIVATE:
+      // Coming back from the background is not something that happened in the
+      // world, so the client starts its clock over rather than simulating the
+      // time it was away.
+      if (LOWORD(wparam) != WA_INACTIVE && activate_) activate_();
+      break;
+
     case WM_CLOSE:
       if (close_) close_();
       Destroy();

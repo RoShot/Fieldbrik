@@ -151,6 +151,11 @@ and the weld across the sides, tinted by the brick's own colour, which is what a
 brick looked like before surfaces were switched off. The avatar wears one stud on
 the top of each arm and nothing else.
 
+The cursors are the era's own as well: the arrow for pointing, the hand while the
+camera is being dragged, and the resize arrow over the window's frame. They are
+compiled in like everything else, and a file that cannot be read falls back to the
+system cursor of the same shape.
+
 The sky is the era's own skybox: six square pictures, one per face of a cube round
 the camera, sampled by the direction every pixel looks along, so it turns with the
 view instead of being painted on the screen. The joins between the faces are left
@@ -294,9 +299,11 @@ empty folders.
   another window cannot walk the player around.
 - Only the top face of a brick is textured, and only the classic smile is
   compiled in: the other seven faces arrive with the website tie-in.
-- Only `Surfaces.png` is read. `SurfacesStrip.png` — the shorter strip, for short
-  faces — is unused until the rule for choosing between them is worked out.
-- The era's cursors in `content/textures/ui` are not the mouse cursor yet.
+- `SurfacesStrip.png` is not read, and that is now a decision rather than an open
+  question: it is the same four tiles at half the block size — 2x2 studs of the
+  same 32 pixels in a 64-pixel block, where `Surfaces.png` has 4x4 in 128. One
+  tile per stud samples the same pixels either way, so the long strip serves every
+  face and a second strip would be a second path with nothing to show for it.
 - No tool poses yet: the arm does not come up to hold anything, because there is
   nothing to hold until tools arrive.
 - Back faces are not culled (`CULL_NONE`). A closed box hides them anyway, so it

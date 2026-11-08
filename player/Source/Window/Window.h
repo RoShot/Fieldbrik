@@ -17,6 +17,8 @@ class Window {
  public:
   using ResizeHandler = std::function<void(int width, int height)>;
   using CloseHandler = std::function<void()>;
+  using CursorHandler = std::function<HCURSOR(unsigned hitTest)>;
+  using ActivateHandler = std::function<void()>;
 
   Window() = default;
   ~Window();
@@ -48,6 +50,13 @@ class Window {
   void OnResize(ResizeHandler handler) { resize_ = std::move(handler); }
   void OnClose(CloseHandler handler) { close_ = std::move(handler); }
 
+  // Asked on every WM_SETCURSOR, with the hit test Windows reported.
+  void OnSetCursor(CursorHandler handler) { cursor_ = std::move(handler); }
+
+  // Called when the window comes back to the foreground, which is when the frame
+  // clock has to start over: time spent away is not time the world stood still.
+  void OnActivate(ActivateHandler handler) { activate_ = std::move(handler); }
+
  private:
   static LRESULT CALLBACK WndProc(HWND handle, UINT message, WPARAM wparam,
                                   LPARAM lparam);
@@ -63,6 +72,8 @@ class Window {
 
   ResizeHandler resize_;
   CloseHandler close_;
+  CursorHandler cursor_;
+  ActivateHandler activate_;
 };
 
 }  // namespace fieldbrik

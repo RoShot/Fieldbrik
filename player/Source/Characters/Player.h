@@ -22,7 +22,10 @@ namespace fieldbrik {
 
 class Player {
  public:
-  void Spawn(const DirectX::XMFLOAT3& feetPosition);
+  // Puts the player at a point and settles them onto whatever is under it. A
+  // spawn is not a landing: it starts grounded, with no landing pose to hold.
+  void Spawn(const DirectX::XMFLOAT3& feetPosition,
+             const std::vector<Part>& parts);
 
   // `parts` is everything in the world; the player collides with the ones whose
   // `collides` flag is set.
@@ -39,6 +42,11 @@ class Player {
   // True for the beat after a landing, while the jump pose is still being held.
   bool Landing() const { return landingHold_ > 0.0f; }
 
+  // Drops a held landing pose. The client calls this when the window comes back
+  // to the foreground: an arm still up from a landing that happened before the
+  // client went away is not something the returning player did.
+  void CancelLanding() { landingHold_ = 0.0f; }
+
   // Studs per second along the ground, and up and down. The animation wants the
   // horizontal one to decide whether this is a walk or a stand, and the vertical
   // one to tell a jump from a fall.
@@ -46,7 +54,7 @@ class Player {
   float VerticalSpeed() const { return velocity_.y; }
 
  private:
-  void Respawn();
+  void Respawn(const std::vector<Part>& parts);
 
   DirectX::XMFLOAT3 position_{0.0f, 0.0f, 0.0f};
   DirectX::XMFLOAT3 velocity_{0.0f, 0.0f, 0.0f};

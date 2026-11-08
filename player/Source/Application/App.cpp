@@ -137,7 +137,15 @@ bool App::Initialise() {
   // build for the world: the studs are part of the picture on each face.
 
   camera_.SetViewport(window_.Width(), window_.Height());
-  player_.Spawn(world_.SpawnPoint());
+  // The era's cursors, out of the exe's own resources. A file that cannot be read
+  // falls back to the system arrow rather than stopping the client.
+  cursors_.Load();
+  window_.OnSetCursor([this](unsigned hitTest) {
+    return cursors_.For(hitTest, input_.LeftButton());
+  });
+  window_.OnActivate([this]() { clockReset_ = true; });
+
+  player_.Spawn(world_.SpawnPoint(), world_.Parts());
   renderedFeet_ = player_.Position();
 
   // Start already looking at the player instead of flying in from the origin.
@@ -204,6 +212,16 @@ int App::Run() {
 
     LARGE_INTEGER now{};
     QueryPerformanceCounter(&now);
+
+    // Back from the background: the clock would otherwise count the time away and
+    // simulate it as a fall, which lands with the jump pose still up. Start the
+    // clock here and drop any pose that was being held when the window went away.
+    if (clockReset_) {
+      clockReset_ = false;
+      previous = now;
+      player_.CancelLanding();
+    }
+
     const double elapsed =
         static_cast<double>(now.QuadPart - previous.QuadPart) /
         static_cast<double>(frequency.QuadPart);
