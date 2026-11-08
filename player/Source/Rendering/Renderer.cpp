@@ -24,6 +24,10 @@ constexpr D3D_FEATURE_LEVEL kFeatureLevels[] = {D3D_FEATURE_LEVEL_11_0,
 
 // One directional light, fixed in the world, and no shadows. Enough to tell the
 // faces of a brick apart, which is all a 2004-era client needs.
+//
+// The sky is a separate entry point pair in the same source: a fullscreen
+// triangle that reads the view direction out of the inverse view-projection and
+// picks a colour between the horizon and the zenith.
 constexpr char kShaderSource[] = R"hlsl(
 cbuffer FrameConstants : register(b0)
 {
@@ -36,10 +40,18 @@ cbuffer ObjectConstants : register(b1)
     float4 colour;
 };
 
+cbuffer SkyConstants : register(b0)
+{
+    row_major float4x4 inverseViewProjection;
+    float4 zenithColour;
+    float4 horizonColour;
+};
+
 struct VertexIn
 {
     float3 position : POSITION;
     float3 normal : NORMAL;
+    float3 tint : COLOUR;
 };
 
 struct VertexOut
@@ -55,7 +67,7 @@ VertexOut VSMain(VertexIn input)
     float4 worldPosition = mul(float4(input.position, 1.0f), world);
     output.position = mul(worldPosition, viewProjection);
     output.normal = normalize(mul(float4(input.normal, 0.0f), world).xyz);
-    output.colour = colour;
+    output.colour = colour * float4(input.tint, 1.0f);
     return output;
 }
 
@@ -69,7 +81,40 @@ float4 PSMain(VertexOut input) : SV_TARGET
     float shade = 0.55f + 0.45f * diffuse;
     return float4(input.colour.rgb * shade, 1.0f);
 }
+
+struct SkyOut
+{
+    float4 position : SV_POSITION;
+    float2 ndc : TEXCOORD0;
+};
+
+SkyOut SkyVS(uint id : SV_VertexID)
+{
+    float2 corner = float2(id == 1 ? 3.0f : -1.0f, id == 2 ? 3.0f : -1.0f);
+
+    SkyOut output;
+    output.position = float4(corner, 1.0f, 1.0f);
+    output.ndc = corner;
+    return output;
+}
+
+float4 SkyPS(SkyOut input) : SV_TARGET
+{
+    // w = 0 turns the clip point into a direction: the ray this pixel looks
+    // along, in world space.
+    float3 direction = normalize(mul(float4(input.ndc, 1.0f, 0.0f),
+                                    inverseViewProjection).xyz);
+
+    float height = saturate(direction.y * 1.5f + 0.06f);
+    float3 sky = lerp(horizonColour.rgb, zenithColour.rgb, pow(height, 0.65f));
+    return float4(sky, 1.0f);
+}
 )hlsl";
+
+// The era's sky: a pale blue at the horizon deepening towards the top, which is
+// what the old client's sky texture did before there were clouds in it.
+constexpr XMFLOAT4 kZenithColour{0.33f, 0.58f, 0.88f, 1.0f};
+constexpr XMFLOAT4 kHorizonColour{0.72f, 0.87f, 0.97f, 1.0f};
 
 struct FrameConstants {
   XMFLOAT4X4 viewProjection;
@@ -78,6 +123,12 @@ struct FrameConstants {
 struct ObjectConstants {
   XMFLOAT4X4 world;
   XMFLOAT4 colour;
+};
+
+struct SkyConstants {
+  XMFLOAT4X4 inverseViewProjection;
+  XMFLOAT4 zenith;
+  XMFLOAT4 horizon;
 };
 
 std::wstring Widen(const char* text) {
@@ -208,6 +259,8 @@ bool Renderer::CreatePipeline() {
        D3D11_INPUT_PER_VERTEX_DATA, 0},
       {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12,
        D3D11_INPUT_PER_VERTEX_DATA, 0},
+      {"COLOUR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24,
+       D3D11_INPUT_PER_VERTEX_DATA, 0},
   };
 
   if (FAILED(device_->CreateInputLayout(
@@ -220,7 +273,8 @@ bool Renderer::CreatePipeline() {
 
   if (!CreateConstantBuffer(device_.Get(), sizeof(FrameConstants), &frameBuffer_) ||
       !CreateConstantBuffer(device_.Get(), sizeof(ObjectConstants),
-                            &objectBuffer_)) {
+                            &objectBuffer_) ||
+      !CreateConstantBuffer(device_.Get(), sizeof(SkyConstants), &skyBuffer_)) {
     lastError_ = L"The shader constants could not be allocated.";
     return false;
   }
@@ -241,12 +295,52 @@ bool Renderer::CreatePipeline() {
     return false;
   }
 
-  std::vector<Vertex> vertices;
-  std::vector<unsigned short> indices;
-  BuildUnitCube(vertices, indices);
+  Microsoft::WRL::ComPtr<ID3DBlob> skyVertexBlob;
+  Microsoft::WRL::ComPtr<ID3DBlob> skyPixelBlob;
 
+  if (!CompileShader("SkyVS", "vs_4_0", &skyVertexBlob, lastError_)) return false;
+  if (!CompileShader("SkyPS", "ps_4_0", &skyPixelBlob, lastError_)) return false;
+
+  if (FAILED(device_->CreateVertexShader(skyVertexBlob->GetBufferPointer(),
+                                         skyVertexBlob->GetBufferSize(), nullptr,
+                                         &skyVertexShader_)) ||
+      FAILED(device_->CreatePixelShader(skyPixelBlob->GetBufferPointer(),
+                                        skyPixelBlob->GetBufferSize(), nullptr,
+                                        &skyPixelShader_))) {
+    lastError_ = L"The sky shaders could not be created.";
+    return false;
+  }
+
+  // The sky does not test or write depth: it is the backdrop.
+  D3D11_DEPTH_STENCIL_DESC skyDepth{};
+  skyDepth.DepthEnable = FALSE;
+  skyDepth.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+  skyDepth.DepthFunc = D3D11_COMPARISON_ALWAYS;
+  skyDepth.StencilEnable = FALSE;
+
+  if (FAILED(device_->CreateDepthStencilState(&skyDepth, &skyDepthState_))) {
+    lastError_ = L"The sky's depth state could not be created.";
+    return false;
+  }
+
+  std::vector<Vertex> vertices;
+  std::vector<unsigned int> indices;
+
+  BuildUnitCube(vertices, indices);
   if (!cube_.Create(device_.Get(), vertices, indices)) {
     lastError_ = L"The cube geometry could not be uploaded.";
+    return false;
+  }
+
+  BuildHead(vertices, indices);
+  if (!head_.Create(device_.Get(), vertices, indices)) {
+    lastError_ = L"The head geometry could not be uploaded.";
+    return false;
+  }
+
+  if (!avatarStuds_.CreateDynamic(device_.Get(), kAvatarStudVertices,
+                                  kAvatarStudIndices)) {
+    lastError_ = L"The stud buffer could not be created.";
     return false;
   }
 
@@ -373,9 +467,41 @@ void Renderer::BeginFrame(const float clearColour[4]) {
   }
 }
 
-void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera) {
-  if (!context_ || !targetView_ || !cube_.Valid()) return;
+void Renderer::DrawSky(const Camera& camera) {
+  if (!context_ || !targetView_ || !skyVertexShader_ || !skyPixelShader_) return;
 
+  D3D11_MAPPED_SUBRESOURCE mapped{};
+  if (FAILED(context_->Map(skyBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
+                           &mapped))) {
+    return;
+  }
+
+  auto* sky = static_cast<SkyConstants*>(mapped.pData);
+  XMVECTOR determinant{};
+  XMStoreFloat4x4(&sky->inverseViewProjection,
+                  XMMatrixInverse(&determinant, camera.ViewProjection()));
+  sky->zenith = kZenithColour;
+  sky->horizon = kHorizonColour;
+  context_->Unmap(skyBuffer_.Get(), 0);
+
+  ID3D11Buffer* skyConstants[] = {skyBuffer_.Get()};
+  context_->VSSetConstantBuffers(0, 1, skyConstants);
+  context_->PSSetConstantBuffers(0, 1, skyConstants);
+
+  context_->IASetInputLayout(nullptr);
+  context_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  context_->VSSetShader(skyVertexShader_.Get(), nullptr, 0);
+  context_->PSSetShader(skyPixelShader_.Get(), nullptr, 0);
+  context_->RSSetState(rasterState_.Get());
+  context_->OMSetDepthStencilState(skyDepthState_.Get(), 0);
+
+  context_->Draw(3, 0);
+
+  // Put the depth buffer back in charge for everything drawn over the sky.
+  context_->OMSetDepthStencilState(nullptr, 0);
+}
+
+void Renderer::BindGeometry(const Camera& camera) {
   context_->IASetInputLayout(inputLayout_.Get());
   context_->VSSetShader(vertexShader_.Get(), nullptr, 0);
   context_->PSSetShader(pixelShader_.Get(), nullptr, 0);
@@ -397,18 +523,85 @@ void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera) {
   context_->PSSetConstantBuffers(0, 1, frameBuffers);
   context_->VSSetConstantBuffers(1, 1, objectBuffers);
   context_->PSSetConstantBuffers(1, 1, objectBuffers);
+}
+
+void Renderer::SetObject(const XMFLOAT4X4& world, const XMFLOAT4& colour) {
+  D3D11_MAPPED_SUBRESOURCE mapped{};
+  if (SUCCEEDED(context_->Map(objectBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
+                              &mapped))) {
+    auto* object = static_cast<ObjectConstants*>(mapped.pData);
+    object->world = world;
+    object->colour = colour;
+    context_->Unmap(objectBuffer_.Get(), 0);
+  }
+}
+
+void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera) {
+  if (!context_ || !targetView_ || !cube_.Valid()) return;
+
+  BindGeometry(camera);
 
   for (const Part& part : parts) {
-    if (SUCCEEDED(context_->Map(objectBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
-                                &mapped))) {
-      auto* object = static_cast<ObjectConstants*>(mapped.pData);
-      object->world = part.ModelMatrix();
-      object->colour = XMFLOAT4(part.colour.x, part.colour.y, part.colour.z, 1.0f);
-      context_->Unmap(objectBuffer_.Get(), 0);
-    }
+    SetObject(part.ModelMatrix(),
+              XMFLOAT4(part.colour.x, part.colour.y, part.colour.z, 1.0f));
 
-    cube_.Draw(context_.Get());
+    if (part.shape == PartShape::RoundedHead && head_.Valid()) {
+      head_.Draw(context_.Get());
+    } else {
+      cube_.Draw(context_.Get());
+    }
   }
+}
+
+void Renderer::BuildWorldStuds(const std::vector<Part>& parts) {
+  if (!device_) return;
+
+  std::vector<Vertex> vertices;
+  std::vector<unsigned int> indices;
+
+  for (const Part& part : parts) AppendStuds(part, vertices, indices);
+
+  if (vertices.empty()) {
+    worldStuds_.Release();
+    return;
+  }
+
+  if (!worldStuds_.Create(device_.Get(), vertices, indices)) {
+    lastError_ = L"The world's studs could not be uploaded.";
+  }
+}
+
+void Renderer::DrawWorldStuds(const Camera& camera) {
+  if (!context_ || !targetView_ || !worldStuds_.Valid()) return;
+
+  BindGeometry(camera);
+
+  // The studs are already in the world, so the matrix is the identity and the
+  // colour comes from the vertices.
+  XMFLOAT4X4 identity{};
+  XMStoreFloat4x4(&identity, XMMatrixIdentity());
+  SetObject(identity, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+
+  worldStuds_.Draw(context_.Get());
+}
+
+void Renderer::DrawStuds(const std::vector<Part>& parts, const Camera& camera) {
+  if (!context_ || !targetView_ || !avatarStuds_.Valid()) return;
+
+  std::vector<Vertex> vertices;
+  std::vector<unsigned int> indices;
+  for (const Part& part : parts) AppendStuds(part, vertices, indices);
+
+  if (vertices.empty()) return;
+  if (!avatarStuds_.Update(context_.Get(), vertices, indices)) return;
+
+  BindGeometry(camera);
+
+  XMFLOAT4X4 identity{};
+  XMStoreFloat4x4(&identity, XMMatrixIdentity());
+  SetObject(identity, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+
+  avatarStuds_.Draw(context_.Get());
 }
 
 void Renderer::EndFrame() {
@@ -424,7 +617,14 @@ void Renderer::WaitForGpu() {
 }
 
 void Renderer::Shutdown() {
+  avatarStuds_.Release();
+  worldStuds_.Release();
+  head_.Release();
   cube_.Release();
+  skyDepthState_.Reset();
+  skyBuffer_.Reset();
+  skyPixelShader_.Reset();
+  skyVertexShader_.Reset();
   rasterState_.Reset();
   objectBuffer_.Reset();
   frameBuffer_.Reset();
