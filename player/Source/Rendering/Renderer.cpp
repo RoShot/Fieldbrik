@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Camera/Camera.h"
+#include "Rendering/Texture.h"
 #include "World/Part.h"
 
 using namespace DirectX;
@@ -38,6 +39,7 @@ cbuffer ObjectConstants : register(b1)
 {
     row_major float4x4 world;
     float4 colour;
+    float4 options;   // x: sample the texture and alpha-test it
 };
 
 cbuffer SkyConstants : register(b0)
@@ -46,6 +48,11 @@ cbuffer SkyConstants : register(b0)
     float4 zenithColour;
     float4 horizonColour;
 };
+
+// The only texture the client has is the face, so it is bound at t0 and the
+// textured draw is chosen per draw rather than per material.
+Texture2D faceTexture : register(t0);
+SamplerState faceSampler : register(s0);
 
 struct VertexIn
 {
@@ -73,6 +80,20 @@ VertexOut VSMain(VertexIn input)
 
 float4 PSMain(VertexOut input) : SV_TARGET
 {
+    // The face is line art on a transparent canvas: everything the artist did not
+    // draw is thrown away rather than blended, so the head stays solid behind it
+    // and there is no white card where the image ends.
+    //
+    // Its coordinates ride in the vertex colour rather than in a texture
+    // coordinate attribute: the only textured thing in the client is one square
+    // plane, and the colour channel is already carried for the studs.
+    if (options.x > 0.5f)
+    {
+        float4 texel = faceTexture.Sample(faceSampler, input.colour.rg);
+        clip(texel.a - 0.5f);
+        return float4(texel.rgb, 1.0f);
+    }
+
     float3 lightDirection = normalize(float3(0.45f, 0.80f, 0.35f));
     float diffuse = saturate(dot(input.normal, lightDirection));
 
@@ -123,6 +144,7 @@ struct FrameConstants {
 struct ObjectConstants {
   XMFLOAT4X4 world;
   XMFLOAT4 colour;
+  XMFLOAT4 options;  // x: textured draw
 };
 
 struct SkyConstants {
@@ -295,6 +317,21 @@ bool Renderer::CreatePipeline() {
     return false;
   }
 
+  // Point filtering and clamping: the face is 128 pixels of line art, and it is
+  // meant to stay pixel-sharp at every distance rather than be smoothed.
+  D3D11_SAMPLER_DESC sampler{};
+  sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+  sampler.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+  sampler.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+  sampler.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+  sampler.ComparisonFunc = D3D11_COMPARISON_NEVER;
+  sampler.MaxLOD = D3D11_FLOAT32_MAX;
+
+  if (FAILED(device_->CreateSamplerState(&sampler, &samplerState_))) {
+    lastError_ = L"The texture sampler could not be created.";
+    return false;
+  }
+
   Microsoft::WRL::ComPtr<ID3DBlob> skyVertexBlob;
   Microsoft::WRL::ComPtr<ID3DBlob> skyPixelBlob;
 
@@ -343,6 +380,14 @@ bool Renderer::CreatePipeline() {
     lastError_ = L"The stud buffer could not be created.";
     return false;
   }
+
+  if (!CreateWhiteTexture(device_.Get(), whiteTexture_.GetAddressOf(), lastError_)) {
+    return false;
+  }
+
+  // The head model and its face. Not fatal: if they cannot be read, the generated
+  // rounded block is drawn instead and the client still runs.
+  LoadHeadAssets();
 
   return true;
 }
@@ -523,15 +568,24 @@ void Renderer::BindGeometry(const Camera& camera) {
   context_->PSSetConstantBuffers(0, 1, frameBuffers);
   context_->VSSetConstantBuffers(1, 1, objectBuffers);
   context_->PSSetConstantBuffers(1, 1, objectBuffers);
+
+  ID3D11SamplerState* samplers[] = {samplerState_.Get()};
+  context_->PSSetSamplers(0, 1, samplers);
+
+  // Untextured by default; DrawHead swaps the face in for its own draw.
+  ID3D11ShaderResourceView* textures[] = {whiteTexture_.Get()};
+  context_->PSSetShaderResources(0, 1, textures);
 }
 
-void Renderer::SetObject(const XMFLOAT4X4& world, const XMFLOAT4& colour) {
+void Renderer::SetObject(const XMFLOAT4X4& world, const XMFLOAT4& colour,
+                         bool textured) {
   D3D11_MAPPED_SUBRESOURCE mapped{};
   if (SUCCEEDED(context_->Map(objectBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
                               &mapped))) {
     auto* object = static_cast<ObjectConstants*>(mapped.pData);
     object->world = world;
     object->colour = colour;
+    object->options = XMFLOAT4(textured ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
     context_->Unmap(objectBuffer_.Get(), 0);
   }
 }
@@ -542,14 +596,17 @@ void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera) {
   BindGeometry(camera);
 
   for (const Part& part : parts) {
-    SetObject(part.ModelMatrix(),
-              XMFLOAT4(part.colour.x, part.colour.y, part.colour.z, 1.0f));
+    const XMFLOAT4 colour(part.colour.x, part.colour.y, part.colour.z, 1.0f);
 
-    if (part.shape == PartShape::RoundedHead && head_.Valid()) {
-      head_.Draw(context_.Get());
-    } else {
-      cube_.Draw(context_.Get());
+    // The head is a model and a face rather than a scaled cube, so it has its own
+    // path; everything else in the world is a brick.
+    if (part.shape == PartShape::RoundedHead) {
+      DrawHead(part, colour);
+      continue;
     }
+
+    SetObject(part.ModelMatrix(), colour, false);
+    cube_.Draw(context_.Get());
   }
 }
 
@@ -617,6 +674,11 @@ void Renderer::WaitForGpu() {
 }
 
 void Renderer::Shutdown() {
+  faceQuad_.Release();
+  headModel_.Release();
+  faceTexture_.Reset();
+  whiteTexture_.Reset();
+  samplerState_.Reset();
   avatarStuds_.Release();
   worldStuds_.Release();
   head_.Release();
