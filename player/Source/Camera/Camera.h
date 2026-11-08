@@ -44,6 +44,18 @@ class Camera {
   DirectX::XMFLOAT3 Position() const;
   DirectX::XMMATRIX ViewProjection() const;
 
+  // The camera's three axes in world space, with the field of view already
+  // folded into the right and up ones: a pixel at the edge of the screen looks
+  // along forward + right. The sky needs this because it has no geometry to
+  // carry a direction in, and inverting the view-projection at these near and
+  // far planes loses almost all of the screen's spread.
+  struct SkyBasis {
+    DirectX::XMFLOAT3 forward;
+    DirectX::XMFLOAT3 right;
+    DirectX::XMFLOAT3 up;
+  };
+  SkyBasis SkyRayBasis() const;
+
   float Distance() const { return distance_; }
   float Pitch() const { return pitch_; }
   float Yaw() const { return yaw_; }

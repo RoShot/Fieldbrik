@@ -1,4 +1,4 @@
-// The ids of things compiled into the exe.
+// The ids of things compiled into the exe, and the one way to read them back.
 //
 // The head and the face are the era's own assets, and they travel inside the
 // executable as Windows resources rather than as files to install beside it:
@@ -11,6 +11,9 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 namespace fieldbrik {
 
 // head.obj: the era's head mesh, 972 vertices and 324 triangles with UVs.
@@ -18,5 +21,14 @@ constexpr int kHeadMeshResource = 101;
 
 // face.png: the classic smile, 128x128 RGBA with a transparent background.
 constexpr int kFaceTextureResource = 102;
+
+// The sky panorama, when content/textures/sky holds one. Brick textures are
+// numbered from 201 upwards by the generated table, because the folder decides
+// how many there are.
+constexpr int kSkyTextureResource = 150;
+
+// Reads a resource compiled into this executable. Returns false, with `error`
+// saying what was missing, when the id is not in the image or is empty.
+bool ReadEmbedded(int id, std::vector<unsigned char>& bytes, std::wstring& error);
 
 }  // namespace fieldbrik

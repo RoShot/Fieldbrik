@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.21)
 # Built by .github/workflows/player-build.yml on every push that touches this
 # folder, and by hand with the commands in README.md.
 
-project(FieldBrikPlayer VERSION 0.8 LANGUAGES CXX)
+project(FieldBrikPlayer VERSION 0.9 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,6 +31,55 @@ if(NOT EXISTS "${HEAD_MESH_PATH}" OR NOT EXISTS "${FACE_TEXTURE_PATH}")
     "in ${PLAYER_ASSET_DIR}")
 endif()
 
+# The textures live in content/textures and are compiled in the same way. Nothing
+# here is required: a half-finished drop still builds, and the client stops with a
+# message if a place asks for an image that is not present, rather than drawing
+# the wrong colour. Adding a file renumbers the textures after it, which is why
+# only the generated table knows the ids.
+set(PLAYER_TEXTURE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/content/textures")
+
+file(GLOB BRICK_TEXTURE_FILES
+  "${PLAYER_TEXTURE_DIR}/bricks/*.png"
+  "${PLAYER_TEXTURE_DIR}/bricks/*.jpg"
+  "${PLAYER_TEXTURE_DIR}/bricks/*.jpeg")
+list(SORT BRICK_TEXTURE_FILES)
+
+set(TEXTURE_RESOURCES "")
+set(TEXTURE_ENTRIES "")
+set(texture_id 201)
+
+foreach(texture ${BRICK_TEXTURE_FILES})
+  file(REAL_PATH "${texture}" texture_path)
+  get_filename_component(texture_name "${texture_path}" NAME)
+  string(APPEND TEXTURE_RESOURCES "${texture_id} 10 \"${texture_path}\"\n")
+  string(APPEND TEXTURE_ENTRIES "    {${texture_id}, L\"${texture_name}\"},\n")
+  math(EXPR texture_id "${texture_id} + 1")
+endforeach()
+
+file(GLOB SKY_TEXTURE_FILES
+  "${PLAYER_TEXTURE_DIR}/sky/panorama.png"
+  "${PLAYER_TEXTURE_DIR}/sky/panorama.jpg")
+
+if(SKY_TEXTURE_FILES)
+  list(GET SKY_TEXTURE_FILES 0 sky_texture)
+  file(REAL_PATH "${sky_texture}" sky_texture_path)
+  string(APPEND TEXTURE_RESOURCES "150 10 \"${sky_texture_path}\"\n")
+  set(SKY_PRESENT 1)
+else()
+  set(SKY_PRESENT 0)
+endif()
+
+list(LENGTH BRICK_TEXTURE_FILES texture_count)
+message(STATUS
+  "FieldBrik Player: ${texture_count} brick texture(s), sky ${SKY_PRESENT}")
+
+configure_file(Tools/TextureTable.h.in
+  "${CMAKE_CURRENT_BINARY_DIR}/TextureTable.generated.h" @ONLY)
+
+# The title bar says which version this is, and the number comes from the
+# project() line above, so the exe and the release tag cannot drift apart.
+configure_file(Tools/Version.h.in
+  "${CMAKE_CURRENT_BINARY_DIR}/Version.generated.h" @ONLY)
 configure_file(Tools/assets.rc.in "${CMAKE_CURRENT_BINARY_DIR}/assets.rc" @ONLY)
 
 add_executable(FieldBrikPlayer WIN32
@@ -39,6 +88,7 @@ add_executable(FieldBrikPlayer WIN32
   Source/Window/Window.cpp
   Source/Rendering/Renderer.cpp
   Source/Rendering/RendererHead.cpp
+  Source/Rendering/RendererTextures.cpp
   Source/Rendering/Mesh.cpp
   Source/Rendering/ObjMesh.cpp
   Source/Rendering/Texture.cpp
@@ -52,7 +102,10 @@ add_executable(FieldBrikPlayer WIN32
   "${CMAKE_CURRENT_BINARY_DIR}/assets.rc"
 )
 
-target_include_directories(FieldBrikPlayer PRIVATE Source)
+target_include_directories(FieldBrikPlayer PRIVATE
+  Source
+  "${CMAKE_CURRENT_BINARY_DIR}"   # TextureTable.generated.h
+)
 
 target_compile_definitions(FieldBrikPlayer PRIVATE
   UNICODE

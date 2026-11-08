@@ -14,6 +14,9 @@ constexpr float kMinDistance = 6.0f;
 constexpr float kMaxDistance = 60.0f;
 constexpr float kOrbitDegreesPerPixel = 0.30f;
 constexpr float kZoomPerStep = 2.0f;
+constexpr float kFieldOfViewDegrees = 58.0f;
+constexpr float kNearPlane = 0.1f;
+constexpr float kFarPlane = 400.0f;
 
 float Ease(float deltaSeconds, float rate) {
   return 1.0f - std::exp(-rate * deltaSeconds);
@@ -90,10 +93,40 @@ XMMATRIX Camera::ViewProjection() const {
 
   const float aspect =
       static_cast<float>(width_) / static_cast<float>(height_ > 0 ? height_ : 1);
-  const XMMATRIX projection =
-      XMMatrixPerspectiveFovLH(XMConvertToRadians(58.0f), aspect, 0.1f, 400.0f);
+  const XMMATRIX projection = XMMatrixPerspectiveFovLH(
+      XMConvertToRadians(kFieldOfViewDegrees), aspect, kNearPlane, kFarPlane);
 
   return view * projection;
+}
+
+Camera::SkyBasis Camera::SkyRayBasis() const {
+  // The same axes the view matrix is built from, so the sky and the bricks look
+  // out along exactly the same directions.
+  const XMFLOAT3 position = Position();
+  const XMVECTOR eye = XMLoadFloat3(&position);
+  const XMVECTOR target = XMLoadFloat3(&focus_);
+  const XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+  const XMVECTOR forward = XMVector3Normalize(XMVectorSubtract(target, eye));
+  XMVECTOR right = XMVector3Normalize(XMVector3Cross(up, forward));
+  XMVECTOR cameraUp = XMVector3Cross(forward, right);
+
+  // The half tangents: at the edge of the screen the ray leans out by tan(fov/2)
+  // horizontally and vertically, and the shader should not have to know either
+  // the field of view or the aspect ratio.
+  const float vertical =
+      std::tan(XMConvertToRadians(kFieldOfViewDegrees) * 0.5f);
+  const float aspect =
+      static_cast<float>(width_) / static_cast<float>(height_ > 0 ? height_ : 1);
+
+  right = XMVectorScale(right, vertical * aspect);
+  cameraUp = XMVectorScale(cameraUp, vertical);
+
+  SkyBasis basis;
+  XMStoreFloat3(&basis.forward, forward);
+  XMStoreFloat3(&basis.right, right);
+  XMStoreFloat3(&basis.up, cameraUp);
+  return basis;
 }
 
 }  // namespace fieldbrik
