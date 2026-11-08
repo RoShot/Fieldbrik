@@ -19,6 +19,10 @@
 
 namespace fieldbrik {
 
+// Almost everything is a brick, and a brick is a box. The head is the one part
+// drawn as something else: the rounded block the era's head mesh was.
+enum class PartShape { Cube, RoundedHead };
+
 struct Part {
   DirectX::XMFLOAT3 position{0.0f, 0.0f, 0.0f};
   DirectX::XMFLOAT3 size{1.0f, 1.0f, 1.0f};
@@ -39,6 +43,10 @@ struct Part {
   std::string textureId;
 
   std::string name;
+
+  // Which generated mesh draws this part. A place file's bricks are all cubes;
+  // the avatar asks for the head.
+  PartShape shape = PartShape::Cube;
 
   DirectX::XMMATRIX RotationMatrix() const {
     if (hasRotationMatrix) return DirectX::XMLoadFloat3x3(&rotationMatrix);
