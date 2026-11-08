@@ -15,6 +15,9 @@ constexpr XMFLOAT3 kTorsoColour{0.06f, 0.41f, 0.67f};
 constexpr XMFLOAT3 kLegColour{0.64f, 0.74f, 0.28f};
 constexpr XMFLOAT3 kFaceColour{0.09f, 0.09f, 0.09f};
 
+constexpr float kRunHipRate = 0.55f;      // radians per 0.1 s tick, running
+constexpr float kRunHipAmplitude = 0.75f;  // radians, so about 43 degrees each way
+
 // Which motor a part hangs off.
 enum class JointId {
   Torso,
@@ -32,6 +35,7 @@ struct BodyPart {
   XMFLOAT3 size;
   XMFLOAT3 colour;
   JointId joint;
+  PartShape shape = PartShape::Cube;
 };
 
 // Laid out once, in body space, then swung, turned and moved to the world.
@@ -47,7 +51,7 @@ constexpr BodyPart kBody[] = {
     {"Right arm", {1.5f, 4.0f, 0.0f}, {1.5f, 3.0f, 0.0f}, {1.0f, 2.0f, 1.0f},
      kSkinColour, JointId::RightArm},
     {"Head", {0.0f, 4.0f, 0.0f}, {0.0f, 4.5f, 0.0f}, {2.0f, 1.0f, 1.0f},
-     kSkinColour, JointId::Head},
+     kSkinColour, JointId::Head, PartShape::RoundedHead},
 
     // The face: two dots and a smile, sitting just proud of the front of the head
     // so they cannot z-fight with it. They hang off the same pivot as the head, so
@@ -119,6 +123,14 @@ void Avatar::MoveSwing(Pose pose) {
     // which is what makes a held arm snap up and a swinging one ease out.
     rightShoulder_.rate = std::fabs(rightShoulder_.angle) > 1.5f ? 0.75f : 0.15f;
     leftShoulder_.rate = std::fabs(leftShoulder_.angle) > 1.5f ? 0.75f : 0.15f;
+
+    // The hips are given no rate of their own while running, so they move at the
+    // motor's own ceiling. Limiting them is what keeps the legs from swinging the
+    // full radian the sine asks for: at 0.55 a tick they trail the target and
+    // peak around 35 degrees, which is the walk the era actually had.
+    rightHip_.rate = kRunHipRate;
+    leftHip_.rate = kRunHipRate;
+
     amplitude = 1.0f;
     frequency = 9.0f;
   } else if (pose == Pose::Climbing) {
@@ -135,9 +147,15 @@ void Avatar::MoveSwing(Pose pose) {
   leftShoulder_.desired = swing - climbFudge;
 
   // The hips take the shoulders' number negated, which is why an arm and the leg
-  // on the same side go opposite ways.
-  rightHip_.desired = -swing;
-  leftHip_.desired = -swing;
+  // on the same side go opposite ways. Running asks for a little less than the
+  // arms are asked for: a full radian each way reads as a stride, not a walk,
+  // and the era's walk had the legs swinging about 43 degrees.
+  const float hipAmplitude =
+      pose == Pose::Running ? kRunHipAmplitude : amplitude;
+  const float hipSwing = hipAmplitude * std::sin(time_ * frequency);
+
+  rightHip_.desired = -hipSwing;
+  leftHip_.desired = -hipSwing;
 }
 
 void Avatar::MoveJump() {
@@ -183,8 +201,8 @@ void Avatar::Advance(float deltaSeconds) {
 
   advance(rightShoulder_);
   advance(leftShoulder_);
-  advance(leftHip_);
   advance(rightHip_);
+  advance(leftHip_);
 }
 
 void Avatar::SetPose(const XMFLOAT3& feetPosition, float facingDegrees) {
@@ -220,6 +238,7 @@ void Avatar::CollectParts(std::vector<Part>& out) const {
     part.name = body.name;
     part.size = body.size;
     part.colour = body.colour;
+    part.shape = body.shape;
 
     part.position.x = feet_.x + local.x * cosine + local.z * sine;
     part.position.y = feet_.y + local.y;

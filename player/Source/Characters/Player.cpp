@@ -11,7 +11,7 @@ namespace fieldbrik {
 namespace {
 
 // The era's own numbers. Roblox's gravity is 196.2 studs per second squared, the
-// walk is 16, and a jump leaves the ground at 50, which peaks about 6.4 studs up.
+// walk is 16, and a jump leaves the ground at 50, which peaks about six studs up.
 // The one thing that is not a number from the engine is how quickly you get going
 // and how quickly you stop: those are tuned by feel, slow enough to carry
 // momentum and quick enough that letting go does not read as ice.
@@ -127,12 +127,16 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
   if (input.KeyDown('A')) rightInput -= 1.0f;
 
   // The camera looks from its eye towards the target, so the ground direction it
-  // faces is the negation of the eye offset.
+  // faces is the negation of the eye offset. Right is that forward turned a
+  // quarter turn: (cos, sin), which is what the view matrix's own right-hand
+  // column comes out as. Get that sign wrong and W still reads correctly while
+  // A and D swap over the moment the camera is turned sideways, which is exactly
+  // how it looked before this was fixed.
   const float yaw = XMConvertToRadians(cameraYawDegrees);
   const float forwardX = -std::sin(yaw);
   const float forwardZ = std::cos(yaw);
   const float rightX = std::cos(yaw);
-  const float rightZ = -std::sin(yaw);
+  const float rightZ = std::sin(yaw);
 
   float moveX = forwardX * forwardInput + rightX * rightInput;
   float moveZ = forwardZ * forwardInput + rightZ * rightInput;
@@ -145,8 +149,8 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
     moveZ /= length;
   }
 
-  // Steering: a steady acceleration up to walking speed, and less of it in the
-  // air, so a jump keeps the momentum it started with.
+  // Steering: reach walking speed in a fraction of a second on the ground, and
+  // slower in the air, so a jump keeps the momentum it started with.
   const float accel = grounded_ ? kGroundAccel : kAirAccel;
   velocity_.x = Approach(velocity_.x, moveX * kWalkSpeed, accel * deltaSeconds);
   velocity_.z = Approach(velocity_.z, moveZ * kWalkSpeed, accel * deltaSeconds);
