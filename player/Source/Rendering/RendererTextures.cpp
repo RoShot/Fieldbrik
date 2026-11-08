@@ -1,0 +1,232 @@
+// The textures: bricks and the sky.
+//
+// Both are the era's own images, compiled into the exe (see Tools/assets.rc.in)
+// and read back by id. What decides which image a brick gets is the last segment
+// of its TextureID, so a place file written for the old client finds its art
+// without edits: rbxasset://textures/Brick.png is bricks/Brick.png here, matched
+// case-insensitively.
+//
+// The texture only ever covers the top face of a brick, stretched once across it,
+// which is what a decal did in the era. The sides keep their flat colour.
+//
+// The sky is one wide panorama wrapped round the horizon and sampled by direction.
+// With no panorama in the exe there is no sky pass at all and the window's clear
+// colour is what you see: replacing the gradient outright is deliberate, because a
+// missing sky should be obvious rather than quietly plausible.
+
+#include "Rendering/Renderer.h"
+
+#include <windows.h>
+
+#include <d3d11.h>
+
+#include <DirectXMath.h>
+
+#include <algorithm>
+#include <cctype>
+#include <string>
+#include <vector>
+
+#include "Rendering/Mesh.h"
+#include "Rendering/Resources.h"
+#include "Rendering/Texture.h"
+// Generated beside the build by CMake; the build folder is on the include path.
+#include "TextureTable.generated.h"
+#include "World/Part.h"
+
+using namespace DirectX;
+using Microsoft::WRL::ComPtr;
+
+namespace fieldbrik {
+namespace {
+
+// RCDATA, as a number because the resource script carries no headers.
+constexpr WORD kResourceTypeData = 10;
+
+// The textured top face sits this far above the brick's own top, in the part's
+// own space, so it cannot fight with the face it is covering. At any size the
+// bricks in a place are, that is a fraction of a stud.
+constexpr float kTopFaceLift = 0.002f;
+
+std::string Narrow(const wchar_t* text) {
+  if (!text || !*text) return std::string();
+
+  const int needed = WideCharToMultiByte(CP_UTF8, 0, text, -1, nullptr, 0, nullptr,
+                                         nullptr);
+  if (needed <= 1) return std::string();
+
+  std::string result(static_cast<std::size_t>(needed - 1), '\0');
+  WideCharToMultiByte(CP_UTF8, 0, text, -1, result.data(), needed, nullptr, nullptr);
+  return result;
+}
+
+// The name a TextureID is looked up by: its last path segment, lowercased. That
+// is what makes a rbxasset path and a bare file name the same key.
+std::string TextureKey(const std::string& textureId) {
+  const std::size_t cut = textureId.find_last_of("/\\");
+  std::string name =
+      cut == std::string::npos ? textureId : textureId.substr(cut + 1);
+
+  std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  return name;
+}
+
+// A unit square across the top of a brick, carrying its texture coordinates in
+// the colour channel: the shader has no texture coordinate attribute, because the
+// face plane already taught it to read them from there.
+void BuildTopFace(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices) {
+  vertices.clear();
+  indices.clear();
+
+  constexpr float kHalf = 0.5f;
+  constexpr float kTop = 0.5f + kTopFaceLift;
+
+  struct Corner {
+    float x;
+    float z;
+    float u;
+    float v;
+  };
+
+  const Corner corners[4] = {
+      {-kHalf, kHalf, 0.0f, 0.0f},
+      {kHalf, kHalf, 1.0f, 0.0f},
+      {kHalf, -kHalf, 1.0f, 1.0f},
+      {-kHalf, -kHalf, 0.0f, 1.0f},
+  };
+
+  for (const Corner& corner : corners) {
+    Vertex vertex;
+    vertex.position = {corner.x, kTop, corner.z};
+    vertex.normal = {0.0f, 1.0f, 0.0f};
+    vertex.colour = {corner.u, corner.v, 0.0f};
+    vertices.push_back(vertex);
+  }
+
+  const unsigned int order[6] = {0, 1, 2, 0, 2, 3};
+  indices.assign(order, order + 6);
+}
+
+}  // namespace
+
+bool ReadEmbedded(int id, std::vector<unsigned char>& bytes, std::wstring& error) {
+  const HMODULE module = GetModuleHandleW(nullptr);
+
+  const HRSRC found =
+      FindResourceW(module, MAKEINTRESOURCEW(id), MAKEINTRESOURCEW(kResourceTypeData));
+  if (!found) {
+    error = L"An asset is missing from the executable.";
+    return false;
+  }
+
+  const HGLOBAL loaded = LoadResource(module, found);
+  const void* data = loaded ? LockResource(loaded) : nullptr;
+  const DWORD size = SizeofResource(module, found);
+
+  if (!data || size == 0) {
+    error = L"An asset in the executable could not be read.";
+    return false;
+  }
+
+  const auto* first = static_cast<const unsigned char*>(data);
+  bytes.assign(first, first + size);
+  return true;
+}
+
+bool Renderer::LoadTextures() {
+  std::vector<unsigned char> bytes;
+  std::wstring error;
+
+  textures_.clear();
+
+  for (const EmbeddedTexture& embedded : kEmbeddedTextures) {
+    if (embedded.id == 0 || !embedded.name || embedded.name[0] == L'\0') continue;
+
+    if (!ReadEmbedded(embedded.id, bytes, error)) {
+      lastError_ = error;
+      return false;
+    }
+
+    ComPtr<ID3D11ShaderResourceView> view;
+    if (!CreateTextureFromPng(device_.Get(), bytes.data(), bytes.size(),
+                              view.GetAddressOf(), error)) {
+      lastError_ = error;
+      return false;
+    }
+
+    TextureEntry entry;
+    entry.name = TextureKey(Narrow(embedded.name));
+    entry.view = view;
+    textures_.push_back(entry);
+  }
+
+  // The sky, when the folder has one. Its own sampler: a panorama wants linear
+  // filtering and to wrap round, where a face wants neither.
+  if (kSkyTexturePresent) {
+    if (!ReadEmbedded(kSkyTextureResource, bytes, error)) {
+      lastError_ = error;
+      return false;
+    }
+
+    if (!CreateTextureFromPng(device_.Get(), bytes.data(), bytes.size(),
+                              skyTexture_.GetAddressOf(), error)) {
+      lastError_ = error;
+      return false;
+    }
+
+    D3D11_SAMPLER_DESC description{};
+    description.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    description.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    description.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    description.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    description.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    description.MaxLOD = D3D11_FLOAT32_MAX;
+
+    if (FAILED(device_->CreateSamplerState(&description, &skySampler_))) {
+      lastError_ = L"The sky's sampler could not be created.";
+      return false;
+    }
+  }
+
+  std::vector<Vertex> vertices;
+  std::vector<unsigned int> indices;
+  BuildTopFace(vertices, indices);
+
+  if (!topFace_.Create(device_.Get(), vertices, indices)) {
+    lastError_ = L"The textured top face could not be prepared.";
+    return false;
+  }
+
+  return true;
+}
+
+const ID3D11ShaderResourceView* Renderer::FindTexture(
+    const std::string& textureId) const {
+  const std::string key = TextureKey(textureId);
+
+  for (const TextureEntry& entry : textures_) {
+    if (entry.name == key) return entry.view.Get();
+  }
+  return nullptr;
+}
+
+std::vector<std::string> Renderer::MissingTextures(
+    const std::vector<Part>& parts) const {
+  std::vector<std::string> missing;
+
+  for (const Part& part : parts) {
+    if (part.textureId.empty()) continue;
+    if (FindTexture(part.textureId) != nullptr) continue;
+
+    // The same id on a dozen bricks is one missing file, not twelve.
+    if (std::find(missing.begin(), missing.end(), part.textureId) == missing.end()) {
+      missing.push_back(part.textureId);
+    }
+  }
+
+  return missing;
+}
+
+}  // namespace fieldbrik

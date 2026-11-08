@@ -5,7 +5,7 @@
 // viewport are rebuilt. Every part is drawn as the same unit cube scaled and
 // moved by its own matrix, which is why a brick can be any size without having
 // its own geometry. Two shapes sit beside the cube — the stud and the head — and
-// one gradient covers the sky.
+// one panorama covers the sky.
 
 #pragma once
 
@@ -42,8 +42,8 @@ class Renderer {
   void BeginFrame(const float clearColour[4]);
 
   // The sky goes down before anything else and covers whatever is left after
-  // the world is drawn: a gradient from the horizon up, built from the view
-  // direction so it turns with the camera instead of sitting on the screen.
+  // the world is drawn: a panorama sampled by the direction each pixel looks
+  // along, so it turns with the camera instead of sitting on the screen.
   void DrawSky(const Camera& camera);
 
   // Draws a list of parts. The world and the avatar are drawn as separate lists
@@ -66,6 +66,11 @@ class Renderer {
   // Empty when the head model and its face loaded. Otherwise it says which step
   // failed, and the avatar is drawn without them.
   const std::wstring& HeadAssetError() const { return headAssetError_; }
+
+  // Every TextureID the parts ask for that this exe does not carry. Empty when
+  // each one has an image; the client refuses to run otherwise, because a brick
+  // in the wrong colour is a bug that hides.
+  std::vector<std::string> MissingTextures(const std::vector<Part>& parts) const;
 
  private:
   bool CreatePipeline();
@@ -92,6 +97,11 @@ class Renderer {
   bool LoadHeadAssets();
   void DrawHead(const Part& part, const DirectX::XMFLOAT4& colour);
   DirectX::XMFLOAT4X4 HeadMatrix(const Part& part) const;
+
+  // The textures - bricks looked up by the last segment of their TextureID, and
+  // the sky panorama. In RendererTextures.cpp.
+  bool LoadTextures();
+  const ID3D11ShaderResourceView* FindTexture(const std::string& textureId) const;
 
   Microsoft::WRL::ComPtr<ID3D11Device> device_;
   Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
@@ -132,14 +142,31 @@ class Renderer {
   Mesh headModel_;
   Mesh faceQuad_;
 
+  // One square across the top of a brick, carrying its texture coordinates in
+  // the colour channel like the face plane does.
+  Mesh topFace_;
+
   // The face image, and a single white texel bound whenever a draw is not
   // textured so the pipeline is never left with a hole in it.
   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> faceTexture_;
   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> whiteTexture_;
 
   // Point filtering, clamped: the face is 128 pixels of line art and is meant to
-  // stay sharp rather than be smoothed.
+  // stay sharp rather than be smoothed. Brick textures use it too.
   Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState_;
+
+  // The sky's panorama and its own sampler: linear, and wrapping round, because
+  // a wrapped picture has an edge that must not show.
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture_;
+  Microsoft::WRL::ComPtr<ID3D11SamplerState> skySampler_;
+
+  // A brick texture and the key its TextureID is matched by: the last path
+  // segment, lowercased.
+  struct TextureEntry {
+    std::string name;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> view;
+  };
+  std::vector<TextureEntry> textures_;
 
   // The avatar can only ever wear so many studs; this is its ceiling.
   static constexpr unsigned int kAvatarStudVertices = 4096;

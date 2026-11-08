@@ -50,33 +50,6 @@ constexpr float kFaceSize = 1.048f;
 // that it never looks loose, far enough that it cannot z-fight with the surface.
 constexpr float kFaceDepth = 0.5906f + 0.0005f;
 
-// RCDATA, as a number because the resource script carries no headers.
-constexpr WORD kResourceTypeData = 10;
-
-bool ReadResource(int id, std::vector<unsigned char>& bytes, std::wstring& error) {
-  const HMODULE module = GetModuleHandleW(nullptr);
-
-  const HRSRC found =
-      FindResourceW(module, MAKEINTRESOURCEW(id), MAKEINTRESOURCEW(kResourceTypeData));
-  if (!found) {
-    error = L"An asset is missing from the executable.";
-    return false;
-  }
-
-  const HGLOBAL loaded = LoadResource(module, found);
-  const void* data = loaded ? LockResource(loaded) : nullptr;
-  const DWORD size = SizeofResource(module, found);
-
-  if (!data || size == 0) {
-    error = L"An asset in the executable could not be read.";
-    return false;
-  }
-
-  const auto* first = static_cast<const unsigned char*>(data);
-  bytes.assign(first, first + size);
-  return true;
-}
-
 // Four corners, wound so the plane faces +Z, which is the direction the avatar
 // walks in. UV (0,0) is the image's top left.
 void BuildFaceQuad(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices) {
@@ -129,7 +102,7 @@ bool Renderer::LoadHeadAssets() {
     return false;
   };
 
-  if (!ReadResource(kHeadMeshResource, bytes, error)) return fail(error);
+  if (!ReadEmbedded(kHeadMeshResource, bytes, error)) return fail(error);
 
   MeshData head;
   const std::string text(bytes.begin(), bytes.end());
@@ -139,7 +112,7 @@ bool Renderer::LoadHeadAssets() {
     return fail(L"The head mesh could not be uploaded.");
   }
 
-  if (!ReadResource(kFaceTextureResource, bytes, error)) return fail(error);
+  if (!ReadEmbedded(kFaceTextureResource, bytes, error)) return fail(error);
 
   if (!CreateTextureFromPng(device_.Get(), bytes.data(), bytes.size(),
                             faceTexture_.GetAddressOf(), error)) {
@@ -187,7 +160,6 @@ void Renderer::DrawHead(const Part& part, const XMFLOAT4& colour) {
   headModel_.Draw(context_.Get());
 
   if (!faceQuad_.Valid() || !faceTexture_) return;
-
 
   // The face is the head's own geometry with a picture on it: same transform, a
   // textured draw, and alpha test rather than blending, so the head stays solid
