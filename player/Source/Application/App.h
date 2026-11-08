@@ -9,6 +9,7 @@
 
 #include <windows.h>
 
+#include <string>
 #include <vector>
 
 #include "Camera/Camera.h"
@@ -24,7 +25,9 @@ namespace fieldbrik {
 
 class App {
  public:
-  App(HINSTANCE instance, int showCommand);
+  // `placePath` is what was passed on the command line, empty when the client was
+  // double-clicked.
+  App(HINSTANCE instance, int showCommand, const std::wstring& placePath);
   ~App();
 
   App(const App&) = delete;
@@ -40,12 +43,17 @@ class App {
   int FailureCode() const { return failureCode_; }
 
  private:
+  // Loads the place named on the command line, or the one beside the exe, and
+  // falls back to the built-in place when neither is there.
+  void LoadWorld();
+
   void UpdateCamera(float deltaSeconds);
   void SetTitle(int framesPerSecond);
   DirectX::XMFLOAT3 FocusPoint() const;
 
   HINSTANCE instance_;
   int showCommand_;
+  std::wstring placePath_;
   int failureCode_ = 1;
 
   Window window_;
