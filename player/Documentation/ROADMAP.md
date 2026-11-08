@@ -7,7 +7,7 @@ buttons on a client that has never moved a box across a screen.
 
 The order below is the intended one. It is not a promise about dates.
 
-## 0.1 — Milestone 1: application foundation — done
+## 0.1 — Milestone 1: application foundation
 
 Win32 window, Direct3D 11 device, resize, clean close, a frame loop and an fps
 readout in the title bar. The screen is cleared to the sky colour and nothing
@@ -28,11 +28,16 @@ rotates its buffers on `Present`, so a render target view cached at startup
 draws into a texture that is never shown. The symptom is an empty frame with the
 clear colour still visible — geometry drawn, nothing on screen.
 
-## 0.3 — Milestone 3: the avatar
+## 0.3 — Milestone 3: the avatar — done
 
 Head, torso, two arms, two legs, rigid, in flat colours with no animation. WASD
 movement, sliding rather than walking, and a third-person camera that follows and
 orbits.
+
+Shipped as the 2005 default avatar: yellow head and arms, blue torso, green legs,
+five studs tall, with a two-dot-and-a-smile face made of small boxes. Movement is
+camera-relative and the body turns towards its direction of travel. Dragging the
+mouse looks around, and dragging right turns the view right.
 
 ## 0.4 — Milestone 4: physics
 
@@ -59,7 +64,7 @@ After the first playable build, the look is moved forward era by era:
 Studio and Player are one client in the early eras, the way `RobloxApp` shipped
 them. The web launch (a `join.aspx`-shaped handoff from the site to the client)
 comes after the client can survive being told which place to load, which is why
-the exe takes its world from data rather than having one compiled in.
+the exe already takes its world from data rather than having one compiled in.
 
 ## Deliberately not in 0.1
 
