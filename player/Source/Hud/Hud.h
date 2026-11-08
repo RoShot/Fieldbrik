@@ -46,9 +46,34 @@ class Hud {
 
   bool HelpOpen() const { return helpOpen_; }
 
+  // True while the pointer is over a part of the interface that takes clicks.
+  // The camera stays still then, so pressing a button does not drag the view.
+  bool PointerOverInterface() const { return hover_ != Hit::None; }
+
+  // True while the press the interface handled is still held. That press
+  // belongs to the button, so it must not turn into a camera drag on the
+  // frames that follow, once the help screen has gone.
+  bool SwallowingDrag() const { return swallowDrag_; }
+
   void Collect(std::vector<Renderer::HudSprite>& sprites) const;
 
  private:
+  // What the pointer is over. The movement keys are a picture of the keyboard
+  // rather than buttons, so they are deliberately not here.
+  enum class Hit {
+    None,
+    Fullscreen,
+    Help,
+    Exit,
+    ZoomIn,
+    ZoomOut,
+    Tilt,
+    Report,
+    Chat,
+    HelpPanel,
+    HelpClose
+  };
+
   struct Rect {
     float x = 0.0f;
     float y = 0.0f;
@@ -75,6 +100,17 @@ class Hud {
 
   void Layout();
 
+  Hit HitTest(float x, float y) const;
+
+  // Picks the art for a button: pressed, hovered, or at rest.
+  ID3D11ShaderResourceView* Art(ID3D11ShaderResourceView* base,
+                                ID3D11ShaderResourceView* hover,
+                                ID3D11ShaderResourceView* down,
+                                Hit hit) const;
+
+  // The top buttons are drawn, so they answer the pointer with a colour.
+  DirectX::XMFLOAT4 TopColour(Hit hit) const;
+
   static void Add(std::vector<Renderer::HudSprite>& sprites, const Rect& rect,
                   const DirectX::XMFLOAT4& colour,
                   ID3D11ShaderResourceView* texture);
@@ -91,6 +127,9 @@ class Hud {
   int width_ = 1024;
   int height_ = 768;
   bool helpOpen_ = false;
+  Hit hover_ = Hit::None;
+  Hit pressed_ = Hit::None;
+  bool swallowDrag_ = false;
 
   // The era's key art, up and pressed, and the buttons that had art of their own.
   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> keyW_;
@@ -106,6 +145,14 @@ class Hud {
   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> zoomOut_;
   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> tiltUp_;
   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> report_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> chatHover_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> chatDown_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> zoomInHover_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> zoomInDown_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> zoomOutHover_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> zoomOutDown_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> tiltDown_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> reportDown_;
 
   Label fullscreen_;
   Label helpButton_;

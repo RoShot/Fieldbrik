@@ -313,6 +313,8 @@ empty folders.
   same 32 pixels in a 64-pixel block, where `Surfaces.png` has 4x4 in 128. One
   tile per stud samples the same pixels either way, so the long strip serves every
   face and a second strip would be a second path with nothing to show for it.
+- The buttons that have hover and pressed art use it, and a press the interface
+  handled is not also a camera drag. A click outside Help closes it.
 - The chat and Report buttons are laid out where they belong but have nothing
   behind them: there is no chat and nobody to report yet.
 - The tilt button wears `CameraTiltUp_ovr.png`, because that is the only tilt art

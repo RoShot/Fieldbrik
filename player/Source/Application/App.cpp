@@ -248,30 +248,6 @@ int App::Run() {
 
     player_.Update(input_, world_.Parts(), camera_.Yaw(), delta);
     camera_.SetTarget(FocusPoint());
-    UpdateCamera(delta);
-
-    switch (hud_.Update(input_)) {
-      case Hud::Action::Fullscreen:
-        window_.ToggleFullscreen();
-        break;
-      case Hud::Action::Exit:
-        exitRequested_ = true;
-        break;
-      case Hud::Action::ZoomIn:
-        camera_.Zoom(1.0f);
-        break;
-      case Hud::Action::ZoomOut:
-        camera_.Zoom(-1.0f);
-        break;
-      case Hud::Action::TiltUp:
-        camera_.Orbit(0.0f, -6.0f);
-        break;
-      case Hud::Action::None:
-        break;
-    }
-
-    if (exitRequested_) break;
-
     // The animation is driven by what the player is doing, not by a timer: the
     // same pose the old Animate script picks from the Humanoid's events.
     Avatar::Pose pose = Avatar::Pose::Standing;
@@ -293,6 +269,28 @@ int App::Run() {
     renderedFeet_.x += (player_.Position().x - renderedFeet_.x) * ease;
     renderedFeet_.y += (player_.Position().y - renderedFeet_.y) * ease;
     renderedFeet_.z += (player_.Position().z - renderedFeet_.z) * ease;
+
+    switch (hud_.Update(input_)) {
+      case Hud::Action::Fullscreen:
+        window_.ToggleFullscreen();
+        break;
+      case Hud::Action::Exit:
+        exitRequested_ = true;
+        break;
+      case Hud::Action::ZoomIn:
+        camera_.Zoom(1.0f);
+        break;
+      case Hud::Action::ZoomOut:
+        camera_.Zoom(-1.0f);
+        break;
+      case Hud::Action::TiltUp:
+        camera_.Orbit(0.0f, -6.0f);
+        break;
+      case Hud::Action::None:
+        break;
+    }
+
+    UpdateCamera(delta);
 
     avatar_.Animate(pose, delta);
     avatar_.SetPose(renderedFeet_, player_.Facing());
@@ -333,24 +331,34 @@ int App::Run() {
 void App::UpdateCamera(float deltaSeconds) {
   // Hold the left button and drag to look around. The camera is the only thing
   // that reacts to the mouse; the avatar turns by itself, towards where it walks.
-  if (input_.LeftButton()) {
+  // The interface owns the mouse: pressing one of its buttons must not also
+  // drag the view, and nothing behind the help screen moves either.
+  const bool overInterface = hud_.PointerOverInterface();
+  const bool modal = hud_.HelpOpen() || hud_.SwallowingDrag();
+
+  if (!overInterface && !modal && input_.LeftButton()) {
     camera_.Orbit(input_.MouseDeltaX(), input_.MouseDeltaY());
   }
 
-  if (input_.KeyDown(VK_LEFT)) camera_.Orbit(-8.0f, 0.0f);
-  if (input_.KeyDown(VK_RIGHT)) camera_.Orbit(8.0f, 0.0f);
-  if (input_.KeyDown(VK_UP)) camera_.Orbit(0.0f, -6.0f);
-  if (input_.KeyDown(VK_DOWN)) camera_.Orbit(0.0f, 6.0f);
+  if (!modal) {
+    if (input_.KeyDown(VK_LEFT)) camera_.Orbit(-8.0f, 0.0f);
+    if (input_.KeyDown(VK_RIGHT)) camera_.Orbit(8.0f, 0.0f);
+    if (input_.KeyDown(VK_UP)) camera_.Orbit(0.0f, -6.0f);
+    if (input_.KeyDown(VK_DOWN)) camera_.Orbit(0.0f, 6.0f);
+  }
 
   // The wheel zooms, one notch per step, the way the era's camera did. Q and E
   // stay for keyboards without one.
   const int notches = window_.TakeWheel();
-  if (notches != 0) camera_.Zoom(-static_cast<float>(notches));
+  if (notches != 0 && !overInterface && !modal) {
+    camera_.Zoom(-static_cast<float>(notches));
+  }
 
-  if (input_.KeyDown('Q')) camera_.Zoom(1.0f);
-  if (input_.KeyDown('E')) camera_.Zoom(-1.0f);
-
-  if (input_.KeyPressed(VK_HOME)) camera_.Reset();
+  if (!modal) {
+    if (input_.KeyDown('Q')) camera_.Zoom(1.0f);
+    if (input_.KeyDown('E')) camera_.Zoom(-1.0f);
+    if (input_.KeyPressed(VK_HOME)) camera_.Reset();
+  }
 
   camera_.Update(deltaSeconds);
 

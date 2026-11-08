@@ -61,6 +61,17 @@ constexpr int kHudZoomOutResource = 200;
 constexpr int kHudTiltResource = 201;
 constexpr int kHudReportResource = 202;
 
+// The hover and pressed art some of those buttons have. 203-219 stay free:
+// brick textures are numbered from 201 by the build when a place brings them.
+constexpr int kHudChatHoverResource = 220;
+constexpr int kHudChatDownResource = 221;
+constexpr int kHudZoomInHoverResource = 222;
+constexpr int kHudZoomInDownResource = 223;
+constexpr int kHudZoomOutHoverResource = 224;
+constexpr int kHudZoomOutDownResource = 225;
+constexpr int kHudTiltDownResource = 226;
+constexpr int kHudReportDownResource = 227;
+
 // Reads a resource compiled into this executable. Returns false, with `error`
 // saying what was missing, when the id is not in the image or is empty.
 bool ReadEmbedded(int id, std::vector<unsigned char>& bytes, std::wstring& error);

@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.21)
 # Built by .github/workflows/player-build.yml on every push that touches this
 # folder, and by hand with the commands in README.md.
 
-project(FieldBrikPlayer VERSION 0.11 LANGUAGES CXX)
+project(FieldBrikPlayer VERSION 0.11.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -137,15 +137,23 @@ foreach(pair "Arrow;ArrowCursor.png;180" "Drag;DragCursor.png;181"
 endforeach()
 
 # The HUD's own art: the movement keys up and pressed, the chat button, the
-# camera buttons and the report button. There is no art for Fullscreen, Help or
-# Exit in the era's drop, so those are drawn in Arial at startup instead.
+# camera buttons and the report button, with the hover and pressed states the
+# drop happens to carry. There is no art for Fullscreen, Help or Exit, so those
+# are drawn in Arial at startup instead.
 foreach(pair "KeyW;W_Key.png;190" "KeyWDown;W_Key_dn.png;191"
             "KeyA;A_Key.png;192" "KeyADown;A_Key_dn.png;193"
             "KeyS;S_Key.png;194" "KeySDown;S_Key_dn.png;195"
             "KeyD;D_Key.png;196" "KeyDDown;D_Key_dn.png;197"
             "Chat;Chat.png;198" "ZoomIn;CameraZoomIn.png;199"
             "ZoomOut;CameraZoomOut.png;200" "Tilt;CameraTiltUp_ovr.png;201"
-            "Report;ReportAbuse_ovr.PNG;202")
+            "Report;ReportAbuse_ovr.PNG;202"
+            "ChatHover;Chat_ovr.png;220" "ChatDown;Chat_ds.png;221"
+            "ZoomInHover;CameraZoomIn_ovr.png;222"
+            "ZoomInDown;CameraZoomIn_dn.png;223"
+            "ZoomOutHover;CameraZoomOut_ovr.png;224"
+            "ZoomOutDown;CameraZoomOut_dn.png;225"
+            "TiltDown;CameraTiltUp_dn.png;226"
+            "ReportDown;ReportAbuse_ds.PNG;227")
   list(GET pair 0 hud_role)
   list(GET pair 1 hud_file)
   list(GET pair 2 hud_id)

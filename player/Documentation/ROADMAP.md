@@ -184,6 +184,12 @@ The era's own images, drawn where the era drew them.
 Still open: the chat and Report buttons have no destination yet, and the tilt
 button wears the hover art because no unpressed tilt image exists.
 
+0.11.1 finishes the interaction: every button that has hover and pressed art uses
+it, the top strip answers the pointer with a lighter or darker colour, the chat
+and Report buttons still do nothing but now look like they were pressed, pressing
+anything on the interface no longer drags the camera, the camera holds still
+behind the help screen, and a click outside Help closes it.
+
 ## 0.10 — Milestone 10: the cursors and a pose that should not happen — done
 
 - The era's cursors are the mouse cursor: the arrow, the hand while the camera is
