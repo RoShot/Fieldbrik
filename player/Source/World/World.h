@@ -31,7 +31,10 @@ class World {
            bool collides = true);
 
   std::vector<Part> parts_;
-  DirectX::XMFLOAT3 spawn_{0.0f, 4.0f, 0.0f};
+
+  // Clear of the bricks, on the flat top of the baseplate, with the build area
+  // in front of the player rather than behind him.
+  DirectX::XMFLOAT3 spawn_{0.0f, 0.0f, 14.0f};
 };
 
 }  // namespace fieldbrik

@@ -51,11 +51,6 @@ void World::BuildDefault() {
   Add("Step 1", {-16.0f, 0.5f, -14.0f}, {6.0f, 1.0f, 6.0f}, kBrickBlue);
   Add("Step 2", {-16.0f, 1.5f, -19.0f}, {6.0f, 1.0f, 4.0f}, kBrickBlue);
   Add("Step 3", {-16.0f, 2.5f, -23.0f}, {6.0f, 1.0f, 2.0f}, kBrickBlue);
-
-  // A tall thin marker at the spawn point, so the middle of the world is
-  // findable once the camera can be moved anywhere.
-  Add("Spawn marker", {0.0f, 4.0f, 0.0f}, {0.6f, 8.0f, 0.6f}, kBrickRed, {0, 0, 0},
-      false);
 }
 
 }  // namespace fieldbrik
