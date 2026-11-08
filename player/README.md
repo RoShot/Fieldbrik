@@ -3,14 +3,20 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.4**: a window, a world of bricks, and a blocky avatar you can walk,
-jump and climb around in third person. Gravity pulls it down, bricks stop it, and
-falling off the baseplate puts it back at the spawn point.
+This is **0.5**: a window, a world of bricks, and a blocky avatar you can walk,
+jump and climb around in third person. Gravity pulls it down, bricks stop it,
+low bricks are walked up, and falling off the baseplate puts it back at the spawn
+point.
+
+The world it walks in comes out of a **place file**, not out of the exe. Point
+the client at a `.rbxl` and that is what loads.
 
 ## Run it
 
 Download `FieldBrikPlayer.exe` from the repository's **Releases** page and
-double-click it. Nothing needs installing.
+double-click it. Nothing needs installing. It looks for `place.rbxl` beside the
+exe; with no place file it opens the built-in test world, so a bare exe still
+works.
 
 Windows will warn you the first time ("Windows protected your PC") because the
 exe is not code-signed. Choose **More info → Run anyway**. That warning is about
@@ -30,6 +36,39 @@ The window opens at 1024×768, can be resized, and closes with the title bar X o
 | Q / E | Zoom out / in |
 | Home | Put the camera back behind the player |
 | Escape | Close the client |
+
+## Places
+
+A place is a plain readable XML file — the format Roblox used before 2013 — so it
+opens in Notepad, diffs, and can be fixed by hand. Put a file called
+`place.rbxl` next to `FieldBrikPlayer.exe` and it loads on start, or pass a path:
+
+```bat
+FieldBrikPlayer.exe "C:\maps\crossroads2006.rbxl"
+```
+
+`.rbxl`, `.rbxlx` and `.xml` are read. `.fbrx` — the format Studio will save — is
+not yet: the client names the file and says so rather than loading nothing.
+
+Every `<Item>` is one brick, and says what you would expect a brick to say:
+
+- `Name`, the label the brick has in an explorer.
+- `size`, three numbers in studs. `Size` is accepted too.
+- `CFrame`, where it sits: an `X`, `Y`, `Z` position and nine rotation numbers.
+  The matrix is kept as a matrix, because that is what a CFrame is, so a brick
+  turned on three axes is read exactly rather than flattened into degrees.
+- `Color3uint8`, the brick colour, 0–255 per channel.
+- `CanCollide`, whether the player is stopped by it.
+- `TextureID`, read and kept, e.g. `rbxasset://textures/...`. Nothing is drawn
+  from it yet.
+
+A `SpawnLocation` item puts the player on top of it instead of at the default
+spawn. `player/Place/default.rbxl` is a working sample that rebuilds the built-in
+world, with a commented-out spawn location to copy.
+
+The reader is strict and names what went wrong — the tag without a name, a tag
+that is never closed, a file with no parts in it — and falls back to the built-in
+world rather than showing an empty screen.
 
 ## The avatar
 
@@ -61,6 +100,16 @@ You are stopped by walls rather than snagging on them, because the shallowest ax
 is the one that gets corrected. Land on something and the fall ends there; jump
 into the underside of a brick and the head stops against it. Fall below -60 and
 the client puts you back at the spawn point instead of dropping you forever.
+
+A ledge up to 1.15 studs high is walked up instead of jumped onto: the client
+lifts the player over it, checks there is room at the top, and sets them back down
+on it. That is what makes the steps and the one-stud bricks walkable, and it stops
+short of anything that should really be jumped.
+
+The camera is kept out of the bricks too. It casts from the player's chest towards
+where it wants to sit and stops short of the first thing along that line, so
+zooming out with a wall behind you pulls the view in instead of putting the camera
+inside the wall.
 
 ## What is in the world
 
@@ -104,7 +153,7 @@ player/
     Camera/        third-person follow camera
     Characters/    the avatar's body and the player's movement
     Physics/       collision against the bricks
-    World/         the Part type and the test world
+    World/         the Part type, the place reader and the test world
     Input/         keyboard and mouse state
   Documentation/   roadmap, milestone notes
 ```
@@ -136,10 +185,18 @@ empty folders.
 
 ## Known issues
 
-- No stepping up: a one-stud brick in front of you is something to jump onto, not
-  to walk over. Slopes are stood on rather than walked up, and nothing slides.
-- The camera has no collision of its own, so it can still end up inside a brick
-  when you zoom in against one.
+- No scripts. Nothing in a place file runs: no Lua, no buttons, no damage, no
+  sound, no tools. A place is geometry plus where you start.
+- Boxes only. Every part is a rectangular brick: no spheres, wedges or cylinders,
+  and no surfaces or materials. `TextureID` is read and kept, but nothing is
+  drawn from it.
+- `.fbrx` is recognised and refused for now, with a message saying it is not
+  supported yet.
+- Unanchored parts stay exactly where the file put them. Physics is the player's,
+  not the world's.
+- Slopes are stood on rather than walked up, and nothing slides.
+- Input is only read while the client is the foreground window, so typing in
+  another window cannot walk the player around.
 - No walk animation, by design for this era. The body turns towards its direction
   of travel and slides, and it does not change pose in mid-air.
 - No studs on the avatar's body parts yet.
