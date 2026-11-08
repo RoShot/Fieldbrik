@@ -5,8 +5,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <string>
+#include <vector>
 
 #include "Physics/Physics.h"
+#include "Version.generated.h"
 
 namespace fieldbrik {
 namespace {
@@ -110,6 +113,25 @@ bool App::Initialise() {
   }
 
   LoadWorld();
+
+  // A place that asks for a texture this exe does not carry is not run. A brick
+  // in the wrong colour is the kind of bug that hides, and the fix is one file.
+  const std::vector<std::string> missing = renderer_.MissingTextures(world_.Parts());
+  if (!missing.empty()) {
+    std::wstring list;
+    for (const std::string& id : missing) {
+      list += L"\n  ";
+      list += Widen(id);
+    }
+
+    const std::wstring message =
+        L"The place uses textures this client does not have:" + list +
+        L"\n\nPut them in player/content/textures/bricks and rebuild.";
+    MessageBoxW(nullptr, message.c_str(), L"FieldBrik Player",
+                MB_OK | MB_ICONERROR);
+    failureCode_ = 4;
+    return false;
+  }
 
   // The world never moves, so its studs are built once instead of every frame.
   renderer_.BuildWorldStuds(world_.Parts());
@@ -304,8 +326,8 @@ void App::UpdateCamera(float deltaSeconds) {
 void App::SetTitle(int framesPerSecond) {
   wchar_t buffer[512];
   swprintf_s(buffer,
-             L"FieldBrik Player 0.8 - %d x %d - %d parts - %d fps - %s",
-             window_.Width(), window_.Height(),
+             L"FieldBrik Player %s - %d x %d - %d parts - %d fps - %s",
+             kClientVersion, window_.Width(), window_.Height(),
              world_.PartCount() + static_cast<int>(avatarParts_.size()),
              framesPerSecond, Widen(world_.Name()).c_str());
   window_.SetTitle(buffer);

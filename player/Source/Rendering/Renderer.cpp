@@ -27,8 +27,8 @@ constexpr D3D_FEATURE_LEVEL kFeatureLevels[] = {D3D_FEATURE_LEVEL_11_0,
 // faces of a brick apart, which is all a 2004-era client needs.
 //
 // The sky is a separate entry point pair in the same source: a fullscreen
-// triangle that reads the view direction out of the inverse view-projection and
-// picks a colour between the horizon and the zenith.
+// triangle that leans out along the camera's own axes and samples the panorama
+// along the ray.
 constexpr char kShaderSource[] = R"hlsl(
 cbuffer FrameConstants : register(b0)
 {
@@ -44,15 +44,16 @@ cbuffer ObjectConstants : register(b1)
 
 cbuffer SkyConstants : register(b0)
 {
-    row_major float4x4 inverseViewProjection;
-    float4 zenithColour;
-    float4 horizonColour;
+    float4 skyForward;  // xyz: the way the camera looks
+    float4 skyRight;    // xyz: a lean of one screen-edge rightwards
+    float4 skyUp;       // xyz: a lean of one screen-edge upwards
 };
 
-// The only texture the client has is the face, so it is bound at t0 and the
-// textured draw is chosen per draw rather than per material.
-Texture2D faceTexture : register(t0);
-SamplerState faceSampler : register(s0);
+// One texture slot for the whole client: a brick's top face, the avatar's face,
+// or the sky. Which image is bound is the drawing code's business, and the
+// textured branch below is chosen per draw rather than per material.
+Texture2D sceneTexture : register(t0);
+SamplerState sceneSampler : register(s0);
 
 struct VertexIn
 {
@@ -89,7 +90,7 @@ float4 PSMain(VertexOut input) : SV_TARGET
     // plane, and the colour channel is already carried for the studs.
     if (options.x > 0.5f)
     {
-        float4 texel = faceTexture.Sample(faceSampler, input.colour.rg);
+        float4 texel = sceneTexture.Sample(sceneSampler, input.colour.rg);
         clip(texel.a - 0.5f);
         return float4(texel.rgb, 1.0f);
     }
@@ -121,21 +122,23 @@ SkyOut SkyVS(uint id : SV_VertexID)
 
 float4 SkyPS(SkyOut input) : SV_TARGET
 {
-    // w = 0 turns the clip point into a direction: the ray this pixel looks
-    // along, in world space.
-    float3 direction = normalize(mul(float4(input.ndc, 1.0f, 0.0f),
-                                    inverseViewProjection).xyz);
+    // The ray this pixel looks along. The camera's axes arrive already scaled by
+    // the field of view, so the only work left is to lean out towards the pixel.
+    float3 direction = normalize(skyForward.xyz + input.ndc.x * skyRight.xyz +
+                                     input.ndc.y * skyUp.xyz);
 
-    float height = saturate(direction.y * 1.5f + 0.06f);
-    float3 sky = lerp(horizonColour.rgb, zenithColour.rgb, pow(height, 0.65f));
+    // The era's sky is a picture wrapped round the horizon, not a gradient:
+    // longitude across, latitude up, so the top of the image is overhead.
+    const float kInvTwoPi = 0.15915494f;
+    const float kInvPi = 0.31830989f;
+
+    const float longitude = atan2(direction.x, direction.z) * kInvTwoPi + 0.5f;
+    const float latitude = 0.5f - asin(clamp(direction.y, -1.0f, 1.0f)) * kInvPi;
+
+    float3 sky = sceneTexture.Sample(sceneSampler, float2(longitude, latitude)).rgb;
     return float4(sky, 1.0f);
 }
 )hlsl";
-
-// The era's sky: a pale blue at the horizon deepening towards the top, which is
-// what the old client's sky texture did before there were clouds in it.
-constexpr XMFLOAT4 kZenithColour{0.33f, 0.58f, 0.88f, 1.0f};
-constexpr XMFLOAT4 kHorizonColour{0.72f, 0.87f, 0.97f, 1.0f};
 
 struct FrameConstants {
   XMFLOAT4X4 viewProjection;
@@ -148,9 +151,9 @@ struct ObjectConstants {
 };
 
 struct SkyConstants {
-  XMFLOAT4X4 inverseViewProjection;
-  XMFLOAT4 zenith;
-  XMFLOAT4 horizon;
+  XMFLOAT4 forward;
+  XMFLOAT4 right;
+  XMFLOAT4 up;
 };
 
 std::wstring Widen(const char* text) {
@@ -389,6 +392,10 @@ bool Renderer::CreatePipeline() {
   // rounded block is drawn instead and the client still runs.
   LoadHeadAssets();
 
+  // The brick and sky textures. Fatal, unlike the head: an image that will not
+  // decode is a broken build, and drawing nothing would hide it.
+  if (!LoadTextures()) return false;
+
   return true;
 }
 
@@ -513,7 +520,13 @@ void Renderer::BeginFrame(const float clearColour[4]) {
 }
 
 void Renderer::DrawSky(const Camera& camera) {
-  if (!context_ || !targetView_ || !skyVertexShader_ || !skyPixelShader_) return;
+  // No panorama means no sky pass at all: the window's clear colour is what
+  // shows. Replacing the gradient outright is deliberate, so a missing sky is
+  // obvious rather than quietly plausible.
+  if (!context_ || !targetView_ || !skyVertexShader_ || !skyPixelShader_ ||
+      !skyTexture_ || !skySampler_) {
+    return;
+  }
 
   D3D11_MAPPED_SUBRESOURCE mapped{};
   if (FAILED(context_->Map(skyBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
@@ -522,11 +535,10 @@ void Renderer::DrawSky(const Camera& camera) {
   }
 
   auto* sky = static_cast<SkyConstants*>(mapped.pData);
-  XMVECTOR determinant{};
-  XMStoreFloat4x4(&sky->inverseViewProjection,
-                  XMMatrixInverse(&determinant, camera.ViewProjection()));
-  sky->zenith = kZenithColour;
-  sky->horizon = kHorizonColour;
+  const Camera::SkyBasis basis = camera.SkyRayBasis();
+  sky->forward = {basis.forward.x, basis.forward.y, basis.forward.z, 0.0f};
+  sky->right = {basis.right.x, basis.right.y, basis.right.z, 0.0f};
+  sky->up = {basis.up.x, basis.up.y, basis.up.z, 0.0f};
   context_->Unmap(skyBuffer_.Get(), 0);
 
   ID3D11Buffer* skyConstants[] = {skyBuffer_.Get()};
@@ -539,6 +551,12 @@ void Renderer::DrawSky(const Camera& camera) {
   context_->PSSetShader(skyPixelShader_.Get(), nullptr, 0);
   context_->RSSetState(rasterState_.Get());
   context_->OMSetDepthStencilState(skyDepthState_.Get(), 0);
+
+  ID3D11SamplerState* samplers[] = {skySampler_.Get()};
+  context_->PSSetSamplers(0, 1, samplers);
+
+  ID3D11ShaderResourceView* textures[] = {skyTexture_.Get()};
+  context_->PSSetShaderResources(0, 1, textures);
 
   context_->Draw(3, 0);
 
@@ -607,6 +625,24 @@ void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera) {
 
     SetObject(part.ModelMatrix(), colour, false);
     cube_.Draw(context_.Get());
+
+    // The texture covers the top face only, stretched once across the whole
+    // square, which is what a decal sat on in the era. The sides keep their
+    // flat colour.
+    if (part.textureId.empty() || !topFace_.Valid()) continue;
+
+    const ID3D11ShaderResourceView* texture = FindTexture(part.textureId);
+    if (!texture) continue;
+
+    ID3D11ShaderResourceView* painted[] = {
+        const_cast<ID3D11ShaderResourceView*>(texture)};
+    context_->PSSetShaderResources(0, 1, painted);
+
+    SetObject(part.ModelMatrix(), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), true);
+    topFace_.Draw(context_.Get());
+
+    ID3D11ShaderResourceView* plain[] = {whiteTexture_.Get()};
+    context_->PSSetShaderResources(0, 1, plain);
   }
 }
 
@@ -674,6 +710,10 @@ void Renderer::WaitForGpu() {
 }
 
 void Renderer::Shutdown() {
+  topFace_.Release();
+  textures_.clear();
+  skySampler_.Reset();
+  skyTexture_.Reset();
   faceQuad_.Release();
   headModel_.Release();
   faceTexture_.Reset();
