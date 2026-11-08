@@ -100,6 +100,10 @@ void Player::Spawn(const XMFLOAT3& feetPosition) {
   facing_ = 180.0f;
 }
 
+float Player::HorizontalSpeed() const {
+  return std::sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
+}
+
 void Player::Respawn() {
   position_ = spawn_;
   velocity_ = {0.0f, 0.0f, 0.0f};

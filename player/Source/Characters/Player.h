@@ -7,7 +7,7 @@
 //
 // Direction is relative to the camera, the way a third-person game works: W moves
 // away from the camera, not along a fixed world axis. The avatar turns to face
-// where it is going, which is the only "animation" the early client had.
+// where it is going; the swinging of the limbs is the Avatar's business.
 
 #pragma once
 
@@ -35,6 +35,12 @@ class Player {
   float Facing() const { return facing_; }
 
   bool Grounded() const { return grounded_; }
+
+  // Studs per second along the ground, and up and down. The animation wants the
+  // horizontal one to decide whether this is a walk or a stand, and the vertical
+  // one to tell a jump from a fall.
+  float HorizontalSpeed() const;
+  float VerticalSpeed() const { return velocity_.y; }
 
  private:
   void Respawn();
