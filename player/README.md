@@ -6,9 +6,10 @@ no third-party dependencies.
 This is **0.9**: a window, a world of bricks, and a blocky avatar that walks,
 jumps and falls with limbs that swing. Gravity pulls it down, bricks stop it, low
 bricks are walked up, and falling off the baseplate puts it back at the spawn
-point. Every brick wears its studs and the texture its `TextureID` names, the sky
-is the era's own panorama rather than a gradient, and the avatar wears the era's
-own head model and face image.
+point. Every brick's faces wear the era's surface strip — studs on top, inlets
+underneath, weld on the sides, one per stud — the sky is the era's own six-faced
+skybox with the sun and the moon in it, and the avatar wears the era's own head
+model and face image.
 
 The world it walks in comes out of a **place file**, not out of the exe. Point
 the client at a `.rbxl` and that is what loads.
@@ -124,9 +125,9 @@ teleporting a whole stud.
 ## Textures
 
 `player/content/textures` is the drop folder: `bricks/` holds one image per brick
-texture, `sky/panorama.png` holds the sky. Everything in there is compiled into
-the exe at build time, so a new file means a rebuild and the download is still one
-file.
+texture, and `sky/` holds the six faces of the skybox — `null_plainsky512_rt` and
+its five siblings. Everything in there is compiled into the exe at build time, so
+a new file means a rebuild and the download is still one file.
 
 The names are the whole lookup. A brick is matched by the **last segment of its
 `TextureID`**, lowercased, so a place written for the old client finds its art with
@@ -138,21 +139,24 @@ flat throughout.
 
 A place that names an image the exe does not carry is **not run**: the client
 lists what is missing and stops, because a brick in the wrong colour is a bug that
-hides. With no panorama in `sky/` there is no sky pass at all and the window's
-clear colour shows — the gradient is gone rather than kept as a fallback.
+hides. With no complete set of faces in `sky/` there is no sky pass at all and the
+window's clear colour shows — the gradient is gone rather than kept as a fallback.
 
 ## Studs and the sky
 
-Every brick wears studs on its top face, a stud apart, shrunk to fit a brick
-that is under a stud across. They are real geometry, generated at load: a stud
-is a small eight-sided cylinder, and the 80×80 baseplate's 6400 of them are
-built once into one buffer and drawn in a single call. The avatar's ten are
-rebuilt each frame, because it moves.
+Studs are part of the surface strip rather than geometry: a brick's top samples
+the strip's stud tile once per stud, so an 80-stud baseplate shows 80 of them
+across and a 1-stud arm shows one. The same strip supplies the inlets underneath
+and the weld across the sides, tinted by the brick's own colour, which is what a
+brick looked like before surfaces were switched off. The avatar wears one stud on
+the top of each arm and nothing else.
 
-The sky is the era's own panorama: one wide image wrapped round the horizon and
-sampled by the direction every pixel looks along, so it turns with the view
-instead of being painted on the screen. The horizon is not a separate object: it
-is where the image meets the world, and the world covers the rest.
+The sky is the era's own skybox: six square pictures, one per face of a cube round
+the camera, sampled by the direction every pixel looks along, so it turns with the
+view instead of being painted on the screen. The joins between the faces are left
+exactly where the artist put them rather than blended away. The horizon is not a
+separate object: it is where the pictures meet the world, and the world covers the
+rest.
 
 The camera is unaffected by either, but both are drawn behind it: the sky goes
 down first with depth off, and the studs are drawn straight after the parts they
@@ -290,9 +294,9 @@ empty folders.
   another window cannot walk the player around.
 - Only the top face of a brick is textured, and only the classic smile is
   compiled in: the other seven faces arrive with the website tie-in.
-- Expensive studs. The baseplate's are built once into a buffer of about 160,000
-  triangles, which is fine on a desktop GPU and would not be on the hardware of
-  the era. A brick with more than 8192 studs gets none rather than stalling.
+- Only `Surfaces.png` is read. `SurfacesStrip.png` — the shorter strip, for short
+  faces — is unused until the rule for choosing between them is worked out.
+- The era's cursors in `content/textures/ui` are not the mouse cursor yet.
 - No tool poses yet: the arm does not come up to hold anything, because there is
   nothing to hold until tools arrive.
 - Back faces are not culled (`CULL_NONE`). A closed box hides them anyway, so it

@@ -133,8 +133,8 @@ bool App::Initialise() {
     return false;
   }
 
-  // The world never moves, so its studs are built once instead of every frame.
-  renderer_.BuildWorldStuds(world_.Parts());
+  // Bricks wear the era's surface strip now, so there is no stud geometry to
+  // build for the world: the studs are part of the picture on each face.
 
   camera_.SetViewport(window_.Width(), window_.Height());
   player_.Spawn(world_.SpawnPoint());
@@ -249,10 +249,10 @@ int App::Run() {
     if (!window_.IsMinimised()) {
       renderer_.BeginFrame(kSkyColour);
       renderer_.DrawSky(camera_);
-      renderer_.DrawParts(world_.Parts(), camera_);
-      renderer_.DrawWorldStuds(camera_);
-      renderer_.DrawParts(avatarParts_, camera_);
-      renderer_.DrawStuds(avatarParts_, camera_);
+      renderer_.DrawSkyObjects(camera_);
+      renderer_.DrawParts(world_.Parts(), camera_, true);
+      renderer_.DrawParts(avatarParts_, camera_, false);
+      renderer_.DrawAvatarStuds(avatarParts_, camera_);
       renderer_.EndFrame();
 
       titleElapsed += elapsed;

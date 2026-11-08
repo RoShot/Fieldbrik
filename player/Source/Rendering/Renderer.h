@@ -5,7 +5,7 @@
 // viewport are rebuilt. Every part is drawn as the same unit cube scaled and
 // moved by its own matrix, which is why a brick can be any size without having
 // its own geometry. Two shapes sit beside the cube — the stud and the head — and
-// one panorama covers the sky.
+// the sky behind them is six pictures round a cube.
 
 #pragma once
 
@@ -42,19 +42,27 @@ class Renderer {
   void BeginFrame(const float clearColour[4]);
 
   // The sky goes down before anything else and covers whatever is left after
-  // the world is drawn: a panorama sampled by the direction each pixel looks
-  // along, so it turns with the camera instead of sitting on the screen.
+  // the world is drawn: sampled by the direction each pixel looks along, so it
+  // turns with the camera instead of sitting on the screen.
   void DrawSky(const Camera& camera);
 
   // Draws a list of parts. The world and the avatar are drawn as separate lists
   // so a future second player, or a selection outline, needs no special case.
-  void DrawParts(const std::vector<Part>& parts, const Camera& camera);
+  //
+  // `surfaces` gives each brick the era's surface strip on its faces: studs on
+  // top, inlets underneath, weld on the sides, one tile per stud so nothing is
+  // stretched. The avatar passes false: its only studs are the two on its arms.
+  void DrawParts(const std::vector<Part>& parts, const Camera& camera,
+                 bool surfaces = false);
 
-  // The world's studs never move, so they are built once and drawn as a single
-  // batch. The avatar's are rebuilt each frame, because it does.
-  void BuildWorldStuds(const std::vector<Part>& parts);
-  void DrawWorldStuds(const Camera& camera);
-  void DrawStuds(const std::vector<Part>& parts, const Camera& camera);
+  // One flat stud centred on the top of each arm, from the same strip. Nothing
+  // else on the body wears one.
+  void DrawAvatarStuds(const std::vector<Part>& parts, const Camera& camera);
+
+  // The sun, the moon and the flare, drawn over the sky and behind the world as
+  // additive billboards: the sun where the art is brightest, the moon opposite,
+  // and the flare mirrored across the screen while the sun is in view.
+  void DrawSkyObjects(const Camera& camera);
 
   void EndFrame();
 
@@ -83,14 +91,17 @@ class Renderer {
   bool BindBackBuffer();
 
   // Input layout, shaders, states and the per-frame constants, ready for parts
-  // or studs.
+  //
   void BindGeometry(const Camera& camera);
 
   // One draw's own matrix and colour. `textured` switches the pixel shader to
   // sampling and alpha-testing instead of shading a flat colour, which is how the
-  // face is drawn over the head.
+  // face is drawn over the head. `surfaces` samples the surface strip instead of
+  // the object's colour, and `size` is the part's extent in studs, which is what
+  // decides how many studs a face shows.
   void SetObject(const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4& colour,
-                 bool textured = false);
+                 bool textured = false, const DirectX::XMFLOAT3* size = nullptr,
+                 bool surfaces = false, bool billboard = false);
 
   // The head and its face, in RendererHead.cpp. Both come out of the executable's
   // own resources; without them the generated rounded block is drawn instead.
@@ -135,8 +146,6 @@ class Renderer {
 
   Mesh cube_;
   Mesh head_;
-  Mesh worldStuds_;
-  Mesh avatarStuds_;
 
   // The era's head model and the plane its face is drawn on.
   Mesh headModel_;
@@ -155,9 +164,23 @@ class Renderer {
   // stay sharp rather than be smoothed. Brick textures use it too.
   Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState_;
 
-  // The sky's panorama and its own sampler: linear, and wrapping round, because
-  // a wrapped picture has an edge that must not show.
-  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture_;
+  // The surface strip and its sampler: point filtering so a stud stays a stud,
+  // and wrapping so one stud can repeat across a face of any size.
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> surfacesTexture_;
+  Microsoft::WRL::ComPtr<ID3D11SamplerState> surfacesSampler_;
+
+  // The sun, the moon and the flare, and the quad that carries each of them.
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sunTexture_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> moonTexture_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> flareTexture_;
+  Microsoft::WRL::ComPtr<ID3D11BlendState> additiveBlend_;
+  Mesh billboard_;
+
+  // The sky's six faces, in one cube texture (the era's own art).
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyCube_;
+
+  // Linear filtering for the sky, and clamped: the faces meet exactly, so there
+  // is nothing to wrap.
   Microsoft::WRL::ComPtr<ID3D11SamplerState> skySampler_;
 
   // A brick texture and the key its TextureID is matched by: the last path
@@ -167,10 +190,6 @@ class Renderer {
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> view;
   };
   std::vector<TextureEntry> textures_;
-
-  // The avatar can only ever wear so many studs; this is its ceiling.
-  static constexpr unsigned int kAvatarStudVertices = 4096;
-  static constexpr unsigned int kAvatarStudIndices = 8192;
 
   int width_ = 0;
   int height_ = 0;

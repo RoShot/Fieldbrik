@@ -44,6 +44,10 @@ file(GLOB BRICK_TEXTURE_FILES
   "${PLAYER_TEXTURE_DIR}/bricks/*.jpeg")
 list(SORT BRICK_TEXTURE_FILES)
 
+# The surface strips are not brick textures: they are what a brick's faces wear,
+# so they are embedded on their own id rather than swept up by the glob above.
+list(FILTER BRICK_TEXTURE_FILES EXCLUDE REGEX "/Surfaces(Strip)?\\.png$")
+
 set(TEXTURE_RESOURCES "")
 set(TEXTURE_ENTRIES "")
 set(texture_id 201)
@@ -56,18 +60,66 @@ foreach(texture ${BRICK_TEXTURE_FILES})
   math(EXPR texture_id "${texture_id} + 1")
 endforeach()
 
-file(GLOB SKY_TEXTURE_FILES
-  "${PLAYER_TEXTURE_DIR}/sky/panorama.png"
-  "${PLAYER_TEXTURE_DIR}/sky/panorama.jpg")
+# The sky, the way the era shipped it: six square pictures, one per face of a
+# cube round the camera, named *_rt, *_lf, *_up, *_dn, *_ft and *_bk. All six are
+# needed or there is no sky at all: half a sky is worse than a clear colour,
+# because it is the kind of thing that hides.
+set(SKY_PRESENT 0)
+set(SKY_CUBE_IDS "0,0,0,0,0,0")
+set(sky_cube_complete 1)
+set(sky_cube_id 151)
+set(sky_cube_resources "")
 
-if(SKY_TEXTURE_FILES)
-  list(GET SKY_TEXTURE_FILES 0 sky_texture)
-  file(REAL_PATH "${sky_texture}" sky_texture_path)
-  string(APPEND TEXTURE_RESOURCES "150 10 \"${sky_texture_path}\"\n")
+# In the order Direct3D numbers a cube's faces: +X, -X, +Y, -Y, +Z, -Z, which is
+# the order the generated table and the shader agree on.
+foreach(side rt lf up dn ft bk)
+  file(GLOB sky_side_files
+    "${PLAYER_TEXTURE_DIR}/sky/*_${side}.png"
+    "${PLAYER_TEXTURE_DIR}/sky/*_${side}.jpg")
+
+  if(sky_side_files)
+    list(GET sky_side_files 0 sky_side)
+    file(REAL_PATH "${sky_side}" sky_side_path)
+    string(APPEND sky_cube_resources "${sky_cube_id} 10 \"${sky_side_path}\"\n")
+    math(EXPR sky_cube_id "${sky_cube_id} + 1")
+  else()
+    set(sky_cube_complete 0)
+  endif()
+endforeach()
+
+if(sky_cube_complete)
   set(SKY_PRESENT 1)
-else()
-  set(SKY_PRESENT 0)
+  set(SKY_CUBE_IDS "151,152,153,154,155,156")
+  string(APPEND TEXTURE_RESOURCES "${sky_cube_resources}")
 endif()
+
+# The surface strip: studs, inlets, weld and glue, which every brick's faces wear.
+set(SURFACES_PRESENT 0)
+set(surfaces_file "${PLAYER_TEXTURE_DIR}/bricks/Surfaces.png")
+
+if(EXISTS "${surfaces_file}")
+  file(REAL_PATH "${surfaces_file}" surfaces_path)
+  string(APPEND TEXTURE_RESOURCES "160 10 \"${surfaces_path}\"\n")
+  set(SURFACES_PRESENT 1)
+endif()
+
+# The things that hang in the sky, all drawn additively over it: the sun, the moon
+# opposite it, and the flare that follows the sun across the screen.
+set(SUN_PRESENT 0)
+set(MOON_PRESENT 0)
+set(FLARE_PRESENT 0)
+
+foreach(pair "SUN;sun.jpg;170" "MOON;moon.jpg;171" "FLARE;lensflare.jpg;172")
+  list(GET pair 0 sky_role)
+  list(GET pair 1 sky_file)
+  list(GET pair 2 sky_id)
+
+  if(EXISTS "${PLAYER_TEXTURE_DIR}/sky/${sky_file}")
+    file(REAL_PATH "${PLAYER_TEXTURE_DIR}/sky/${sky_file}" sky_object_path)
+    string(APPEND TEXTURE_RESOURCES "${sky_id} 10 \"${sky_object_path}\"\n")
+    set(${sky_role}_PRESENT 1)
+  endif()
+endforeach()
 
 list(LENGTH BRICK_TEXTURE_FILES texture_count)
 message(STATUS

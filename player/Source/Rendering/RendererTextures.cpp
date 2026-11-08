@@ -9,10 +9,13 @@
 // The texture only ever covers the top face of a brick, stretched once across it,
 // which is what a decal did in the era. The sides keep their flat colour.
 //
-// The sky is one wide panorama wrapped round the horizon and sampled by direction.
-// With no panorama in the exe there is no sky pass at all and the window's clear
-// colour is what you see: replacing the gradient outright is deliberate, because a
-// missing sky should be obvious rather than quietly plausible.
+// The sky is six pictures, one per face of a cube round the camera, sampled by the
+// direction each pixel looks along: that is the shape the era shipped it in, and
+// the only shape this reads.
+//
+// With no sky in the exe there is no sky pass at all and the window's clear colour
+// is what you see: replacing the gradient outright is deliberate, because a missing
+// sky should be obvious rather than quietly plausible.
 
 #include "Rendering/Renderer.h"
 
@@ -162,23 +165,13 @@ bool Renderer::LoadTextures() {
     textures_.push_back(entry);
   }
 
-  // The sky, when the folder has one. Its own sampler: a panorama wants linear
-  // filtering and to wrap round, where a face wants neither.
-  if (kSkyTexturePresent) {
-    if (!ReadEmbedded(kSkyTextureResource, bytes, error)) {
-      lastError_ = error;
-      return false;
-    }
-
-    if (!CreateTextureFromPng(device_.Get(), bytes.data(), bytes.size(),
-                              skyTexture_.GetAddressOf(), error)) {
-      lastError_ = error;
-      return false;
-    }
-
+  // The sky, when the folder has all six faces. Its sampler is linear, because a
+  // sky is a photograph rather than line art, and clamped, because the faces meet
+  // exactly and there is nothing to wrap.
+  if (kSkyPresent) {
     D3D11_SAMPLER_DESC description{};
     description.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    description.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    description.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
     description.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
     description.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
     description.ComparisonFunc = D3D11_COMPARISON_NEVER;
@@ -187,6 +180,75 @@ bool Renderer::LoadTextures() {
     if (FAILED(device_->CreateSamplerState(&description, &skySampler_))) {
       lastError_ = L"The sky's sampler could not be created.";
       return false;
+    }
+
+    // Six faces, in the order the table lists them: +X, -X, +Y, -Y, +Z, -Z.
+    std::vector<std::vector<unsigned char>> faces(kSkyFaceCount);
+    const void* images[kSkyFaceCount]{};
+    std::size_t sizes[kSkyFaceCount]{};
+
+    for (int face = 0; face < kSkyFaceCount; ++face) {
+      if (!ReadEmbedded(kSkyCubeFaceIds[face], faces[face], error)) {
+        lastError_ = error;
+        return false;
+      }
+      images[face] = faces[face].data();
+      sizes[face] = faces[face].size();
+    }
+
+    if (!CreateTextureCubeFromImages(device_.Get(), images, sizes, kSkyFaceCount,
+                                     skyCube_.GetAddressOf(), error)) {
+      lastError_ = error;
+      return false;
+    }
+  }
+
+  // The surface strip. Point filtering and wrapping: a stud is one tile of 32
+  // pixels and has to repeat, not smear, across a face of any size.
+  if (kSurfacesPresent) {
+    if (!ReadEmbedded(kSurfacesResource, bytes, error)) {
+      lastError_ = error;
+      return false;
+    }
+
+    if (!CreateTextureFromPng(device_.Get(), bytes.data(), bytes.size(),
+                              surfacesTexture_.GetAddressOf(), error)) {
+      lastError_ = error;
+      return false;
+    }
+
+    D3D11_SAMPLER_DESC description{};
+    description.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    description.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    description.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    description.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    description.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    description.MaxLOD = D3D11_FLOAT32_MAX;
+
+    if (FAILED(device_->CreateSamplerState(&description, &surfacesSampler_))) {
+      lastError_ = L"The surface sampler could not be created.";
+      return false;
+    }
+  }
+
+  // The sun, the moon and the flare, each optional: a missing one is simply not
+  // drawn, and the sky is still a sky.
+  {
+    const int ids[3] = {kSunResource, kMoonResource, kFlareResource};
+    const bool present[3] = {kSunPresent, kMoonPresent, kFlarePresent};
+    ID3D11ShaderResourceView** targets[3] = {sunTexture_.GetAddressOf(),
+                                             moonTexture_.GetAddressOf(),
+                                             flareTexture_.GetAddressOf()};
+
+    for (int index = 0; index < 3; ++index) {
+      if (!present[index]) continue;
+
+      if (!ReadEmbedded(ids[index], bytes, error) ||
+          !CreateTextureFromPng(device_.Get(), bytes.data(), bytes.size(),
+                                targets[index], error)) {
+        lastError_ = error;
+        return false;
+      }
     }
   }
 

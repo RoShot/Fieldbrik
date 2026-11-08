@@ -9,6 +9,11 @@
 #include <cstdint>
 #include <vector>
 
+// Generated beside the build by CMake; the build folder is on the include path.
+// It is included for kSkyFaceCount: how many faces a cube has is the table's
+// business, not this file's.
+#include "TextureTable.generated.h"
+
 using Microsoft::WRL::ComPtr;
 
 namespace fieldbrik {
@@ -29,13 +34,17 @@ bool Fail(std::wstring& error, const wchar_t* text) {
   return false;
 }
 
-}  // namespace
+// An image as the GPU wants it: 32-bit RGBA, row by row, whatever the file
+// happened to be stored as.
+struct DecodedImage {
+  UINT width = 0;
+  UINT height = 0;
+  std::vector<unsigned char> pixels;
+};
 
-bool CreateTextureFromPng(ID3D11Device* device, const void* bytes, std::size_t size,
-                          ID3D11ShaderResourceView** view, std::wstring& error) {
-  if (!device) return Fail(error, L"There is no device to upload the texture to.");
+bool DecodeImage(const void* bytes, std::size_t size, DecodedImage& image,
+                 std::wstring& error) {
   if (!bytes || size == 0) return Fail(error, L"The texture was empty.");
-  if (!view) return Fail(error, L"There was nowhere to put the texture.");
 
   EnsureCom();
 
@@ -77,23 +86,36 @@ bool CreateTextureFromPng(ID3D11Device* device, const void* bytes, std::size_t s
     return Fail(error, L"The image could not be converted to RGBA.");
   }
 
-  UINT width = 0;
-  UINT height = 0;
-  if (FAILED(converter->GetSize(&width, &height)) || width == 0 || height == 0) {
+  if (FAILED(converter->GetSize(&image.width, &image.height)) || image.width == 0 ||
+      image.height == 0) {
     return Fail(error, L"The image had no size.");
   }
 
-  const UINT stride = width * 4;
-  std::vector<unsigned char> pixels(static_cast<std::size_t>(stride) * height);
+  const UINT stride = image.width * 4;
+  image.pixels.resize(static_cast<std::size_t>(stride) * image.height);
+
   if (FAILED(converter->CopyPixels(nullptr, stride,
-                                   static_cast<UINT>(pixels.size()),
-                                   pixels.data()))) {
+                                   static_cast<UINT>(image.pixels.size()),
+                                   image.pixels.data()))) {
     return Fail(error, L"The image's pixels could not be copied out.");
   }
 
+  return true;
+}
+
+}  // namespace
+
+bool CreateTextureFromPng(ID3D11Device* device, const void* bytes, std::size_t size,
+                          ID3D11ShaderResourceView** view, std::wstring& error) {
+  if (!device) return Fail(error, L"There is no device to upload the texture to.");
+  if (!view) return Fail(error, L"There was nowhere to put the texture.");
+
+  DecodedImage image;
+  if (!DecodeImage(bytes, size, image, error)) return false;
+
   D3D11_TEXTURE2D_DESC description{};
-  description.Width = width;
-  description.Height = height;
+  description.Width = image.width;
+  description.Height = image.height;
   description.MipLevels = 1;
   description.ArraySize = 1;
   description.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -103,8 +125,8 @@ bool CreateTextureFromPng(ID3D11Device* device, const void* bytes, std::size_t s
   description.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
   D3D11_SUBRESOURCE_DATA data{};
-  data.pSysMem = pixels.data();
-  data.SysMemPitch = stride;
+  data.pSysMem = image.pixels.data();
+  data.SysMemPitch = image.width * 4;
 
   ComPtr<ID3D11Texture2D> texture;
   if (FAILED(device->CreateTexture2D(&description, &data, &texture))) {
@@ -119,6 +141,66 @@ bool CreateTextureFromPng(ID3D11Device* device, const void* bytes, std::size_t s
   if (FAILED(device->CreateShaderResourceView(texture.Get(), &viewDescription,
                                               view))) {
     return Fail(error, L"The texture could not be bound for drawing.");
+  }
+
+  return true;
+}
+
+bool CreateTextureCubeFromImages(ID3D11Device* device, const void* const* images,
+                                 const std::size_t* sizes, int count,
+                                 ID3D11ShaderResourceView** view,
+                                 std::wstring& error) {
+  if (!device) return Fail(error, L"There is no device to upload the sky to.");
+  if (!view) return Fail(error, L"There was nowhere to put the sky.");
+  if (!images || !sizes || count != kSkyFaceCount) {
+    return Fail(error, L"The sky does not have six faces.");
+  }
+
+  // All six are decoded before anything is uploaded, so a bad face fails before
+  // half a sky exists on the GPU.
+  DecodedImage faces[kSkyFaceCount];
+  for (int face = 0; face < kSkyFaceCount; ++face) {
+    if (!DecodeImage(images[face], sizes[face], faces[face], error)) return false;
+
+    if (faces[face].width != faces[face].height) {
+      return Fail(error, L"A sky face is not square.");
+    }
+    if (faces[face].width != faces[0].width) {
+      return Fail(error, L"The sky's faces are different sizes.");
+    }
+  }
+
+  D3D11_TEXTURE2D_DESC description{};
+  description.Width = faces[0].width;
+  description.Height = faces[0].width;
+  description.MipLevels = 1;
+  description.ArraySize = static_cast<UINT>(kSkyFaceCount);
+  description.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+  description.SampleDesc.Count = 1;
+  description.SampleDesc.Quality = 0;
+  description.Usage = D3D11_USAGE_DEFAULT;
+  description.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+  description.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+  D3D11_SUBRESOURCE_DATA data[kSkyFaceCount]{};
+  for (int face = 0; face < kSkyFaceCount; ++face) {
+    data[face].pSysMem = faces[face].pixels.data();
+    data[face].SysMemPitch = faces[face].width * 4;
+  }
+
+  ComPtr<ID3D11Texture2D> texture;
+  if (FAILED(device->CreateTexture2D(&description, data, &texture))) {
+    return Fail(error, L"The sky could not be created on the GPU.");
+  }
+
+  D3D11_SHADER_RESOURCE_VIEW_DESC viewDescription{};
+  viewDescription.Format = description.Format;
+  viewDescription.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+  viewDescription.TextureCube.MipLevels = 1;
+
+  if (FAILED(device->CreateShaderResourceView(texture.Get(), &viewDescription,
+                                              view))) {
+    return Fail(error, L"The sky could not be bound for drawing.");
   }
 
   return true;

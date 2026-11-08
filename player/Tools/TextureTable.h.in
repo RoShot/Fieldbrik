@@ -5,6 +5,10 @@
 // and listed here with the id it was given. The id starts at 201 and counts up
 // in file-name order, so adding a texture renumbers the ones after it: nothing
 // outside this header refers to those numbers.
+//
+// The sky is six cube faces, the era's own art (*_rt, *_lf, *_up, *_dn, *_ft,
+// *_bk). Their ids are 151 to 156, fixed rather than counted, because the shader
+// samples the cube rather than picking between paths.
 
 #pragma once
 
@@ -21,8 +25,25 @@ constexpr EmbeddedTexture kEmbeddedTextures[] = {
     {0, L""},
 @TEXTURE_ENTRIES@};
 
-// True when content/textures/sky holds a panorama, which is compiled in under
-// Resources.h's sky id.
-constexpr bool kSkyTexturePresent = @SKY_PRESENT@;
+// Six, because that is how many faces a cube has and how many the era shipped.
+constexpr int kSkyFaceCount = 6;
+
+// False when the folder has no full set of faces: then there is no sky pass at
+// all and the window's clear colour shows.
+constexpr bool kSkyPresent = @SKY_PRESENT@;
+
+// False when the surface strip is missing, and then bricks are drawn in their
+// flat colour with no studs at all.
+constexpr bool kSurfacesPresent = @SURFACES_PRESENT@;
+
+// The sun, the moon and the flare, each optional: without one it is simply not
+// drawn, and the sky is still a sky.
+constexpr bool kSunPresent = @SUN_PRESENT@;
+constexpr bool kMoonPresent = @MOON_PRESENT@;
+constexpr bool kFlarePresent = @FLARE_PRESENT@;
+
+// The six faces in the order Direct3D numbers them: +X, -X, +Y, -Y, +Z, -Z. All
+// zero when there is no sky.
+constexpr int kSkyCubeFaceIds[kSkyFaceCount] = {@SKY_CUBE_IDS@};
 
 }  // namespace fieldbrik

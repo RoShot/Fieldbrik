@@ -1,25 +1,11 @@
 #include "Rendering/Mesh.h"
 
-#include <algorithm>
 #include <cmath>
-
-#include "World/Part.h"
 
 using namespace DirectX;
 
 namespace fieldbrik {
 namespace {
-
-// A stud is a small cylinder with a flat top. Eight sides is enough at the size
-// one is drawn, and it is what keeps an 80x80 baseplate's 6400 studs to a single
-// buffer that still fits in a few megabytes.
-constexpr int kStudSides = 8;
-constexpr float kStudRadius = 0.20f;
-constexpr float kStudHeight = 0.18f;
-
-// Refuse to build studs for a brick with more than this many. A brick that big
-// is a baseplate scaled up, and 50,000 studs is a slideshow, not a look.
-constexpr int kStudsPerPart = 8192;
 
 void AddFace(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
              XMFLOAT3 a, XMFLOAT3 b, XMFLOAT3 c, XMFLOAT3 d, XMFLOAT3 normal,
@@ -183,98 +169,6 @@ void BuildHead(std::vector<Vertex>& vertices,
   }
 }
 
-void AppendStuds(const Part& part, std::vector<Vertex>& vertices,
-                 std::vector<unsigned int>& indices) {
-  // The head is a model rather than a brick, and the era's head wore no studs.
-  if (part.shape != PartShape::Cube) return;
-
-  // Only the top face wears studs, and only where one fits. A 4x2 brick gets
-  // eight, the baseplate gets a field of them.
-  if (part.size.x < 0.45f || part.size.z < 0.45f) return;
-
-  const int countX = std::max(1, static_cast<int>(std::lround(part.size.x)));
-  const int countZ = std::max(1, static_cast<int>(std::lround(part.size.z)));
-  if (countX * countZ > kStudsPerPart) return;
-
-  const float spacingX = part.size.x / static_cast<float>(countX);
-  const float spacingZ = part.size.z / static_cast<float>(countZ);
-
-  // A stud shrinks to fit a brick that is under a stud across, rather than
-  // hanging over its edge.
-  const float radius =
-      std::min(kStudRadius, std::min(spacingX, spacingZ) * 0.42f);
-  const float height = kStudHeight;
-
-  const XMMATRIX rotation = part.RotationMatrix();
-  const XMVECTOR centre = XMLoadFloat3(&part.position);
-
-  for (int z = 0; z < countZ; ++z) {
-    for (int x = 0; x < countX; ++x) {
-      const XMFLOAT3 offset{
-          (static_cast<float>(x) + 0.5f) * spacingX - part.size.x * 0.5f,
-          part.size.y * 0.5f,
-          (static_cast<float>(z) + 0.5f) * spacingZ - part.size.z * 0.5f};
-
-      // TransformNormal, not TransformCoord: the offset is a direction from the
-      // brick's centre, and TransformCoord would drag the brick's position into
-      // it as if it were a point.
-      const XMVECTOR base =
-          XMVectorAdd(centre, XMVector3TransformNormal(XMLoadFloat3(&offset),
-                                                       rotation));
-
-      // A point on the stud, in the stud's own frame, placed in the world.
-      const auto place = [&base, &rotation](float localX, float localY,
-                                            float localZ) {
-        const XMFLOAT3 local{localX, localY, localZ};
-        const XMVECTOR world = XMVectorAdd(
-            base, XMVector3TransformNormal(XMLoadFloat3(&local), rotation));
-        XMFLOAT3 placed{};
-        XMStoreFloat3(&placed, world);
-        return placed;
-      };
-
-      for (int side = 0; side < kStudSides; ++side) {
-        const float a0 = XMConvertToRadians(360.0f * static_cast<float>(side) /
-                                            static_cast<float>(kStudSides));
-        const float a1 = XMConvertToRadians(
-            360.0f * static_cast<float>(side + 1) / static_cast<float>(kStudSides));
-        const float mid = (a0 + a1) * 0.5f;
-
-        XMFLOAT3 localNormal{std::cos(mid), 0.0f, std::sin(mid)};
-        XMFLOAT3 normal{};
-        XMStoreFloat3(&normal, XMVector3TransformNormal(
-                                   XMLoadFloat3(&localNormal), rotation));
-
-        AddFace(vertices, indices,
-                place(std::cos(a0) * radius, 0.0f, std::sin(a0) * radius),
-                place(std::cos(a1) * radius, 0.0f, std::sin(a1) * radius),
-                place(std::cos(a1) * radius, height, std::sin(a1) * radius),
-                place(std::cos(a0) * radius, height, std::sin(a0) * radius),
-                normal, part.colour);
-      }
-
-      // The cap, so a stud seen from above is a disc and not a hole.
-      XMFLOAT3 topNormal{};
-      XMStoreFloat3(&topNormal,
-                    XMVector3TransformNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f),
-                                             rotation));
-
-      const XMFLOAT3 middle = place(0.0f, height, 0.0f);
-      for (int side = 0; side < kStudSides; ++side) {
-        const float a0 = XMConvertToRadians(360.0f * static_cast<float>(side) /
-                                            static_cast<float>(kStudSides));
-        const float a1 = XMConvertToRadians(
-            360.0f * static_cast<float>(side + 1) / static_cast<float>(kStudSides));
-
-        AddTriangle(vertices, indices, middle,
-                    place(std::cos(a0) * radius, height, std::sin(a0) * radius),
-                    place(std::cos(a1) * radius, height, std::sin(a1) * radius),
-                    topNormal, part.colour);
-      }
-    }
-  }
-}
-
 bool Mesh::Create(ID3D11Device* device, const std::vector<Vertex>& vertices,
                   const std::vector<unsigned int>& indices) {
   Release();
@@ -311,69 +205,6 @@ bool Mesh::Create(ID3D11Device* device, const std::vector<Vertex>& vertices,
   return true;
 }
 
-bool Mesh::CreateDynamic(ID3D11Device* device, unsigned int maxVertices,
-                         unsigned int maxIndices) {
-  Release();
-
-  if (maxVertices == 0 || maxIndices == 0) return false;
-
-  D3D11_BUFFER_DESC vertexDesc{};
-  vertexDesc.Usage = D3D11_USAGE_DYNAMIC;
-  vertexDesc.ByteWidth = maxVertices * sizeof(Vertex);
-  vertexDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-  vertexDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-  if (FAILED(device->CreateBuffer(&vertexDesc, nullptr, &vertexBuffer_))) {
-    return false;
-  }
-
-  D3D11_BUFFER_DESC indexDesc{};
-  indexDesc.Usage = D3D11_USAGE_DYNAMIC;
-  indexDesc.ByteWidth = maxIndices * sizeof(unsigned int);
-  indexDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-  indexDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-  if (FAILED(device->CreateBuffer(&indexDesc, nullptr, &indexBuffer_))) {
-    Release();
-    return false;
-  }
-
-  vertexCapacity_ = maxVertices;
-  indexCapacity_ = maxIndices;
-  indexCount_ = 0;
-  return true;
-}
-
-bool Mesh::Update(ID3D11DeviceContext* context,
-                  const std::vector<Vertex>& vertices,
-                  const std::vector<unsigned int>& indices) {
-  if (!Valid() || !context) return false;
-  if (vertices.size() > vertexCapacity_ || indices.size() > indexCapacity_) {
-    return false;
-  }
-
-  indexCount_ = static_cast<unsigned int>(indices.size());
-  if (indexCount_ == 0) return true;
-
-  D3D11_MAPPED_SUBRESOURCE mapped{};
-
-  if (SUCCEEDED(context->Map(vertexBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
-                             &mapped))) {
-    std::copy(vertices.begin(), vertices.end(),
-              static_cast<Vertex*>(mapped.pData));
-    context->Unmap(vertexBuffer_.Get(), 0);
-  }
-
-  if (SUCCEEDED(context->Map(indexBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
-                             &mapped))) {
-    std::copy(indices.begin(), indices.end(),
-              static_cast<unsigned int*>(mapped.pData));
-    context->Unmap(indexBuffer_.Get(), 0);
-  }
-
-  return true;
-}
-
 void Mesh::Draw(ID3D11DeviceContext* context) const {
   if (!Valid() || indexCount_ == 0) return;
 
@@ -391,8 +222,6 @@ void Mesh::Release() {
   vertexBuffer_.Reset();
   indexBuffer_.Reset();
   indexCount_ = 0;
-  vertexCapacity_ = 0;
-  indexCapacity_ = 0;
 }
 
 }  // namespace fieldbrik

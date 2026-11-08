@@ -23,6 +23,10 @@ constexpr D3D_FEATURE_LEVEL kFeatureLevels[] = {D3D_FEATURE_LEVEL_11_0,
                                                 D3D_FEATURE_LEVEL_10_1,
                                                 D3D_FEATURE_LEVEL_10_0};
 
+// How far away the sun and the moon are drawn. They have no parallax worth
+// modelling, so any distance does; this one stays inside the camera's far plane.
+constexpr float kSkyObjectDistance = 120.0f;
+
 // One directional light, fixed in the world, and no shadows. Enough to tell the
 // faces of a brick apart, which is all a 2004-era client needs.
 //
@@ -39,7 +43,8 @@ cbuffer ObjectConstants : register(b1)
 {
     row_major float4x4 world;
     float4 colour;
-    float4 options;   // x: sample the texture and alpha-test it
+    float4 options;   // x: sample the texture; y: sample the surface strip
+    float4 partSize;  // xyz: the part's size in studs, which decides how many studs a face shows
 };
 
 cbuffer SkyConstants : register(b0)
@@ -52,7 +57,12 @@ cbuffer SkyConstants : register(b0)
 // One texture slot for the whole client: a brick's top face, the avatar's face,
 // or the sky. Which image is bound is the drawing code's business, and the
 // textured branch below is chosen per draw rather than per material.
+//
+// The sky's cube faces get their own slot, because a TextureCube is a different
+// kind of object from a Texture2D and cannot share the declaration above.
 Texture2D sceneTexture : register(t0);
+TextureCube sceneCube : register(t1);
+Texture2D sceneSurface : register(t2);
 SamplerState sceneSampler : register(s0);
 
 struct VertexIn
@@ -67,6 +77,8 @@ struct VertexOut
     float4 position : SV_POSITION;
     float3 normal : NORMAL;
     float4 colour : COLOUR;
+    float3 local : TEXCOORD0;         // where on the part's own box this is
+    float3 objectNormal : TEXCOORD1;  // which of the six faces it is
 };
 
 VertexOut VSMain(VertexIn input)
@@ -76,11 +88,78 @@ VertexOut VSMain(VertexIn input)
     output.position = mul(worldPosition, viewProjection);
     output.normal = normalize(mul(float4(input.normal, 0.0f), world).xyz);
     output.colour = colour * float4(input.tint, 1.0f);
+    output.local = input.position;
+    output.objectNormal = input.normal;
     return output;
 }
 
 float4 PSMain(VertexOut input) : SV_TARGET
 {
+    // A brick's face wears the era's surface strip: studs on top, inlets
+    // underneath, weld on the sides. One tile is one stud, so a face of any size
+    // gets a grid of them rather than one stretched picture, and a 1-stud arm
+    // gets exactly one stud.
+    if (options.y > 0.5f)
+    {
+        const float3 n = input.objectNormal;
+        float2 faceUV;
+        float2 faceSize;
+        float block;  // 0 studs, 1 inlets, 2 weld
+
+        if (abs(n.y) > 0.5f)
+        {
+            // Top and bottom: across is X, up the picture is Z.
+            faceUV = float2(input.local.x + 0.5f, 0.5f - input.local.z);
+            faceSize = float2(partSize.x, partSize.z);
+            block = n.y > 0.0f ? 0.0f : 1.0f;
+        }
+        else if (abs(n.x) > 0.5f)
+        {
+            faceUV = float2(input.local.z + 0.5f, 0.5f - input.local.y);
+            faceSize = float2(partSize.z, partSize.y);
+            block = 2.0f;
+        }
+        else
+        {
+            faceUV = float2(input.local.x + 0.5f, 0.5f - input.local.y);
+            faceSize = float2(partSize.x, partSize.y);
+            block = 2.0f;
+        }
+
+        // The strip holds two studs across and four down, so that is how often it
+        // repeats; a stud is never scaled.
+        const float2 studs = faceUV * faceSize;
+        const float2 tile = float2(frac(studs.x * 0.5f), frac(studs.y * 0.25f));
+
+        const float4 surface =
+            sceneSurface.Sample(sceneSampler, float2(tile.x, (block + tile.y) * 0.25f));
+
+        const float3 lightDirection = normalize(float3(0.45f, 0.80f, 0.35f));
+        const float diffuse = saturate(dot(input.normal, lightDirection));
+        const float shade = 0.55f + 0.45f * diffuse;
+
+        // The strip is grey artwork: scaling it up keeps a brick its own colour
+        // with the studs readable over it. The tint is the object's own colour,
+        // not the vertex's: on the arm's stud quad the vertex colour is a
+        // coordinate, and multiplying by it painted a red-green gradient.
+        return float4(saturate(surface.rgb * 2.0f * colour.rgb * shade), 1.0f);
+    }
+
+    // The sun, the moon and the flare: a picture added to what is already on the
+    // screen rather than drawn over it, so the black around the art disappears and
+    // the flare can fade out. The quad's corners give the coordinates, not the
+    // colour channel, because the colour carries the fade.
+    if (options.z > 0.5f)
+    {
+        const float2 uv = float2(input.local.x + 0.5f, 0.5f - input.local.y);
+        const float4 texel = sceneTexture.Sample(sceneSampler, uv);
+
+        // Added, not blended: the art is drawn on black, so black contributes
+        // nothing and no alpha channel is needed. A JPEG's alpha cannot be relied
+        // on, which is why this does not read it.
+        return float4(texel.rgb * colour.rgb * colour.a, 1.0f);
+    }
+
     // The face is line art on a transparent canvas: everything the artist did not
     // draw is thrown away rather than blended, so the head stays solid behind it
     // and there is no white card where the image ends.
@@ -127,16 +206,10 @@ float4 SkyPS(SkyOut input) : SV_TARGET
     float3 direction = normalize(skyForward.xyz + input.ndc.x * skyRight.xyz +
                                      input.ndc.y * skyUp.xyz);
 
-    // The era's sky is a picture wrapped round the horizon, not a gradient:
-    // longitude across, latitude up, so the top of the image is overhead.
-    const float kInvTwoPi = 0.15915494f;
-    const float kInvPi = 0.31830989f;
-
-    const float longitude = atan2(direction.x, direction.z) * kInvTwoPi + 0.5f;
-    const float latitude = 0.5f - asin(clamp(direction.y, -1.0f, 1.0f)) * kInvPi;
-
-    float3 sky = sceneTexture.Sample(sceneSampler, float2(longitude, latitude)).rgb;
-    return float4(sky, 1.0f);
+    // The era's sky is six pictures, not a gradient. The hardware picks the face
+    // and the texel from the ray, so the joins are the artist's problem and not
+    // the shader's: nothing is stitched here on purpose.
+    return float4(sceneCube.Sample(sceneSampler, direction).rgb, 1.0f);
 }
 )hlsl";
 
@@ -147,7 +220,8 @@ struct FrameConstants {
 struct ObjectConstants {
   XMFLOAT4X4 world;
   XMFLOAT4 colour;
-  XMFLOAT4 options;  // x: textured draw
+  XMFLOAT4 options;   // x: textured draw, y: surface strip
+  XMFLOAT4 partSize;  // xyz: the part's size in studs
 };
 
 struct SkyConstants {
@@ -320,6 +394,24 @@ bool Renderer::CreatePipeline() {
     return false;
   }
 
+  // The sun, the moon and the flare are added to what is already there, so the
+  // black around their art contributes nothing and their edges fade rather than
+  // cutting.
+  D3D11_BLEND_DESC blend{};
+  blend.RenderTarget[0].BlendEnable = TRUE;
+  blend.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+  blend.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
+  blend.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+  blend.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+  blend.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+  blend.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+  blend.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+  if (FAILED(device_->CreateBlendState(&blend, &additiveBlend_))) {
+    lastError_ = L"The sky's blend state could not be created.";
+    return false;
+  }
+
   // Point filtering and clamping: the face is 128 pixels of line art, and it is
   // meant to stay pixel-sharp at every distance rather than be smoothed.
   D3D11_SAMPLER_DESC sampler{};
@@ -372,15 +464,29 @@ bool Renderer::CreatePipeline() {
     return false;
   }
 
+  // The quad the sun, the moon and the flare are drawn on: one unit across, in
+  // the camera's own plane, so it always faces the viewer.
+  {
+    const float corners[4][2] = {
+        {-0.5f, 0.5f}, {0.5f, 0.5f}, {0.5f, -0.5f}, {-0.5f, -0.5f}};
+
+    std::vector<Vertex> quad(4);
+    for (int corner = 0; corner < 4; ++corner) {
+      Vertex& vertex = quad[static_cast<std::size_t>(corner)];
+      vertex.position = {corners[corner][0], corners[corner][1], 0.0f};
+      vertex.normal = {0.0f, 0.0f, -1.0f};
+    }
+
+    const std::vector<unsigned int> quadIndices = {0, 1, 2, 0, 2, 3};
+    if (!billboard_.Create(device_.Get(), quad, quadIndices)) {
+      lastError_ = L"The sky's billboards could not be uploaded.";
+      return false;
+    }
+  }
+
   BuildHead(vertices, indices);
   if (!head_.Create(device_.Get(), vertices, indices)) {
     lastError_ = L"The head geometry could not be uploaded.";
-    return false;
-  }
-
-  if (!avatarStuds_.CreateDynamic(device_.Get(), kAvatarStudVertices,
-                                  kAvatarStudIndices)) {
-    lastError_ = L"The stud buffer could not be created.";
     return false;
   }
 
@@ -520,11 +626,11 @@ void Renderer::BeginFrame(const float clearColour[4]) {
 }
 
 void Renderer::DrawSky(const Camera& camera) {
-  // No panorama means no sky pass at all: the window's clear colour is what
-  // shows. Replacing the gradient outright is deliberate, so a missing sky is
-  // obvious rather than quietly plausible.
+  // No sky means no sky pass at all: the window's clear colour is what shows.
+  // Replacing the gradient outright is deliberate, so a missing sky is obvious
+  // rather than quietly plausible.
   if (!context_ || !targetView_ || !skyVertexShader_ || !skyPixelShader_ ||
-      !skyTexture_ || !skySampler_) {
+      !skyCube_ || !skySampler_) {
     return;
   }
 
@@ -555,12 +661,104 @@ void Renderer::DrawSky(const Camera& camera) {
   ID3D11SamplerState* samplers[] = {skySampler_.Get()};
   context_->PSSetSamplers(0, 1, samplers);
 
-  ID3D11ShaderResourceView* textures[] = {skyTexture_.Get()};
-  context_->PSSetShaderResources(0, 1, textures);
+  // The slot the shader declares its TextureCube in; slot 0 is left empty for
+  // this pass, because the sky does not sample a 2D image.
+  ID3D11ShaderResourceView* cubes[] = {skyCube_.Get()};
+  context_->PSSetShaderResources(1, 1, cubes);
 
   context_->Draw(3, 0);
 
   // Put the depth buffer back in charge for everything drawn over the sky.
+  context_->OMSetDepthStencilState(nullptr, 0);
+}
+
+void Renderer::DrawSkyObjects(const Camera& camera) {
+  if (!context_ || !targetView_ || !billboard_.Valid() || !additiveBlend_ ||
+      !skySampler_) {
+    return;
+  }
+
+  BindGeometry(camera);
+
+  ID3D11SamplerState* linear[] = {skySampler_.Get()};
+  context_->PSSetSamplers(0, 1, linear);
+
+  // They are infinitely far away: nothing may cut them, and they are drawn before
+  // the world so the world covers them wherever it stands in front.
+  context_->OMSetDepthStencilState(skyDepthState_.Get(), 0);
+
+  const float blendFactor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+  context_->OMSetBlendState(additiveBlend_.Get(), blendFactor, 0xffffffff);
+
+  const XMFLOAT3 eyePosition = camera.Position();
+  const Camera::SkyBasis basis = camera.SkyRayBasis();
+
+  const XMVECTOR forward = XMVector3Normalize(XMLoadFloat3(&basis.forward));
+  const XMVECTOR right = XMVector3Normalize(XMLoadFloat3(&basis.right));
+  const XMVECTOR up = XMVector3Normalize(XMLoadFloat3(&basis.up));
+  const XMVECTOR eye = XMLoadFloat3(&eyePosition);
+
+  const auto draw = [&](XMVECTOR direction, float size, float alpha,
+                        ID3D11ShaderResourceView* texture) {
+    if (!texture || alpha <= 0.0f) return;
+
+    const XMVECTOR position = eye + direction * kSkyObjectDistance;
+
+    // The quad's own axes are the camera's, which is what keeps it facing the
+    // viewer from anywhere.
+    XMMATRIX placement = XMMatrixIdentity();
+    placement.r[0] = XMVectorSetW(right, 0.0f);
+    placement.r[1] = XMVectorSetW(up, 0.0f);
+    placement.r[2] = XMVectorSetW(XMVectorNegate(forward), 0.0f);
+    placement.r[3] = XMVectorSetW(position, 1.0f);
+
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    if (FAILED(context_->Map(objectBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
+                             &mapped))) {
+      return;
+    }
+
+    auto* object = static_cast<ObjectConstants*>(mapped.pData);
+    XMStoreFloat4x4(&object->world, XMMatrixScaling(size, size, 1.0f) * placement);
+    object->colour = XMFLOAT4(1.0f, 1.0f, 1.0f, alpha);
+    object->options = XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
+    object->partSize = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f);
+    context_->Unmap(objectBuffer_.Get(), 0);
+
+    ID3D11ShaderResourceView* bound[] = {texture};
+    context_->PSSetShaderResources(0, 1, bound);
+
+    billboard_.Draw(context_.Get());
+  };
+
+  // The sun sits where the era's sky is brightest: up and away from the spawn, so
+  // looking up from the default view finds it. The moon is straight opposite it.
+  const XMFLOAT3 sunDirection{0.18f, 0.66f, -0.73f};
+  const XMVECTOR sun = XMVector3Normalize(XMLoadFloat3(&sunDirection));
+
+  draw(sun, 22.0f, 1.0f, sunTexture_.Get());
+  draw(XMVectorNegate(sun), 22.0f, 1.0f, moonTexture_.Get());
+
+  // The flare trails the sun across the screen: its direction mirrored in the
+  // camera's right and up, so it sits on the far side of the centre. It fades as
+  // the sun leaves the view rather than snapping off.
+  const float alongRight = XMVectorGetX(XMVector3Dot(sun, right));
+  const float alongUp = XMVectorGetX(XMVector3Dot(sun, up));
+  const float alongForward = XMVectorGetX(XMVector3Dot(sun, forward));
+
+  if (alongForward > 0.0f) {
+    const XMVECTOR mirrored =
+        XMVector3Normalize(right * -alongRight + up * -alongUp +
+                           forward * alongForward);
+
+    float alpha = (alongForward - 0.55f) / 0.35f;
+    if (alpha < 0.0f) alpha = 0.0f;
+    if (alpha > 1.0f) alpha = 1.0f;
+
+    draw(mirrored, 34.0f, alpha, flareTexture_.Get());
+  }
+
+  context_->OMSetBlendState(nullptr, blendFactor, 0xffffffff);
   context_->OMSetDepthStencilState(nullptr, 0);
 }
 
@@ -596,22 +794,29 @@ void Renderer::BindGeometry(const Camera& camera) {
 }
 
 void Renderer::SetObject(const XMFLOAT4X4& world, const XMFLOAT4& colour,
-                         bool textured) {
+                         bool textured, const XMFLOAT3* size, bool surfaces,
+                         bool billboard) {
   D3D11_MAPPED_SUBRESOURCE mapped{};
   if (SUCCEEDED(context_->Map(objectBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
                               &mapped))) {
     auto* object = static_cast<ObjectConstants*>(mapped.pData);
     object->world = world;
     object->colour = colour;
-    object->options = XMFLOAT4(textured ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
+    object->options = XMFLOAT4(textured ? 1.0f : 0.0f, surfaces ? 1.0f : 0.0f,
+                               billboard ? 1.0f : 0.0f, 0.0f);
+    object->partSize = size ? XMFLOAT4(size->x, size->y, size->z, 0.0f)
+                            : XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f);
     context_->Unmap(objectBuffer_.Get(), 0);
   }
 }
 
-void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera) {
+void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera,
+                         bool surfaces) {
   if (!context_ || !targetView_ || !cube_.Valid()) return;
 
   BindGeometry(camera);
+
+  const bool strip = surfaces && surfacesTexture_ && surfacesSampler_;
 
   for (const Part& part : parts) {
     const XMFLOAT4 colour(part.colour.x, part.colour.y, part.colour.z, 1.0f);
@@ -623,12 +828,27 @@ void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera) {
       continue;
     }
 
-    SetObject(part.ModelMatrix(), colour, false);
+    // The strip wraps, where the face and a decal clamp, so the sampler is
+    // swapped for the brick and put back before anything is drawn over it.
+    if (strip) {
+      ID3D11SamplerState* wrap[] = {surfacesSampler_.Get()};
+      context_->PSSetSamplers(0, 1, wrap);
+
+      ID3D11ShaderResourceView* tiles[] = {surfacesTexture_.Get()};
+      context_->PSSetShaderResources(2, 1, tiles);
+    }
+
+    SetObject(part.ModelMatrix(), colour, false, &part.size, strip);
     cube_.Draw(context_.Get());
 
-    // The texture covers the top face only, stretched once across the whole
-    // square, which is what a decal sat on in the era. The sides keep their
-    // flat colour.
+    if (strip) {
+      ID3D11SamplerState* clamp[] = {samplerState_.Get()};
+      context_->PSSetSamplers(0, 1, clamp);
+    }
+
+    // A painted top wins over the strip: a decal covers the surface, so no studs
+    // are drawn under one. The texture covers the top face only, stretched once
+    // across the whole square, which is what a decal sat on in the era.
     if (part.textureId.empty() || !topFace_.Valid()) continue;
 
     const ID3D11ShaderResourceView* texture = FindTexture(part.textureId);
@@ -646,55 +866,33 @@ void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera) {
   }
 }
 
-void Renderer::BuildWorldStuds(const std::vector<Part>& parts) {
-  if (!device_) return;
-
-  std::vector<Vertex> vertices;
-  std::vector<unsigned int> indices;
-
-  for (const Part& part : parts) AppendStuds(part, vertices, indices);
-
-  if (vertices.empty()) {
-    worldStuds_.Release();
+void Renderer::DrawAvatarStuds(const std::vector<Part>& parts,
+                               const Camera& camera) {
+  if (!context_ || !targetView_ || !topFace_.Valid() || !surfacesTexture_ ||
+      !surfacesSampler_) {
     return;
   }
 
-  if (!worldStuds_.Create(device_.Get(), vertices, indices)) {
-    lastError_ = L"The world's studs could not be uploaded.";
+  BindGeometry(camera);
+
+  ID3D11SamplerState* wrap[] = {surfacesSampler_.Get()};
+  context_->PSSetSamplers(0, 1, wrap);
+
+  ID3D11ShaderResourceView* tiles[] = {surfacesTexture_.Get()};
+  context_->PSSetShaderResources(2, 1, tiles);
+
+  for (const Part& part : parts) {
+    // The arms are the shoulders: one stud on each, and nothing on the torso, the
+    // legs or the head.
+    if (part.name.find("arm") == std::string::npos) continue;
+
+    const XMFLOAT4 colour(part.colour.x, part.colour.y, part.colour.z, 1.0f);
+    SetObject(part.ModelMatrix(), colour, false, &part.size, true);
+    topFace_.Draw(context_.Get());
   }
-}
 
-void Renderer::DrawWorldStuds(const Camera& camera) {
-  if (!context_ || !targetView_ || !worldStuds_.Valid()) return;
-
-  BindGeometry(camera);
-
-  // The studs are already in the world, so the matrix is the identity and the
-  // colour comes from the vertices.
-  XMFLOAT4X4 identity{};
-  XMStoreFloat4x4(&identity, XMMatrixIdentity());
-  SetObject(identity, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-
-  worldStuds_.Draw(context_.Get());
-}
-
-void Renderer::DrawStuds(const std::vector<Part>& parts, const Camera& camera) {
-  if (!context_ || !targetView_ || !avatarStuds_.Valid()) return;
-
-  std::vector<Vertex> vertices;
-  std::vector<unsigned int> indices;
-  for (const Part& part : parts) AppendStuds(part, vertices, indices);
-
-  if (vertices.empty()) return;
-  if (!avatarStuds_.Update(context_.Get(), vertices, indices)) return;
-
-  BindGeometry(camera);
-
-  XMFLOAT4X4 identity{};
-  XMStoreFloat4x4(&identity, XMMatrixIdentity());
-  SetObject(identity, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-
-  avatarStuds_.Draw(context_.Get());
+  ID3D11SamplerState* clamp[] = {samplerState_.Get()};
+  context_->PSSetSamplers(0, 1, clamp);
 }
 
 void Renderer::EndFrame() {
@@ -712,15 +910,20 @@ void Renderer::WaitForGpu() {
 void Renderer::Shutdown() {
   topFace_.Release();
   textures_.clear();
+  billboard_.Release();
+  flareTexture_.Reset();
+  moonTexture_.Reset();
+  sunTexture_.Reset();
+  additiveBlend_.Reset();
+  surfacesSampler_.Reset();
+  surfacesTexture_.Reset();
   skySampler_.Reset();
-  skyTexture_.Reset();
+  skyCube_.Reset();
   faceQuad_.Release();
   headModel_.Release();
   faceTexture_.Reset();
   whiteTexture_.Reset();
   samplerState_.Reset();
-  avatarStuds_.Release();
-  worldStuds_.Release();
   head_.Release();
   cube_.Release();
   skyDepthState_.Reset();

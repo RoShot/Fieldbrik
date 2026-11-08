@@ -27,12 +27,17 @@ One image per brick texture. The client finds one by the **last path segment of
 
 ## sky/
 
-The era's sky was a texture, not a gradient. One wide image is what this reads:
-`sky/panorama.png`, wrapped around the horizon, the top of the picture straight
-overhead. Six faces are not read yet.
+The sky is six pictures, one per face of a cube around the camera: `*_rt`,
+`*_lf`, `*_up`, `*_dn`, `*_ft` and `*_bk` — the era's own `null_plainsky512`
+set. They must agree on size and be square; a part of a set is not a sky.
 
-Until there is one, the client draws no sky and the window's clear colour shows.
-That is deliberate: the gradient is gone rather than kept as a fallback.
+`sun`, `moon` (+ `moon-alpha`), `sun-rays` and `lensflare` hang in it. The sun
+and the moon are drawn additively where the sky is brightest and directly
+opposite; the flare follows the sun across the screen.
+
+Until all six faces are here, the client draws no sky and the window's clear
+colour shows. That is deliberate: the gradient is gone rather than kept as a
+fallback.
 
 ## ui/
 

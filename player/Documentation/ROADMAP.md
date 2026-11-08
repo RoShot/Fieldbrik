@@ -126,7 +126,7 @@ rather than geometry generated in code.
 
 Still to come: the HUD; tools.
 
-## 0.9 — Milestone 9: brick textures and the sky's panorama — done
+## 0.9 — Milestone 9: brick textures, surfaces and the sky — done
 
 The era's own images, drawn where the era drew them.
 
@@ -141,9 +141,10 @@ The era's own images, drawn where the era drew them.
   is still one file.
 - A place that asks for an image the exe does not carry is **refused at startup**,
   with the missing names listed. A brick in the wrong colour is a bug that hides.
-- The sky is a panorama instead of a gradient: sampled by direction, wrapped round
-  the horizon, with no fallback — no panorama means no sky pass and the clear
-  colour shows.
+- The sky is the era's own six-faced skybox instead of a gradient: one picture per
+  face of a cube round the camera, sampled by direction, with no fallback — no
+  complete set of faces means no sky pass and the clear colour shows. The joins
+  are left as the artist drew them rather than stitched.
 - The sky's ray is built from the camera's own axes. Inverting the view-projection
   looked right and was not: at these near and far planes the inverse is nearly
   singular, so every pixel came out looking along almost the same direction, and
@@ -151,6 +152,20 @@ The era's own images, drawn where the era drew them.
   bricks it is drawn behind.
 - The version in the title bar is generated from the one in `CMakeLists.txt`, so it
   can no longer disagree with the release it was built for.
+
+- Brick faces wear the era's surface strip instead of modelled studs: studs on
+  top, inlets underneath, weld on the sides, one tile per stud so a face grows the
+  way the old client's did. The strip is tinted by the brick's own colour, and a
+  `TextureID` still wins, covering the studs under a decal.
+- The avatar keeps a single flat stud on each arm's top, and nothing else.
+- The sun and the moon, drawn additively in the brightest part of the sky and
+  directly opposite it, with the lens flare trailing the sun across the screen.
+- The stud geometry is gone: the meshes, the dynamic buffer and the two serverside
+  batches that built them were deleted rather than left behind.
+
+Two things 0.9 deliberately leaves for the next milestone: the era's cursors in
+`content/textures/ui`, and `SurfacesStrip.png`, which is not read until the rule
+for choosing between the two strip lengths is settled.
 
 ## The eras
 
