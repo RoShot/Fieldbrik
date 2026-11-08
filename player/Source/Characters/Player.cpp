@@ -38,6 +38,12 @@ constexpr int kStepSettleSteps = 10;
 // Below this there is nothing left to stand on, so the player is put back.
 constexpr float kRespawnBelow = -60.0f;
 
+// How long the jump pose is held after touching down. Half a second of arms still
+// up, then the idle starts bringing them down at its own slow rate, which takes
+// another two seconds. It is not a blend, and it should not be, because the
+// client it is copying was not smooth either.
+constexpr float kLandingHoldSeconds = 0.5f;
+
 float Approach(float value, float target, float maxDelta) {
   const float difference = target - value;
   if (std::fabs(difference) <= maxDelta) return target;
@@ -98,6 +104,7 @@ void Player::Spawn(const XMFLOAT3& feetPosition) {
   position_ = feetPosition;
   velocity_ = {0.0f, 0.0f, 0.0f};
   grounded_ = false;
+  landingHold_ = 0.0f;
 
   // Facing -Z, which is where most builds put their bricks. The camera starts
   // behind him, so the first frame reads as "you are standing here, the build is
@@ -113,6 +120,7 @@ void Player::Respawn() {
   position_ = spawn_;
   velocity_ = {0.0f, 0.0f, 0.0f};
   grounded_ = false;
+  landingHold_ = 0.0f;
   facing_ = 180.0f;
 }
 
@@ -219,6 +227,12 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
 
   grounded_ = grounded;
   if (grounded_) velocity_.y = 0.0f;
+
+  // Touching down starts the hang: the arms stay where the jump left them for a
+  // moment, so a landing reads as an event instead of the walk resuming in mid
+  // stride. Fresh jumps cancel it by leaving the ground again.
+  if (grounded_ && !wasGrounded) landingHold_ = kLandingHoldSeconds;
+  if (landingHold_ > 0.0f) landingHold_ -= deltaSeconds;
 
   // Slide along whatever the player was pushed out of, instead of stopping dead
   // against it: only the part of the velocity heading into the brick is removed,

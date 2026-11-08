@@ -36,6 +36,9 @@ class Player {
 
   bool Grounded() const { return grounded_; }
 
+  // True for the beat after a landing, while the jump pose is still being held.
+  bool Landing() const { return landingHold_ > 0.0f; }
+
   // Studs per second along the ground, and up and down. The animation wants the
   // horizontal one to decide whether this is a walk or a stand, and the vertical
   // one to tell a jump from a fall.
@@ -51,6 +54,10 @@ class Player {
 
   float facing_ = 0.0f;
   bool grounded_ = false;
+
+  // Seconds left of the landing pose. The era's client did not drop the arms the
+  // instant you touched down, and that hang is most of what makes a jump read.
+  float landingHold_ = 0.0f;
 };
 
 }  // namespace fieldbrik
