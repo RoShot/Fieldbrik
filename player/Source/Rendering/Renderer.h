@@ -4,7 +4,8 @@
 // The device survives a resize; the back buffer views, the depth buffer and the
 // viewport are rebuilt. Every part is drawn as the same unit cube scaled and
 // moved by its own matrix, which is why a brick can be any size without having
-// its own geometry.
+// its own geometry. Two shapes sit beside the cube — the stud and the head — and
+// one gradient covers the sky.
 
 #pragma once
 
@@ -40,9 +41,20 @@ class Renderer {
 
   void BeginFrame(const float clearColour[4]);
 
+  // The sky goes down before anything else and covers whatever is left after
+  // the world is drawn: a gradient from the horizon up, built from the view
+  // direction so it turns with the camera instead of sitting on the screen.
+  void DrawSky(const Camera& camera);
+
   // Draws a list of parts. The world and the avatar are drawn as separate lists
   // so a future second player, or a selection outline, needs no special case.
   void DrawParts(const std::vector<Part>& parts, const Camera& camera);
+
+  // The world's studs never move, so they are built once and drawn as a single
+  // batch. The avatar's are rebuilt each frame, because it does.
+  void BuildWorldStuds(const std::vector<Part>& parts);
+  void DrawWorldStuds(const Camera& camera);
+  void DrawStuds(const std::vector<Part>& parts, const Camera& camera);
 
   void EndFrame();
 
@@ -61,6 +73,13 @@ class Renderer {
   // cached once at startup.
   bool BindBackBuffer();
 
+  // Input layout, shaders, states and the per-frame constants, ready for parts
+  // or studs.
+  void BindGeometry(const Camera& camera);
+
+  // One draw's own matrix and colour.
+  void SetObject(const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4& colour);
+
   Microsoft::WRL::ComPtr<ID3D11Device> device_;
   Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
   Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain_;
@@ -76,6 +95,13 @@ class Renderer {
   Microsoft::WRL::ComPtr<ID3D11Buffer> objectBuffer_;
   Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterState_;
 
+  // The sky: its own shaders, its own constants, and a depth state that leaves
+  // the depth buffer alone, because the sky is behind everything by definition.
+  Microsoft::WRL::ComPtr<ID3D11VertexShader> skyVertexShader_;
+  Microsoft::WRL::ComPtr<ID3D11PixelShader> skyPixelShader_;
+  Microsoft::WRL::ComPtr<ID3D11Buffer> skyBuffer_;
+  Microsoft::WRL::ComPtr<ID3D11DepthStencilState> skyDepthState_;
+
   // One view per back buffer texture. With two buffers this is two entries, and
   // it saves recreating a view every frame while still following the rotation.
   struct BackBufferView {
@@ -85,6 +111,13 @@ class Renderer {
   std::vector<BackBufferView> backBufferViews_;
 
   Mesh cube_;
+  Mesh head_;
+  Mesh worldStuds_;
+  Mesh avatarStuds_;
+
+  // The avatar can only ever wear so many studs; this is its ceiling.
+  static constexpr unsigned int kAvatarStudVertices = 4096;
+  static constexpr unsigned int kAvatarStudIndices = 8192;
 
   int width_ = 0;
   int height_ = 0;
