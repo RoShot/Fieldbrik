@@ -65,6 +65,25 @@ Also closed off with this milestone: ledges of up to 1.15 studs are stepped up,
 the camera collides so it cannot be pushed inside a brick, and input is read only
 while the client is the foreground window.
 
+## 0.6 — Milestone 6: the 2006 pass — in progress
+
+The client the era actually had: an avatar that moves like a body rather than a
+box sliding around, a camera you can zoom, and the engine's own movement numbers.
+
+Done so far:
+
+- The old `Animate` script, ported: joints chase a desired angle at a capped rate
+  (Standing 0.1 rad at 1 rad/s, Running 1 rad at 9 rad/s, jump arms to pi), which
+  is what makes the arms lag behind the legs.
+- Roblox's gravity (196.2), walk speed (16) and jump (50, peaking about 6 studs),
+  with acceleration and friction tuned so the walk carries momentum.
+- Sliding along walls instead of sticking to them, and a step up that is eased
+  instead of snapping a whole stud.
+- Mouse wheel zoom, alongside Q and E.
+
+Still to come in this pass: studs on bricks and body parts, the sky, a mesh and
+texture pipeline for the new head, textures from `TextureID`, the HUD, and tools.
+
 ## The eras
 
 After the first playable build, the look is moved forward era by era:

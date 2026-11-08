@@ -3,9 +3,9 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.5**: a window, a world of bricks, and a blocky avatar you can walk,
-jump and climb around in third person. Gravity pulls it down, bricks stop it,
-low bricks are walked up, and falling off the baseplate puts it back at the spawn
+This is **0.6**: a window, a world of bricks, and a blocky avatar that walks,
+jumps and falls with limbs that swing. Gravity pulls it down, bricks stop it, low
+bricks are walked up, and falling off the baseplate puts it back at the spawn
 point.
 
 The world it walks in comes out of a **place file**, not out of the exe. Point
@@ -33,7 +33,8 @@ The window opens at 1024×768, can be resized, and closes with the title bar X o
 | Space | Jump (only when standing on something) |
 | Left-drag | Look around (drag right and the view turns right) |
 | Arrow keys | Look around without the mouse |
-| Q / E | Zoom out / in |
+| Mouse wheel | Zoom out / in |
+| Q / E | Zoom out / in, for a keyboard without a wheel |
 | Home | Put the camera back behind the player |
 | Escape | Close the client |
 
@@ -78,16 +79,35 @@ legs, and a two-dot-and-a-smile face drawn as small boxes on the front of the
 head.
 
 That is the 2005 default avatar from the DynaBlocks/early-Roblox era: blocky,
-robotic, made of the same bricks as the world. It slides and turns — it does not
-walk — and the body swings round to face the direction it is moving, which is the
-only "animation" of the era. The round studs on the top faces belong to the 2006
-pass and are not here yet.
+robotic, made of the same bricks as the world. The round studs on the top faces
+belong to the 2006 pass and are not here yet.
+
+## Animation
+
+The motion is the old client's `Animate` script, ported from its Lua rather than
+invented. Nothing is a keyframe clip: every joint chases a desired angle at a
+capped rate, which is what makes the arms lag behind the legs.
+
+- Standing sways by 0.1 radians at 1 radian per second — barely visible.
+- Running swings the hips a full radian at frequency 9, so a cycle takes about
+  0.7 seconds at any speed. The arms want the same swing but are limited to 0.15
+  radians per tick, so they trail at roughly a third of it.
+- Jumping and falling throw the arms up to 180 degrees and straighten the legs.
+
+The body swings round to face the direction of travel, limbs swinging from the
+shoulders and the hips, and a step up is eased over a couple of frames instead of
+teleporting a whole stud.
 
 ## Physics
 
-Gravity is 60 studs per second squared, walking speed is 16, and a jump leaves the
-ground at 24, which peaks about 4.6 studs up — enough to land on the red slab or
-the first step, not enough to get onto the yellow pillar in one go.
+The numbers are the engine's own: gravity is 196.2 studs per second squared, the
+walk is 16 studs per second, and a jump leaves the ground at 50, which peaks about
+six studs up — the classic jump that lands on a five-stud stack but not a taller
+one. Getting up to speed takes about a third of a second and stopping takes about
+a fifth, so the walk carries a little weight instead of snapping on and off.
+
+Walking into a wall at an angle slides along it rather than stopping dead: the
+part of the velocity heading into the brick is the only part removed.
 
 The player is collided as a box, 1.8 studs across and 5 tall, not as the avatar's
 outline: it is what the bricks are, so every test is exact. Each part is resolved
@@ -197,16 +217,14 @@ empty folders.
 - Slopes are stood on rather than walked up, and nothing slides.
 - Input is only read while the client is the foreground window, so typing in
   another window cannot walk the player around.
-- No walk animation, by design for this era. The body turns towards its direction
-  of travel and slides, and it does not change pose in mid-air.
+- No tool poses yet: the arm does not come up to hold anything, because there is
+  nothing to hold until tools arrive.
 - No studs on the avatar's body parts yet.
 - Back faces are not culled (`CULL_NONE`). A closed box hides them anyway, so it
   is invisible today; winding will be settled when a mesh importer needs to agree
   with it.
 - Depth is a single `D32_FLOAT` buffer with no antialiasing. Edges are aliased, as
   they were in 2005.
-- Zoom is on Q and E rather than the mouse wheel, because the wheel needs window
-  messages that the input layer does not read yet.
 - Alt+Enter does nothing on purpose: Direct3D's own fullscreen path fights the
   window's resize handling, so fullscreen will be a client feature instead.
 - No icon yet, so the exe and the title bar show the default Windows icon.
