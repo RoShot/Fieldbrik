@@ -3,6 +3,15 @@
 #include <windows.h>
 
 namespace fieldbrik {
+namespace {
+
+// The keys that become letters in the chat bar rather than a walk.
+bool IsTyped(int virtualKey) {
+  return (virtualKey >= 'A' && virtualKey <= 'Z') ||
+         (virtualKey >= '0' && virtualKey <= '9') || virtualKey == VK_SPACE;
+}
+
+}  // namespace
 
 void Input::Update(bool active) {
   previous_ = current_;
@@ -43,11 +52,13 @@ void Input::Update(bool active) {
 
 bool Input::KeyDown(int virtualKey) const {
   if (virtualKey < 0 || virtualKey >= kKeyCount) return false;
+  if (textMode_ && IsTyped(virtualKey)) return false;
   return current_[virtualKey];
 }
 
 bool Input::KeyPressed(int virtualKey) const {
   if (virtualKey < 0 || virtualKey >= kKeyCount) return false;
+  if (textMode_ && IsTyped(virtualKey)) return false;
   return current_[virtualKey] && !previous_[virtualKey];
 }
 

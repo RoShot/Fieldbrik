@@ -222,8 +222,18 @@ int App::Run() {
   while (window_.PumpMessages()) {
     input_.Update(GetForegroundWindow() == window_.Handle());
 
+    // Characters the window collected go to the chat bar, and while it is
+    // open its letters stop being movement.
+    std::wstring typed;
+    window_.TakeTyped(typed);
+    hud_.TypeText(typed);
+    input_.SetTextMode(hud_.ChatTyping());
+
+    // The era's slash key: it opens the bar without reaching for the mouse.
+    if (!hud_.ChatTyping() && input_.KeyPressed(VK_OEM_2)) hud_.BeginChat();
+
     // Escape closes the help screen first; only then does it leave the client.
-    if (input_.KeyPressed(VK_ESCAPE) && !hud_.CloseHelp()) break;
+    if (input_.KeyPressed(VK_ESCAPE) && !hud_.HandleEscape()) break;
 
     LARGE_INTEGER now{};
     QueryPerformanceCounter(&now);
@@ -245,6 +255,19 @@ int App::Run() {
     // Clamped so that dragging the window, or a stalled frame, cannot fling the
     // player across the baseplate or the camera across the world.
     const float delta = static_cast<float>(elapsed > 0.1 ? 0.1 : elapsed);
+
+    hud_.Tick(delta);
+
+    // The wheel belongs to the quick chat menu while it is open, and to the
+    // camera otherwise.
+    const int notches = window_.TakeWheel();
+    if (notches != 0) {
+      if (hud_.QuickChatOpen()) {
+        hud_.ScrollQuickChat(notches * 3);
+      } else if (!hud_.PointerOverInterface() && !hud_.HelpOpen()) {
+        camera_.Zoom(-static_cast<float>(notches));
+      }
+    }
 
     player_.Update(input_, world_.Parts(), camera_.Yaw(), delta);
     camera_.SetTarget(FocusPoint());
@@ -348,12 +371,8 @@ void App::UpdateCamera(float deltaSeconds) {
   }
 
   // The wheel zooms, one notch per step, the way the era's camera did. Q and E
-  // stay for keyboards without one.
-  const int notches = window_.TakeWheel();
-  if (notches != 0 && !overInterface && !modal) {
-    camera_.Zoom(-static_cast<float>(notches));
-  }
-
+  // stay for keyboards without one; the notches themselves are read in the
+  // frame loop, so the quick chat menu can take them first.
   if (!modal) {
     if (input_.KeyDown('Q')) camera_.Zoom(1.0f);
     if (input_.KeyDown('E')) camera_.Zoom(-1.0f);

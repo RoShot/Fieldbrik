@@ -53,6 +53,11 @@ class Window {
   int Height() const { return height_; }
   bool IsMinimised() const { return minimised_; }
 
+  // Characters typed since the last call, for the chat bar. Nothing else
+  // reads the keyboard as text: the world reads key states.
+  void TakeTyped(std::wstring& out);
+
+
   void OnResize(ResizeHandler handler) { resize_ = std::move(handler); }
   void OnClose(CloseHandler handler) { close_ = std::move(handler); }
 
@@ -73,6 +78,7 @@ class Window {
   int width_ = 0;
   int height_ = 0;
   int wheel_ = 0;
+  std::wstring typed_;
   bool minimised_ = false;
   bool fullscreen_ = false;
   RECT windowedRect_{};

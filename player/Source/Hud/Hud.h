@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "Chat/Chat.h"
 #include "Rendering/Renderer.h"
 
 namespace fieldbrik {
@@ -57,6 +58,20 @@ class Hud {
 
   void Collect(std::vector<Renderer::HudSprite>& sprites) const;
 
+  // Ages the chat log and its caret.
+  void Tick(float seconds);
+
+  // Characters typed this frame, from the window's message queue.
+  void TypeText(const std::wstring& characters) { chatModel_.Type(characters); }
+
+  bool ChatTyping() const { return chatModel_.Typing(); }
+  bool QuickChatOpen() const { return chatModel_.Open(); }
+  void BeginChat() { chatModel_.BeginTyping(); }
+  void ScrollQuickChat(int rows) { chatModel_.Scroll(rows); }
+
+  // Escape closes the chat or the help screen before it closes the game.
+  bool HandleEscape();
+
  private:
   // What the pointer is over. The movement keys are a picture of the keyboard
   // rather than buttons, so they are deliberately not here.
@@ -71,7 +86,9 @@ class Hud {
     Report,
     Chat,
     HelpPanel,
-    HelpClose
+    HelpClose,
+    ChatBar,
+    QuickPanel
   };
 
   struct Rect {
@@ -99,6 +116,12 @@ class Hud {
   bool MakeLabel(const wchar_t* text, int pointSize, bool bold, Label& label);
 
   void Layout();
+  void LayoutChat();
+
+  bool MakeChatLabels();
+  bool BuildLineLabel(const std::wstring& text, Label& label);
+  void RefreshChatLabels();
+  void CollectChat(std::vector<Renderer::HudSprite>& sprites) const;
 
   Hit HitTest(float x, float y) const;
 
@@ -130,6 +153,22 @@ class Hud {
   Hit hover_ = Hit::None;
   Hit pressed_ = Hit::None;
   bool swallowDrag_ = false;
+
+  Chat chatModel_;
+  Label chatTitle_;
+  Label chatPrompt_;
+  std::vector<Label> chatPhrases_;
+  std::vector<Label> chatLogLabels_;
+  std::vector<std::wstring> chatLogKeys_;
+  Label chatTyped_;
+  std::wstring chatTypedSource_;
+  float chatBlink_ = 0.0f;
+  float cursorX_ = 0.0f;
+  float cursorY_ = 0.0f;
+  Rect chatBar_;
+  Rect chatLog_;
+  Rect quickPanel_;
+  std::vector<Rect> quickRows_;
 
   // The era's key art, up and pressed, and the buttons that had art of their own.
   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> keyW_;

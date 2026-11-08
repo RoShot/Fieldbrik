@@ -31,6 +31,7 @@ constexpr float kLeaderboardWidth = 180.0f;
 constexpr float kLeaderboardHeader = 20.0f;
 constexpr float kLeaderboardRow = 18.0f;
 constexpr int kLeaderboardRows = 3;
+constexpr float kChatBarHeight = 22.0f;
 
 const XMFLOAT4 kPanel(0.10f, 0.12f, 0.16f, 0.78f);
 const XMFLOAT4 kColumn(0.50f, 0.58f, 0.72f, 0.85f);
@@ -41,6 +42,11 @@ const XMFLOAT4 kTopButtonDown(0.55f, 0.57f, 0.60f, 0.98f);
 const XMFLOAT4 kTopText(0.09f, 0.09f, 0.09f, 1.0f);
 const XMFLOAT4 kWhite(1.0f, 1.0f, 1.0f, 1.0f);
 const XMFLOAT4 kDim(0.0f, 0.0f, 0.0f, 0.55f);
+const XMFLOAT4 kChatPanel(0.07f, 0.08f, 0.11f, 0.74f);
+const XMFLOAT4 kChatBorder(0.36f, 0.39f, 0.46f, 0.90f);
+const XMFLOAT4 kChatBorderActive(0.58f, 0.63f, 0.72f, 0.95f);
+const XMFLOAT4 kChatHover(0.30f, 0.36f, 0.48f, 0.85f);
+const XMFLOAT4 kChatPrompt(0.62f, 0.65f, 0.70f, 1.0f);
 
 // Draws a label into an image with GDI, in the era's font. GDI antialiases into
 // the colour channels with no alpha, so the red channel becomes the alpha and the
@@ -197,6 +203,9 @@ bool Hud::Load(Renderer& renderer, HWND window) {
   if (!MakeLabels()) {
     return false;
   }
+  if (!MakeChatLabels()) {
+    return false;
+  }
 
   Layout();
   return true;
@@ -264,6 +273,8 @@ void Hud::Layout() {
   helpCloseButton_ = {helpPanel_.x + panelWidth - helpClose_.width - 32.0f,
                       helpPanel_.y + panelHeight - 34.0f,
                       helpClose_.width + 20.0f, 24.0f};
+
+  LayoutChat();
 }
 
 void Hud::Add(std::vector<Renderer::HudSprite>& sprites, const Rect& rect,
@@ -321,6 +332,8 @@ Hud::Hit Hud::HitTest(float x, float y) const {
   if (zoomOutButton_.Contains(x, y)) return Hit::ZoomOut;
   if (tiltButton_.Contains(x, y)) return Hit::Tilt;
   if (reportButton_.Contains(x, y)) return Hit::Report;
+  if (chatBar_.Contains(x, y)) return Hit::ChatBar;
+  if (chatModel_.Open() && quickPanel_.Contains(x, y)) return Hit::QuickPanel;
   if (chatButton_.Contains(x, y)) return Hit::Chat;
 
   return Hit::None;
@@ -350,16 +363,57 @@ Hud::Action Hud::Update(const Input& input) {
 
   // The pointer is followed every frame, not only when it clicks: the art answers
   // the cursor, and the camera needs to know when the interface has the mouse.
+  cursorX_ = x;
+  cursorY_ = y;
   hover_ = HitTest(x, y);
   if (!input.LeftButton()) {
     pressed_ = Hit::None;
     swallowDrag_ = false;
   }
 
-  if (!input.LeftPressed()) return Action::None;
+  // The bar has the keyboard while it is open: Enter sends, Backspace edits.
+  // The letter keys never reach the player while this is true.
+  if (chatModel_.Typing()) {
+    if (input.KeyPressed(VK_RETURN)) {
+      chatModel_.Submit();
+      return Action::None;
+    }
+    if (input.KeyPressed(VK_BACK)) chatModel_.Backspace();
+    if (!input.LeftPressed()) return Action::None;
+  } else if (!input.LeftPressed()) {
+    return Action::None;
+  }
 
   pressed_ = hover_;
   swallowDrag_ = helpOpen_ || hover_ != Hit::None;
+
+  // The quick chat menu takes the click while it is open, and a click that
+  // misses it puts it away.
+  if (chatModel_.Open()) {
+    const std::vector<Chat::Phrase>& phrases = Chat::Phrases();
+    if (hover_ == Hit::QuickPanel) {
+      for (size_t row = 0; row < quickRows_.size(); ++row) {
+        const size_t index = static_cast<size_t>(chatModel_.ScrollOffset()) + row;
+        if (index < phrases.size() && quickRows_[row].Contains(x, y)) {
+          chatModel_.Add(L"You", phrases[index].text);
+          chatModel_.Close();
+          return Action::None;
+        }
+      }
+      return Action::None;
+    }
+    chatModel_.Close();
+  }
+
+  if (hover_ == Hit::Chat) {
+    chatModel_.Toggle();
+    return Action::None;
+  }
+
+  if (hover_ == Hit::ChatBar) {
+    chatModel_.BeginTyping();
+    return Action::None;
+  }
 
   // While the help screen is up it is the only thing that can be clicked: the
   // Close button dismisses it, the panel itself swallows the click, and a click
@@ -449,6 +503,8 @@ void Hud::Collect(std::vector<Renderer::HudSprite>& sprites) const {
   Add(sprites, topExit_, TopColour(Hit::Exit), nullptr);
   AddCentred(sprites, exit_, topExit_, kTopText);
 
+  CollectChat(sprites);
+
   if (!helpOpen_) return;
 
   // The help screen dims the client and sits over it.
@@ -470,6 +526,203 @@ void Hud::Collect(std::vector<Renderer::HudSprite>& sprites) const {
 
   Add(sprites, helpCloseButton_, TopColour(Hit::HelpClose), nullptr);
   AddCentred(sprites, helpClose_, helpCloseButton_, kTopText);
+}
+
+
+void Hud::Tick(float seconds) {
+  chatModel_.Tick(seconds);
+  chatBlink_ += seconds;
+  RefreshChatLabels();
+}
+
+bool Hud::HandleEscape() {
+  if (chatModel_.Typing()) {
+    chatModel_.CancelTyping();
+    return true;
+  }
+  if (helpOpen_) {
+    helpOpen_ = false;
+    return true;
+  }
+  if (chatModel_.Open()) {
+    chatModel_.Close();
+    return true;
+  }
+  return false;
+}
+
+bool Hud::MakeChatLabels() {
+  if (!MakeLabel(L"Quick chat", 12, true, chatTitle_)) return false;
+  if (!MakeLabel(L"Click here or press /", 12, false, chatPrompt_)) return false;
+
+  const std::vector<Chat::Phrase>& phrases = Chat::Phrases();
+  chatPhrases_.resize(phrases.size());
+  for (size_t index = 0; index < phrases.size(); ++index) {
+    if (!MakeLabel(phrases[index].text, 12, false, chatPhrases_[index])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool Hud::BuildLineLabel(const std::wstring& text, Label& label) {
+  // A line that would run past the panel is cut rather than left to overflow.
+  constexpr size_t kMaxCharacters = 52;
+  std::wstring line = text;
+  if (line.size() > kMaxCharacters) {
+    line = line.substr(0, kMaxCharacters - 3) + L"...";
+  }
+
+  std::vector<unsigned char> pixels;
+  int width = 0;
+  int height = 0;
+  if (!RenderLabel(line, 12, false, pixels, width, height)) return false;
+  if (!renderer_->CreateHudTextureFromBgra(width, height, pixels.data(),
+                                           label.view.GetAddressOf())) {
+    return false;
+  }
+
+  label.width = static_cast<float>(width);
+  label.height = static_cast<float>(height);
+  return true;
+}
+
+void Hud::RefreshChatLabels() {
+  const std::vector<Chat::Line>& lines = chatModel_.Lines();
+
+  bool stale = lines.size() != chatLogKeys_.size();
+  if (!stale) {
+    for (size_t index = 0; index < lines.size(); ++index) {
+      if (chatLogKeys_[index] != lines[index].text) {
+        stale = true;
+        break;
+      }
+    }
+  }
+
+  if (stale) {
+    chatLogLabels_.clear();
+    chatLogKeys_.clear();
+    for (const Chat::Line& line : lines) {
+      Label label;
+      if (BuildLineLabel(line.text, label)) {
+        chatLogLabels_.push_back(label);
+        chatLogKeys_.push_back(line.text);
+      }
+    }
+  }
+
+  if (chatModel_.Buffer() != chatTypedSource_) {
+    chatTypedSource_ = chatModel_.Buffer();
+    chatTyped_ = Label();
+    if (!chatTypedSource_.empty()) {
+      Label label;
+      if (BuildLineLabel(chatTypedSource_, label)) chatTyped_ = label;
+    }
+  }
+}
+
+void Hud::LayoutChat() {
+  const float width = static_cast<float>(width_);
+  const float height = static_cast<float>(height_);
+
+  // The bar runs along the bottom left; the movement keys keep the right corner.
+  const float barWidth = std::min(520.0f, width - kPad * 2.0f - 140.0f);
+  chatBar_ = {kPad, height - kPad - kChatBarHeight, barWidth, kChatBarHeight};
+
+  // The chat button sits just above the bar, not on the bottom edge.
+  chatButton_ = {kPad, chatBar_.y - 6.0f - kChatHeight, kChatWidth, kChatHeight};
+
+  // The log lives under the top strip, where the era put it.
+  chatLog_ = {kPad, kTopButtonHeight + 6.0f, 330.0f, 108.0f};
+
+  // The quick chat panel opens upwards out of the chat button.
+  constexpr float kRowHeight = 18.0f;
+  const float room = chatButton_.y - 44.0f;
+  const int rows = std::min(18, std::max(4, static_cast<int>(room / kRowHeight)));
+  const float panelHeight = rows * kRowHeight + 28.0f;
+
+  quickPanel_ = {kPad, chatButton_.y - 8.0f - panelHeight, 306.0f, panelHeight};
+
+  quickRows_.clear();
+  for (int row = 0; row < rows; ++row) {
+    quickRows_.push_back({quickPanel_.x + 6.0f,
+                          quickPanel_.y + 24.0f + row * kRowHeight,
+                          quickPanel_.width - 12.0f, kRowHeight});
+  }
+}
+
+void Hud::CollectChat(std::vector<Renderer::HudSprite>& sprites) const {
+  const std::vector<Chat::Line>& lines = chatModel_.Lines();
+
+  if (!lines.empty()) {
+    Add(sprites, chatLog_, kChatPanel, nullptr);
+
+    float y = chatLog_.y + 4.0f;
+    for (size_t index = 0; index < lines.size() && index < chatLogLabels_.size();
+         ++index) {
+      const float alpha = Chat::LineAlpha(lines[index]);
+      if (alpha > 0.0f) {
+        Rect where = {chatLog_.x + 8.0f, y, chatLogLabels_[index].width,
+                      chatLogLabels_[index].height};
+        const XMFLOAT4 colour = {1.0f, 1.0f, 1.0f, alpha};
+        AddLabel(sprites, chatLogLabels_[index], where, colour);
+      }
+      y += chatLogLabels_[index].height + 2.0f;
+    }
+  }
+
+  // The bar itself, bright-edged while it has the keyboard.
+  const bool active = chatModel_.Typing();
+  Add(sprites, chatBar_, active ? kChatBorderActive : kChatBorder, nullptr);
+
+  Rect inner = {chatBar_.x + 1.0f, chatBar_.y + 1.0f, chatBar_.width - 2.0f,
+                chatBar_.height - 2.0f};
+  Add(sprites, inner, kChatPanel, nullptr);
+
+  if (chatTyped_.view && !chatTypedSource_.empty()) {
+    Rect text = {chatBar_.x + 7.0f, chatBar_.y + 3.0f, chatTyped_.width,
+                 chatTyped_.height};
+    AddLabel(sprites, chatTyped_, text, kWhite);
+  } else {
+    Rect prompt = {chatBar_.x + 7.0f, chatBar_.y + 3.0f, chatPrompt_.width,
+                   chatPrompt_.height};
+    AddLabel(sprites, chatPrompt_, prompt, kChatPrompt);
+  }
+
+  if (active) {
+    const float phase = chatBlink_ * 2.0f;
+    if (phase - std::floor(phase) < 0.5f) {
+      const float offset = chatTyped_.view ? chatTyped_.width : 0.0f;
+      Rect caret = {chatBar_.x + 8.0f + offset, chatBar_.y + 4.0f, 1.0f,
+                    chatBar_.height - 8.0f};
+      Add(sprites, caret, kWhite, nullptr);
+    }
+  }
+
+  if (!chatModel_.Open()) return;
+
+  Add(sprites, quickPanel_, kChatPanel, nullptr);
+
+  Rect title = {quickPanel_.x + 8.0f, quickPanel_.y + 4.0f, chatTitle_.width,
+                chatTitle_.height};
+  AddLabel(sprites, chatTitle_, title, kWhite);
+
+  const std::vector<Chat::Phrase>& phrases = Chat::Phrases();
+  for (size_t row = 0; row < quickRows_.size(); ++row) {
+    const size_t index = static_cast<size_t>(chatModel_.ScrollOffset()) + row;
+    if (index >= phrases.size()) break;
+
+    const Rect& where = quickRows_[row];
+    if (where.Contains(cursorX_, cursorY_)) {
+      Add(sprites, where, kChatHover, nullptr);
+    }
+
+    const Label& label = chatPhrases_[index];
+    Rect text = {where.x + 4.0f, where.y + (where.height - label.height) * 0.5f,
+                 label.width, label.height};
+    AddLabel(sprites, label, text, kRowText);
+  }
 }
 
 }  // namespace fieldbrik

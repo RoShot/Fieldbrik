@@ -190,6 +190,26 @@ and Report buttons still do nothing but now look like they were pressed, pressin
 anything on the interface no longer drags the camera, the camera holds still
 behind the help screen, and a click outside Help closes it.
 
+## 0.12 — Milestone 12: quick chat and the bar — done
+
+- The chat button opens the era's quick chat menu: the 2008-2009 safe chat
+  tree kept whole, group headings sitting above their phrases the way the old
+  menu stacked them, scrolling under the wheel and closing on a pick.
+- A reply bar runs along the lower left, the keys keeping the right corner. It
+  is Arial at 12 px over a dark panel with a thin border that brightens while
+  it holds the keyboard, and a caret that blinks beside the text.
+- Clicking the bar or pressing / takes the keyboard, Enter sends, Backspace
+  edits, Esc puts it away. While it is open its letters stop walking the
+  avatar, so typing a sentence no longer moves the character.
+- What is said gathers in a thin-bordered field under the top strip: eight
+  lines, full strength for eight seconds, faded out by eleven.
+- The wheel belongs to the menu while it is open and to the camera otherwise.
+  The camera also holds still behind the menu, as it already did behind Help.
+
+Still open: nothing is sent anywhere. The bar and the menu feed a local log,
+the way safe chat did, so there is nobody on the other end until the client
+talks to a server.
+
 ## 0.10 — Milestone 10: the cursors and a pose that should not happen — done
 
 - The era's cursors are the mouse cursor: the arrow, the hand while the camera is

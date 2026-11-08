@@ -128,6 +128,11 @@ LRESULT CALLBACK Window::WndProc(HWND handle, UINT message, WPARAM wparam,
   return DefWindowProcW(handle, message, wparam, lparam);
 }
 
+void Window::TakeTyped(std::wstring& out) {
+  out.swap(typed_);
+  typed_.clear();
+}
+
 LRESULT Window::HandleMessage(UINT message, WPARAM wparam, LPARAM lparam) {
   switch (message) {
     case WM_SIZE: {
@@ -142,6 +147,13 @@ LRESULT Window::HandleMessage(UINT message, WPARAM wparam, LPARAM lparam) {
       }
       return 0;
     }
+
+    case WM_CHAR:
+      // Only what can be seen in the field: no control codes, no delete.
+      if (wparam >= 32 && wparam != 127) {
+        typed_.push_back(static_cast<wchar_t>(wparam));
+      }
+      return 0;
 
     case WM_MOUSEWHEEL: {
       // A high-resolution wheel sends fractions of a notch, so a scroll smaller

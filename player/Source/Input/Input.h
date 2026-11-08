@@ -22,6 +22,9 @@ class Input {
   // typing in another window would otherwise walk the player about.
   void Update(bool active);
 
+  // While the chat bar has the keyboard, its letters are not movement.
+  void SetTextMode(bool enabled) { textMode_ = enabled; }
+
   bool KeyDown(int virtualKey) const;
   bool KeyPressed(int virtualKey) const;
 
@@ -46,6 +49,7 @@ class Input {
   bool haveMouse_ = false;
   float mouseDeltaX_ = 0.0f;
   float mouseDeltaY_ = 0.0f;
+  bool textMode_ = false;
   bool leftButton_ = false;
   bool previousLeftButton_ = false;
 };

@@ -165,6 +165,13 @@ startup, because there was no art for them in the drop. Help opens a screen that
 says how to move, jump, look and zoom, and Escape closes it before it closes the
 client.
 
+Chat is the era's safe chat. The chat button opens its tree of phrases whole,
+group headings and all, and picking one says it. A bar runs along the lower left
+for anything typed: click it or press / and it takes the keyboard, Enter sends,
+Backspace edits and Escape puts it away, and while it is open its letters stop
+walking the avatar. What is said appears in a thin-bordered field under the top
+strip, stays eight seconds, and is gone by eleven.
+
 The sky is the era's own skybox: six square pictures, one per face of a cube round
 the camera, sampled by the direction every pixel looks along, so it turns with the
 view instead of being painted on the screen. The joins between the faces are left
@@ -315,8 +322,11 @@ empty folders.
   face and a second strip would be a second path with nothing to show for it.
 - The buttons that have hover and pressed art use it, and a press the interface
   handled is not also a camera drag. A click outside Help closes it.
-- The chat and Report buttons are laid out where they belong but have nothing
-  behind them: there is no chat and nobody to report yet.
+- Chat does not leave the machine. The bar and the menu write to the log on the
+  screen; nothing is sent and nothing arrives, because there is no server for it
+  to talk to yet. Everyone in a place sees only what they said themselves.
+- The Report button is laid out where it belongs but has nothing behind it:
+  there is nobody to report yet.
 - The tilt button wears `CameraTiltUp_ovr.png`, because that is the only tilt art
   in the drop: there is no unpressed `CameraTiltUp.png`.
 - No tool poses yet: the arm does not come up to hold anything, because there is
