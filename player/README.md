@@ -3,11 +3,12 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.8**: a window, a world of bricks, and a blocky avatar that walks,
+This is **0.9**: a window, a world of bricks, and a blocky avatar that walks,
 jumps and falls with limbs that swing. Gravity pulls it down, bricks stop it, low
 bricks are walked up, and falling off the baseplate puts it back at the spawn
-point. Every brick wears its studs, the sky is a gradient rather than one flat
-fill, and the avatar wears the era's own head model and face image.
+point. Every brick wears its studs and the texture its `TextureID` names, the sky
+is the era's own panorama rather than a gradient, and the avatar wears the era's
+own head model and face image.
 
 The world it walks in comes out of a **place file**, not out of the exe. Point
 the client at a `.rbxl` and that is what loads.
@@ -61,8 +62,9 @@ Every `<Item>` is one brick, and says what you would expect a brick to say:
   turned on three axes is read exactly rather than flattened into degrees.
 - `Color3uint8`, the brick colour, 0–255 per channel.
 - `CanCollide`, whether the player is stopped by it.
-- `TextureID`, read and kept, e.g. `rbxasset://textures/...`. Nothing is drawn
-  from it yet.
+- `TextureID`, e.g. `rbxasset://textures/Brick.png`. The last segment of the
+  path names an image in `player/content/textures/bricks`, and that image covers
+  the brick's top face.
 
 A `SpawnLocation` item puts the player on top of it instead of at the default
 spawn. `player/Place/default.rbxl` is a working sample that rebuilds the built-in
@@ -119,6 +121,26 @@ The body swings round to face the direction of travel, limbs swinging from the
 shoulders and the hips, and a step up is eased over a couple of frames instead of
 teleporting a whole stud.
 
+## Textures
+
+`player/content/textures` is the drop folder: `bricks/` holds one image per brick
+texture, `sky/panorama.png` holds the sky. Everything in there is compiled into
+the exe at build time, so a new file means a rebuild and the download is still one
+file.
+
+The names are the whole lookup. A brick is matched by the **last segment of its
+`TextureID`**, lowercased, so a place written for the old client finds its art with
+no edits: `rbxasset://textures/Brick.png` is `bricks/Brick.png` here. PNG or JPG.
+
+A texture covers the **top face only**, stretched once across the square, which is
+where a decal sat in the era; the sides keep their flat colour. The avatar stays
+flat throughout.
+
+A place that names an image the exe does not carry is **not run**: the client
+lists what is missing and stops, because a brick in the wrong colour is a bug that
+hides. With no panorama in `sky/` there is no sky pass at all and the window's
+clear colour shows — the gradient is gone rather than kept as a fallback.
+
 ## Studs and the sky
 
 Every brick wears studs on its top face, a stud apart, shrunk to fit a brick
@@ -127,10 +149,10 @@ is a small eight-sided cylinder, and the 80×80 baseplate's 6400 of them are
 built once into one buffer and drawn in a single call. The avatar's ten are
 rebuilt each frame, because it moves.
 
-The sky is a gradient from a pale horizon up to a deeper blue, worked out per
-pixel from the direction the camera is looking, so it turns with the view
-instead of being painted on the screen. The horizon is not a separate object:
-it is where the gradient reaches its palest, and the world covers the rest.
+The sky is the era's own panorama: one wide image wrapped round the horizon and
+sampled by the direction every pixel looks along, so it turns with the view
+instead of being painted on the screen. The horizon is not a separate object: it
+is where the image meets the world, and the world covers the rest.
 
 The camera is unaffected by either, but both are drawn behind it: the sky goes
 down first with depth off, and the studs are drawn straight after the parts they
@@ -258,8 +280,7 @@ empty folders.
 - No scripts. Nothing in a place file runs: no Lua, no buttons, no damage, no
   sound, no tools. A place is geometry plus where you start.
 - Boxes only. Every part is a rectangular brick: no spheres, wedges or cylinders,
-  and no surfaces or materials. `TextureID` is read and kept, but nothing is
-  drawn from it.
+  and no surfaces or materials.
 - `.fbrx` is recognised and refused for now, with a message saying it is not
   supported yet.
 - Unanchored parts stay exactly where the file put them. Physics is the player's,
@@ -267,9 +288,8 @@ empty folders.
 - Slopes are stood on rather than walked up, and nothing slides.
 - Input is only read while the client is the foreground window, so typing in
   another window cannot walk the player around.
-- Only the face is textured. `TextureID` is still read and ignored, so bricks are
-  flat colours, and the client carries the classic smile alone rather than the
-  other seven faces the era had.
+- Only the top face of a brick is textured, and only the classic smile is
+  compiled in: the other seven faces arrive with the website tie-in.
 - Expensive studs. The baseplate's are built once into a buffer of about 160,000
   triangles, which is fine on a desktop GPU and would not be on the hardware of
   the era. A brick with more than 8192 studs gets none rather than stalling.

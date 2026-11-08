@@ -124,7 +124,33 @@ rather than geometry generated in code.
   two seconds of slow descent rather than a drop. Nothing is blended, so a
   landing looks like the era's: abrupt, briefly frozen, then lazy.
 
-Still to come: textures from `TextureID`; the HUD; tools.
+Still to come: the HUD; tools.
+
+## 0.9 — Milestone 9: brick textures and the sky's panorama — done
+
+The era's own images, drawn where the era drew them.
+
+- A brick's `TextureID` now puts an image on its **top face**, stretched once
+  across the square, the way a decal sat on one face. The sides keep their flat
+  colour and the avatar stays flat, because that is what the old client did.
+- The image is matched by the **last segment of the `TextureID`**, lowercased, so
+  `rbxasset://textures/Brick.png` is `content/textures/bricks/Brick.png` and a
+  place written for the old client needs no edits.
+- Textures are compiled into the exe like the head and the face, from a table CMake
+  generates out of the folder, so adding a file is the whole job and the download
+  is still one file.
+- A place that asks for an image the exe does not carry is **refused at startup**,
+  with the missing names listed. A brick in the wrong colour is a bug that hides.
+- The sky is a panorama instead of a gradient: sampled by direction, wrapped round
+  the horizon, with no fallback — no panorama means no sky pass and the clear
+  colour shows.
+- The sky's ray is built from the camera's own axes. Inverting the view-projection
+  looked right and was not: at these near and far planes the inverse is nearly
+  singular, so every pixel came out looking along almost the same direction, and
+  the 0.8 "gradient" was in fact one flat colour. The sky now agrees with the
+  bricks it is drawn behind.
+- The version in the title bar is generated from the one in `CMakeLists.txt`, so it
+  can no longer disagree with the release it was built for.
 
 ## The eras
 
