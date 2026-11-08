@@ -1,9 +1,10 @@
-// An orbit camera around a point of interest.
+// The third-person camera: it follows a point, and you drag to look around it.
 //
-// Milestone 2 only needs to look at the world from different angles, so this is
-// a free orbit: drag to swing around the target, keys to rotate, zoom in and out.
-// The third-person follow camera that stays behind an avatar is Milestone 3, and
-// it will reuse the same projection and the same smoothing.
+// Dragging right turns the view right (the same way a mouse-look camera does),
+// dragging up lifts the view; the camera sits at a fixed distance and eases
+// towards where it is being pulled, so movement and looking both stay smooth.
+//
+// Milestone 4 adds collision so the camera cannot end up inside a brick.
 
 #pragma once
 
@@ -15,11 +16,17 @@ class Camera {
  public:
   void SetViewport(int width, int height);
 
-  // Called once per frame with the frame time, so the camera eases towards where
-  // it is being dragged instead of snapping.
+  // Where the camera should look from now on. The point is followed with easing,
+  // which is what stops the view jerking when the player changes direction.
+  void SetTarget(const DirectX::XMFLOAT3& point);
+
+  // Jumps straight to the target instead of easing, for the first frame.
+  void SnapToTarget();
+
+  // Called once per frame with the frame time.
   void Update(float deltaSeconds);
 
-  // Delta in screen pixels.
+  // Drag deltas in screen pixels.
   void Orbit(float deltaX, float deltaY);
   void Zoom(float steps);
   void Reset();
@@ -32,15 +39,17 @@ class Camera {
   float Yaw() const { return yaw_; }
 
  private:
-  float yaw_ = 35.0f;            // degrees, smoothed towards targetYaw_
-  float pitch_ = 28.0f;          // degrees above the target
-  float distance_ = 52.0f;       // studs from the target
+  // Yaw 180 puts the camera on the +Z side, behind a player who faces -Z.
+  float yaw_ = 180.0f;           // degrees, smoothed towards targetYaw_
+  float pitch_ = 20.0f;          // degrees above the target
+  float distance_ = 20.0f;       // studs behind the target
 
-  float targetYaw_ = 35.0f;
-  float targetPitch_ = 28.0f;
-  float targetDistance_ = 52.0f;
+  float targetYaw_ = 180.0f;
+  float targetPitch_ = 20.0f;
+  float targetDistance_ = 20.0f;
 
-  DirectX::XMFLOAT3 target_{0.0f, 3.0f, 0.0f};
+  DirectX::XMFLOAT3 focus_{0.0f, 3.0f, 0.0f};
+  DirectX::XMFLOAT3 focusGoal_{0.0f, 3.0f, 0.0f};
 
   int width_ = 1024;
   int height_ = 768;

@@ -53,10 +53,22 @@ bool App::Initialise() {
 
   camera_.SetViewport(window_.Width(), window_.Height());
   world_.BuildDefault();
+  player_.Spawn(world_.SpawnPoint());
+
+  // Start already looking at the player instead of flying in from the origin.
+  camera_.SetTarget(FocusPoint());
+  camera_.SnapToTarget();
+
+  avatarParts_.reserve(16);
 
   initialised_ = true;
   SetTitle(0);
   return true;
+}
+
+DirectX::XMFLOAT3 App::FocusPoint() const {
+  const DirectX::XMFLOAT3 feet = player_.Position();
+  return {feet.x, feet.y + 3.0f, feet.z};
 }
 
 int App::Run() {
@@ -68,7 +80,8 @@ int App::Run() {
   double titleElapsed = 0.0;
   int titleFrames = 0;
 
-  // The loop: pump the window, sample input, move the camera, draw the world.
+  // The loop: pump the window, sample input, move the player, follow with the
+  // camera, draw the world and the avatar.
   while (window_.PumpMessages()) {
     input_.Update();
 
@@ -82,15 +95,23 @@ int App::Run() {
     previous = now;
 
     // Clamped so that dragging the window, or a stalled frame, cannot fling the
-    // camera easing across the world.
+    // player across the baseplate or the camera across the world.
     const float delta = static_cast<float>(elapsed > 0.1 ? 0.1 : elapsed);
+
+    player_.Update(input_, camera_.Yaw(), delta);
+    camera_.SetTarget(FocusPoint());
     UpdateCamera(delta);
+
+    avatar_.SetPose(player_.Position(), player_.Facing());
+    avatarParts_.clear();
+    avatar_.CollectParts(avatarParts_);
 
     // A minimised window has nothing to draw; skip the frame but keep pumping
     // messages so it can be restored.
     if (!window_.IsMinimised()) {
       renderer_.BeginFrame(kSkyColour);
-      renderer_.DrawWorld(world_, camera_);
+      renderer_.DrawParts(world_.Parts(), camera_);
+      renderer_.DrawParts(avatarParts_, camera_);
       renderer_.EndFrame();
 
       titleElapsed += elapsed;
@@ -111,7 +132,8 @@ int App::Run() {
 }
 
 void App::UpdateCamera(float deltaSeconds) {
-  // Drag with the left button to swing around the world.
+  // Hold the left button and drag to look around. The camera is the only thing
+  // that reacts to the mouse; the avatar turns by itself, towards where it walks.
   if (input_.LeftButton()) {
     camera_.Orbit(input_.MouseDeltaX(), input_.MouseDeltaY());
   }
@@ -131,8 +153,9 @@ void App::UpdateCamera(float deltaSeconds) {
 
 void App::SetTitle(int framesPerSecond) {
   wchar_t buffer[256];
-  swprintf_s(buffer, L"FieldBrik Player 0.2 - %d x %d - %d parts - %d fps",
-             window_.Width(), window_.Height(), world_.PartCount(),
+  swprintf_s(buffer, L"FieldBrik Player 0.3 - %d x %d - %d parts - %d fps",
+             window_.Width(), window_.Height(),
+             world_.PartCount() + static_cast<int>(avatarParts_.size()),
              framesPerSecond);
   window_.SetTitle(buffer);
 }
