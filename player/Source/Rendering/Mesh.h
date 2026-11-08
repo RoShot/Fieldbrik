@@ -1,10 +1,10 @@
 // A mesh: vertices and indices on the GPU.
 //
 // Every brick is one unit cube scaled and moved by its own matrix, so a brick of
-// any size needs no geometry of its own. Two shapes exist beside the cube: the
-// stud that sits on a brick's top face, and the rounded block the head is drawn
-// as. Both are generated here rather than loaded, so the client still ships as a
-// single exe with no assets beside it.
+// any size needs no geometry of its own. Two shapes are generated here beside the
+// cube: the stud that sits on a brick's top face, and the rounded block that
+// stands in for the head when the era's model cannot be read. The head itself is
+// the loaded model, in RendererHead.cpp.
 //
 // Vertices carry a colour as well as a position and a normal. The cube and the
 // head leave theirs white and take their colour from the object constants; the
@@ -24,6 +24,9 @@ namespace fieldbrik {
 
 struct Part;
 
+// Three attributes, and no texture coordinate: the one textured thing in the
+// client is the face plane, and it carries its coordinates in the colour channel
+// that every vertex already has.
 struct Vertex {
   DirectX::XMFLOAT3 position;
   DirectX::XMFLOAT3 normal;

@@ -39,7 +39,8 @@ struct Part {
   bool collides = true;
 
   // Asset id or path of the part's texture, straight out of the place file. The
-  // renderer does not draw textures yet, so this is carried rather than used.
+  // renderer draws the head's face from a texture, but a brick's is still carried
+  // rather than used: that needs the era's brick textures, not just a face.
   std::string textureId;
 
   std::string name;

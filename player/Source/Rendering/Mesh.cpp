@@ -185,6 +185,9 @@ void BuildHead(std::vector<Vertex>& vertices,
 
 void AppendStuds(const Part& part, std::vector<Vertex>& vertices,
                  std::vector<unsigned int>& indices) {
+  // The head is a model rather than a brick, and the era's head wore no studs.
+  if (part.shape != PartShape::Cube) return;
+
   // Only the top face wears studs, and only where one fits. A 4x2 brick gets
   // eight, the baseplate gets a field of them.
   if (part.size.x < 0.45f || part.size.z < 0.45f) return;

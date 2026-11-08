@@ -63,6 +63,10 @@ class Renderer {
 
   const std::wstring& LastError() const { return lastError_; }
 
+  // Empty when the head model and its face loaded. Otherwise it says which step
+  // failed, and the avatar is drawn without them.
+  const std::wstring& HeadAssetError() const { return headAssetError_; }
+
  private:
   bool CreatePipeline();
   bool CreateTargets();
@@ -77,8 +81,17 @@ class Renderer {
   // or studs.
   void BindGeometry(const Camera& camera);
 
-  // One draw's own matrix and colour.
-  void SetObject(const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4& colour);
+  // One draw's own matrix and colour. `textured` switches the pixel shader to
+  // sampling and alpha-testing instead of shading a flat colour, which is how the
+  // face is drawn over the head.
+  void SetObject(const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4& colour,
+                 bool textured = false);
+
+  // The head and its face, in RendererHead.cpp. Both come out of the executable's
+  // own resources; without them the generated rounded block is drawn instead.
+  bool LoadHeadAssets();
+  void DrawHead(const Part& part, const DirectX::XMFLOAT4& colour);
+  DirectX::XMFLOAT4X4 HeadMatrix(const Part& part) const;
 
   Microsoft::WRL::ComPtr<ID3D11Device> device_;
   Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
@@ -115,6 +128,19 @@ class Renderer {
   Mesh worldStuds_;
   Mesh avatarStuds_;
 
+  // The era's head model and the plane its face is drawn on.
+  Mesh headModel_;
+  Mesh faceQuad_;
+
+  // The face image, and a single white texel bound whenever a draw is not
+  // textured so the pipeline is never left with a hole in it.
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> faceTexture_;
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> whiteTexture_;
+
+  // Point filtering, clamped: the face is 128 pixels of line art and is meant to
+  // stay sharp rather than be smoothed.
+  Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState_;
+
   // The avatar can only ever wear so many studs; this is its ceiling.
   static constexpr unsigned int kAvatarStudVertices = 4096;
   static constexpr unsigned int kAvatarStudIndices = 8192;
@@ -122,6 +148,7 @@ class Renderer {
   int width_ = 0;
   int height_ = 0;
   std::wstring lastError_;
+  std::wstring headAssetError_;
 };
 
 }  // namespace fieldbrik
