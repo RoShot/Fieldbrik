@@ -65,13 +65,16 @@ void Camera::Reset() {
 }
 
 XMFLOAT3 Camera::Position() const {
+  // A brick behind the player wins over the distance being asked for.
+  const float distance = std::min(distance_, maxDistance_);
+
   const float yaw = XMConvertToRadians(yaw_);
   const float pitch = XMConvertToRadians(pitch_);
-  const float horizontal = std::cos(pitch) * distance_;
+  const float horizontal = std::cos(pitch) * distance;
 
   XMFLOAT3 position;
   position.x = focus_.x + std::sin(yaw) * horizontal;
-  position.y = focus_.y + std::sin(pitch) * distance_;
+  position.y = focus_.y + std::sin(pitch) * distance;
   position.z = focus_.z - std::cos(yaw) * horizontal;
   return position;
 }

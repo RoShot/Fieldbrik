@@ -4,7 +4,9 @@
 // dragging up lifts the view; the camera sits at a fixed distance and eases
 // towards where it is being pulled, so movement and looking both stay smooth.
 //
-// Milestone 4 adds collision so the camera cannot end up inside a brick.
+// Collision is the caller's job, because the camera does not know what a brick is:
+// it asks the world for the distance to the first thing between the eye and the
+// point it is looking at, and the camera stays inside that.
 
 #pragma once
 
@@ -31,6 +33,14 @@ class Camera {
   void Zoom(float steps);
   void Reset();
 
+  // How close a brick is along the view line. The distance actually used is the
+  // smaller of this and the distance being asked for, and it is reset by the
+  // caller every frame.
+  void SetMaximumDistance(float distance) { maxDistance_ = distance; }
+
+  // The point the camera looks at, which is where a ray towards the eye starts.
+  DirectX::XMFLOAT3 Focus() const { return focus_; }
+
   DirectX::XMFLOAT3 Position() const;
   DirectX::XMMATRIX ViewProjection() const;
 
@@ -50,6 +60,8 @@ class Camera {
 
   DirectX::XMFLOAT3 focus_{0.0f, 3.0f, 0.0f};
   DirectX::XMFLOAT3 focusGoal_{0.0f, 3.0f, 0.0f};
+
+  float maxDistance_ = 1.0e9f;
 
   int width_ = 1024;
   int height_ = 768;
