@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.21)
 # Built by .github/workflows/player-build.yml on every push that touches this
 # folder, and by hand with the commands in README.md.
 
-project(FieldBrikPlayer VERSION 0.10 LANGUAGES CXX)
+project(FieldBrikPlayer VERSION 0.11 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -136,6 +136,26 @@ foreach(pair "Arrow;ArrowCursor.png;180" "Drag;DragCursor.png;181"
   endif()
 endforeach()
 
+# The HUD's own art: the movement keys up and pressed, the chat button, the
+# camera buttons and the report button. There is no art for Fullscreen, Help or
+# Exit in the era's drop, so those are drawn in Arial at startup instead.
+foreach(pair "KeyW;W_Key.png;190" "KeyWDown;W_Key_dn.png;191"
+            "KeyA;A_Key.png;192" "KeyADown;A_Key_dn.png;193"
+            "KeyS;S_Key.png;194" "KeySDown;S_Key_dn.png;195"
+            "KeyD;D_Key.png;196" "KeyDDown;D_Key_dn.png;197"
+            "Chat;Chat.png;198" "ZoomIn;CameraZoomIn.png;199"
+            "ZoomOut;CameraZoomOut.png;200" "Tilt;CameraTiltUp_ovr.png;201"
+            "Report;ReportAbuse_ovr.PNG;202")
+  list(GET pair 0 hud_role)
+  list(GET pair 1 hud_file)
+  list(GET pair 2 hud_id)
+
+  if(EXISTS "${PLAYER_TEXTURE_DIR}/ui/${hud_file}")
+    file(REAL_PATH "${PLAYER_TEXTURE_DIR}/ui/${hud_file}" hud_path)
+    string(APPEND TEXTURE_RESOURCES "${hud_id} 10 \"${hud_path}\"\n")
+  endif()
+endforeach()
+
 list(LENGTH BRICK_TEXTURE_FILES texture_count)
 message(STATUS
   "FieldBrik Player: ${texture_count} brick texture(s), sky ${SKY_PRESENT}")
@@ -154,6 +174,8 @@ add_executable(FieldBrikPlayer WIN32
   Source/Application/App.cpp
   Source/Window/Window.cpp
   Source/Window/Cursors.cpp
+  Source/Hud/Hud.cpp
+  Source/Rendering/RendererHud.cpp
   Source/Rendering/Renderer.cpp
   Source/Rendering/RendererHead.cpp
   Source/Rendering/RendererTextures.cpp

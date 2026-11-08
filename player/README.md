@@ -156,6 +156,15 @@ camera is being dragged, and the resize arrow over the window's frame. They are
 compiled in like everything else, and a file that cannot be read falls back to the
 system cursor of the same shape.
 
+The interface is where a 2008 client put it: Fullscreen, Help and Exit across the
+top left, the player list in the top right with the camera buttons under it and
+the Report button under those, the W A S D keys in the lower right corner and the
+chat button raised off the lower left edge. The key, camera, chat and report art
+is the era's own; the three top buttons and every label are drawn in Arial at
+startup, because there was no art for them in the drop. Help opens a screen that
+says how to move, jump, look and zoom, and Escape closes it before it closes the
+client.
+
 The sky is the era's own skybox: six square pictures, one per face of a cube round
 the camera, sampled by the direction every pixel looks along, so it turns with the
 view instead of being painted on the screen. The joins between the faces are left
@@ -304,6 +313,10 @@ empty folders.
   same 32 pixels in a 64-pixel block, where `Surfaces.png` has 4x4 in 128. One
   tile per stud samples the same pixels either way, so the long strip serves every
   face and a second strip would be a second path with nothing to show for it.
+- The chat and Report buttons are laid out where they belong but have nothing
+  behind them: there is no chat and nobody to report yet.
+- The tilt button wears `CameraTiltUp_ovr.png`, because that is the only tilt art
+  in the drop: there is no unpressed `CameraTiltUp.png`.
 - No tool poses yet: the arm does not come up to hold anything, because there is
   nothing to hold until tools arrive.
 - Back faces are not culled (`CULL_NONE`). A closed box hides them anyway, so it

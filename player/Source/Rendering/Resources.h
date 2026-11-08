@@ -45,6 +45,22 @@ constexpr int kArrowCursorResource = 180;
 constexpr int kDragCursorResource = 181;
 constexpr int kResizeCursorResource = 182;
 
+// The HUD's art: the movement keys up and pressed, the chat button, the camera
+// buttons and the report button, read by Source/Hud/Hud.cpp.
+constexpr int kHudKeyWResource = 190;
+constexpr int kHudKeyWDownResource = 191;
+constexpr int kHudKeyAResource = 192;
+constexpr int kHudKeyADownResource = 193;
+constexpr int kHudKeySResource = 194;
+constexpr int kHudKeySDownResource = 195;
+constexpr int kHudKeyDResource = 196;
+constexpr int kHudKeyDDownResource = 197;
+constexpr int kHudChatResource = 198;
+constexpr int kHudZoomInResource = 199;
+constexpr int kHudZoomOutResource = 200;
+constexpr int kHudTiltResource = 201;
+constexpr int kHudReportResource = 202;
+
 // Reads a resource compiled into this executable. Returns false, with `error`
 // saying what was missing, when the id is not in the image or is empty.
 bool ReadEmbedded(int id, std::vector<unsigned char>& bytes, std::wstring& error);

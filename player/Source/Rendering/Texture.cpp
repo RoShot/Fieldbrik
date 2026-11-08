@@ -238,4 +238,37 @@ bool CreateWhiteTexture(ID3D11Device* device, ID3D11ShaderResourceView** view,
   return true;
 }
 
+bool CreateTextureFromBgra(ID3D11Device* device, int width, int height,
+                           const void* pixels, ID3D11ShaderResourceView** view,
+                           std::wstring& error) {
+  if (!device || !pixels || !view || width <= 0 || height <= 0) {
+    return Fail(error, L"The interface image was empty.");
+  }
+
+  D3D11_TEXTURE2D_DESC description{};
+  description.Width = static_cast<UINT>(width);
+  description.Height = static_cast<UINT>(height);
+  description.MipLevels = 1;
+  description.ArraySize = 1;
+  description.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+  description.SampleDesc.Count = 1;
+  description.Usage = D3D11_USAGE_DEFAULT;
+  description.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+  D3D11_SUBRESOURCE_DATA data{};
+  data.pSysMem = pixels;
+  data.SysMemPitch = static_cast<UINT>(width) * 4;
+
+  ComPtr<ID3D11Texture2D> texture;
+  if (FAILED(device->CreateTexture2D(&description, &data, &texture))) {
+    return Fail(error, L"An interface image could not be uploaded.");
+  }
+
+  if (FAILED(device->CreateShaderResourceView(texture.Get(), nullptr, view))) {
+    return Fail(error, L"An interface image could not be bound.");
+  }
+
+  return true;
+}
+
 }  // namespace fieldbrik

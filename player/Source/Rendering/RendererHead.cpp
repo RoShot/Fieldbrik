@@ -48,7 +48,7 @@ constexpr float kFaceSize = 1.048f;
 
 // A hair in front of the deepest point on the front of the head: close enough
 // that it never looks loose, far enough that it cannot z-fight with the surface.
-constexpr float kFaceDepth = 0.5906f + 0.0005f;
+constexpr float kFaceDepth = 0.5906f + 0.0001f;
 
 // Four corners, wound so the plane faces +Z, which is the direction the avatar
 // walks in. UV (0,0) is the image's top left.

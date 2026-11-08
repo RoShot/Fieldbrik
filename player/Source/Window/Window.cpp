@@ -55,6 +55,38 @@ void Window::Destroy() {
   }
 }
 
+void Window::ToggleFullscreen() {
+  if (!handle_) return;
+
+  if (!fullscreen_) {
+    if (!GetWindowRect(handle_, &windowedRect_)) return;
+    windowedStyle_ = GetWindowLongPtrW(handle_, GWL_STYLE);
+
+    MONITORINFO monitor{};
+    monitor.cbSize = sizeof(monitor);
+    if (!GetMonitorInfoW(MonitorFromWindow(handle_, MONITOR_DEFAULTTOPRIMARY),
+                         &monitor)) {
+      return;
+    }
+
+    SetWindowLongPtrW(handle_, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+    SetWindowPos(handle_, HWND_TOP, monitor.rcMonitor.left,
+                 monitor.rcMonitor.top,
+                 monitor.rcMonitor.right - monitor.rcMonitor.left,
+                 monitor.rcMonitor.bottom - monitor.rcMonitor.top,
+                 SWP_FRAMECHANGED | SWP_NOOWNERZORDER);
+    fullscreen_ = true;
+    return;
+  }
+
+  SetWindowLongPtrW(handle_, GWL_STYLE, windowedStyle_);
+  SetWindowPos(handle_, nullptr, windowedRect_.left, windowedRect_.top,
+               windowedRect_.right - windowedRect_.left,
+               windowedRect_.bottom - windowedRect_.top,
+               SWP_FRAMECHANGED | SWP_NOZORDER);
+  fullscreen_ = false;
+}
+
 bool Window::PumpMessages() {
   MSG message{};
   while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {

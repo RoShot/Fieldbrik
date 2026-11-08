@@ -908,6 +908,12 @@ void Renderer::WaitForGpu() {
 }
 
 void Renderer::Shutdown() {
+  hudSampler_.Reset();
+  hudDepth_.Reset();
+  hudBlend_.Reset();
+  hudBuffer_.Reset();
+  hudPixelShader_.Reset();
+  hudVertexShader_.Reset();
   topFace_.Release();
   textures_.clear();
   billboard_.Release();

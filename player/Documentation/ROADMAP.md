@@ -163,6 +163,27 @@ The era's own images, drawn where the era drew them.
 - The stud geometry is gone: the meshes, the dynamic buffer and the two serverside
   batches that built them were deleted rather than left behind.
 
+## 0.11 — Milestone 11: the HUD where it was — done
+
+- The era's interface is laid out the way 2008 laid it out: Fullscreen, Help...
+  and Exit across the top left; the player list in the top right with the camera
+  buttons under it and Report under those; W A S D in the lower right corner,
+  showing their pressed art while held; the chat button raised off the lower left.
+- The key, camera, chat and report art is the era's own, compiled in like every
+  other texture. The top three buttons and every label are drawn with GDI in
+  Arial at startup, because the drop had no art for them.
+- Fullscreen fills the monitor and comes back; Help opens a screen describing
+  movement, jumping, looking, zooming and reporting; Exit closes the client. The
+  Esc key closes Help before it leaves the game.
+- A new screen-space pass draws the interface: four vertices generated from the
+  vertex id, source alpha over the world, no depth. It costs one draw call per
+  piece and leaves the brick pipeline untouched.
+- The face moved 0.4 mm of a stud closer to the head, so it sits on the model
+  rather than in front of it.
+
+Still open: the chat and Report buttons have no destination yet, and the tilt
+button wears the hover art because no unpressed tilt image exists.
+
 ## 0.10 — Milestone 10: the cursors and a pose that should not happen — done
 
 - The era's cursors are the mouse cursor: the arrow, the hand while the camera is

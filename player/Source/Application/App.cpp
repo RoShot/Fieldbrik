@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -88,6 +87,7 @@ bool App::Initialise() {
     if (initialised_) {
       renderer_.Resize(width, height);
       camera_.SetViewport(width, height);
+      hud_.Resize(width, height);
     }
   });
 
@@ -144,6 +144,20 @@ bool App::Initialise() {
     return cursors_.For(hitTest, input_.LeftButton());
   });
   window_.OnActivate([this]() { clockReset_ = true; });
+
+  if (!hud_.Load(renderer_, window_.Handle())) {
+    const std::wstring interfaceError =
+        renderer_.LastError().empty()
+            ? std::wstring(L"The interface could not be drawn.")
+            : L"The interface could not be drawn:\n\n" +
+                  renderer_.LastError();
+    ShowError(interfaceError.c_str());
+    failureCode_ = 5;
+    return false;
+  }
+  RECT client{};
+  GetClientRect(window_.Handle(), &client);
+  hud_.Resize(client.right, client.bottom);
 
   player_.Spawn(world_.SpawnPoint(), world_.Parts());
   renderedFeet_ = player_.Position();
@@ -208,7 +222,8 @@ int App::Run() {
   while (window_.PumpMessages()) {
     input_.Update(GetForegroundWindow() == window_.Handle());
 
-    if (input_.KeyDown(VK_ESCAPE)) break;
+    // Escape closes the help screen first; only then does it leave the client.
+    if (input_.KeyPressed(VK_ESCAPE) && !hud_.CloseHelp()) break;
 
     LARGE_INTEGER now{};
     QueryPerformanceCounter(&now);
@@ -234,6 +249,28 @@ int App::Run() {
     player_.Update(input_, world_.Parts(), camera_.Yaw(), delta);
     camera_.SetTarget(FocusPoint());
     UpdateCamera(delta);
+
+    switch (hud_.Update(input_)) {
+      case Hud::Action::Fullscreen:
+        window_.ToggleFullscreen();
+        break;
+      case Hud::Action::Exit:
+        exitRequested_ = true;
+        break;
+      case Hud::Action::ZoomIn:
+        camera_.Zoom(1.0f);
+        break;
+      case Hud::Action::ZoomOut:
+        camera_.Zoom(-1.0f);
+        break;
+      case Hud::Action::TiltUp:
+        camera_.Orbit(0.0f, -6.0f);
+        break;
+      case Hud::Action::None:
+        break;
+    }
+
+    if (exitRequested_) break;
 
     // The animation is driven by what the player is doing, not by a timer: the
     // same pose the old Animate script picks from the Humanoid's events.
@@ -271,6 +308,9 @@ int App::Run() {
       renderer_.DrawParts(world_.Parts(), camera_, true);
       renderer_.DrawParts(avatarParts_, camera_, false);
       renderer_.DrawAvatarStuds(avatarParts_, camera_);
+
+      hud_.Collect(hudSprites_);
+      renderer_.DrawHud(hudSprites_);
       renderer_.EndFrame();
 
       titleElapsed += elapsed;

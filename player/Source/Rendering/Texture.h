@@ -25,6 +25,12 @@ namespace fieldbrik {
 bool CreateTextureFromPng(ID3D11Device* device, const void* bytes, std::size_t size,
                           ID3D11ShaderResourceView** view, std::wstring& error);
 
+// Uploads pixels made in memory rather than decoded from a file: the HUD's
+// labels are drawn with GDI, which produces 32-bit BGRA and no file. Top-down.
+bool CreateTextureFromBgra(ID3D11Device* device, int width, int height,
+                           const void* pixels, ID3D11ShaderResourceView** view,
+                           std::wstring& error);
+
 // The sky, as the era shipped it: six square pictures, one per face of a cube
 // around the camera, in the order Direct3D numbers them (+X, -X, +Y, -Y, +Z,
 // -Z). They have to agree on size and be square, because that is what a cube is;

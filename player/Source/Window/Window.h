@@ -36,6 +36,12 @@ class Window {
 
   void SetTitle(const std::wstring& title);
 
+  // Borderless over the whole monitor, and back to the window it was. The client
+  // resizes itself through the same WM_SIZE path as a drag, so the renderer does
+  // not need to know which happened.
+  void ToggleFullscreen();
+  bool Fullscreen() const { return fullscreen_; }
+
   // Mouse wheel notches gathered since the last call: +1 per notch scrolled up,
   // -1 per notch down. Reading it clears it. The wheel arrives as a window
   // message rather than a polled key, which is why it lives here and not in
@@ -68,6 +74,9 @@ class Window {
   int height_ = 0;
   int wheel_ = 0;
   bool minimised_ = false;
+  bool fullscreen_ = false;
+  RECT windowedRect_{};
+  LONG_PTR windowedStyle_ = 0;
   bool running_ = true;
 
   ResizeHandler resize_;

@@ -6,6 +6,7 @@ namespace fieldbrik {
 
 void Input::Update(bool active) {
   previous_ = current_;
+  previousLeftButton_ = leftButton_;
 
   if (!active) {
     // Every key reads as up, and the mouse is re-anchored when focus returns so

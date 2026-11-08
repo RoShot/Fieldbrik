@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "Camera/Camera.h"
+#include "Hud/Hud.h"
 #include "Characters/Avatar.h"
 #include "Characters/Player.h"
 #include "Input/Input.h"
@@ -61,6 +62,7 @@ class App {
   Renderer renderer_;
   Input input_;
   Cursors cursors_;
+  Hud hud_;
 
   World world_;
   Player player_;
@@ -73,6 +75,13 @@ class App {
 
   // Rebuilt each frame rather than allocated per frame.
   std::vector<Part> avatarParts_;
+
+  // Rebuilt each frame rather than allocated per frame.
+  std::vector<Renderer::HudSprite> hudSprites_;
+
+  // Set by the HUD's Exit button, which leaves the loop the same way the
+  // window's close button does.
+  bool exitRequested_ = false;
 
   bool initialised_ = false;
 

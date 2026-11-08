@@ -27,6 +27,13 @@ class Input {
 
   bool LeftButton() const { return leftButton_; }
 
+  // True on the frame the button went down, which is what a button wants: held
+  // is for dragging the camera.
+  bool LeftPressed() const { return leftButton_ && !previousLeftButton_; }
+
+  // Screen coordinates, as Windows reports them; the HUD converts to client.
+  POINT CursorPosition() const { return mouse_; }
+
   // Movement of the cursor since the previous frame, in pixels.
   float MouseDeltaX() const { return mouseDeltaX_; }
   float MouseDeltaY() const { return mouseDeltaY_; }
@@ -40,6 +47,7 @@ class Input {
   float mouseDeltaX_ = 0.0f;
   float mouseDeltaY_ = 0.0f;
   bool leftButton_ = false;
+  bool previousLeftButton_ = false;
 };
 
 }  // namespace fieldbrik

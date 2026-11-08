@@ -64,6 +64,25 @@ class Renderer {
   // and the flare mirrored across the screen while the sun is in view.
   void DrawSkyObjects(const Camera& camera);
 
+  // The HUD: screen-space quads with alpha, drawn after everything else. The
+  // coordinates are pixels with the origin at the top left, so the caller thinks
+  // in the same units Windows does.
+  struct HudSprite {
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;
+    float height = 0.0f;
+    DirectX::XMFLOAT4 colour{1.0f, 1.0f, 1.0f, 1.0f};
+    ID3D11ShaderResourceView* texture = nullptr;
+  };
+
+  void DrawHud(const std::vector<HudSprite>& sprites);
+
+  // Interface images: the era's art from the exe, and text drawn by GDI.
+  bool LoadHudTexture(int resourceId, ID3D11ShaderResourceView** view);
+  bool CreateHudTextureFromBgra(int width, int height, const void* pixels,
+                                ID3D11ShaderResourceView** view);
+
   void EndFrame();
 
   void WaitForGpu();
@@ -82,6 +101,7 @@ class Renderer {
 
  private:
   bool CreatePipeline();
+  bool CreateHudPipeline();
   bool CreateTargets();
   void ReleaseTargets();
 
@@ -190,6 +210,15 @@ class Renderer {
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> view;
   };
   std::vector<TextureEntry> textures_;
+
+  // The HUD's own pipeline: a four-vertex strip built from the vertex id, a
+  // rectangle of constants, alpha blending and no depth testing.
+  Microsoft::WRL::ComPtr<ID3D11VertexShader> hudVertexShader_;
+  Microsoft::WRL::ComPtr<ID3D11PixelShader> hudPixelShader_;
+  Microsoft::WRL::ComPtr<ID3D11Buffer> hudBuffer_;
+  Microsoft::WRL::ComPtr<ID3D11BlendState> hudBlend_;
+  Microsoft::WRL::ComPtr<ID3D11DepthStencilState> hudDepth_;
+  Microsoft::WRL::ComPtr<ID3D11SamplerState> hudSampler_;
 
   int width_ = 0;
   int height_ = 0;
