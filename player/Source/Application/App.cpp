@@ -15,6 +15,8 @@ constexpr int kStartWidth = 1024;
 constexpr int kStartHeight = 768;
 
 // The early-client sky: a flat, pale blue, a little greener than a modern one.
+// The renderer draws its gradient over this, so it only shows if the sky pass
+// cannot run at all.
 constexpr float kSkyColour[4] = {0.56f, 0.78f, 0.94f, 1.0f};
 
 // Where the camera may not go closer than, whatever is in the way: right up
@@ -97,6 +99,9 @@ bool App::Initialise() {
   }
 
   LoadWorld();
+
+  // The world never moves, so its studs are built once instead of every frame.
+  renderer_.BuildWorldStuds(world_.Parts());
 
   camera_.SetViewport(window_.Width(), window_.Height());
   player_.Spawn(world_.SpawnPoint());
@@ -206,8 +211,11 @@ int App::Run() {
     // messages so it can be restored.
     if (!window_.IsMinimised()) {
       renderer_.BeginFrame(kSkyColour);
+      renderer_.DrawSky(camera_);
       renderer_.DrawParts(world_.Parts(), camera_);
+      renderer_.DrawWorldStuds(camera_);
       renderer_.DrawParts(avatarParts_, camera_);
+      renderer_.DrawStuds(avatarParts_, camera_);
       renderer_.EndFrame();
 
       titleElapsed += elapsed;
@@ -281,7 +289,7 @@ void App::UpdateCamera(float deltaSeconds) {
 void App::SetTitle(int framesPerSecond) {
   wchar_t buffer[512];
   swprintf_s(buffer,
-             L"FieldBrik Player 0.6 - %d x %d - %d parts - %d fps - %s",
+             L"FieldBrik Player 0.7 - %d x %d - %d parts - %d fps - %s",
              window_.Width(), window_.Height(),
              world_.PartCount() + static_cast<int>(avatarParts_.size()),
              framesPerSecond, Widen(world_.Name()).c_str());
