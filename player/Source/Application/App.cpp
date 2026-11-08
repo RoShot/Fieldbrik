@@ -178,6 +178,17 @@ int App::Run() {
     camera_.SetTarget(FocusPoint());
     UpdateCamera(delta);
 
+    // The animation is driven by what the player is doing, not by a timer: the
+    // same pose the old Animate script picks from the Humanoid's events.
+    Avatar::Pose pose = Avatar::Pose::Standing;
+    if (!player_.Grounded()) {
+      pose = player_.VerticalSpeed() > 0.0f ? Avatar::Pose::Jumping
+                                            : Avatar::Pose::FreeFall;
+    } else if (player_.HorizontalSpeed() > 0.5f) {
+      pose = Avatar::Pose::Running;
+    }
+
+    avatar_.Animate(pose, delta);
     avatar_.SetPose(player_.Position(), player_.Facing());
     avatarParts_.clear();
     avatar_.CollectParts(avatarParts_);
