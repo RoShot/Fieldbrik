@@ -1,5 +1,9 @@
 #include "World/World.h"
 
+#include <utility>
+
+#include "World/PlaceFile.h"
+
 namespace fieldbrik {
 namespace {
 
@@ -27,8 +31,24 @@ void World::Add(const char* name, DirectX::XMFLOAT3 position,
   parts_.push_back(part);
 }
 
+bool World::Load(const std::string& path, std::string& error) {
+  PlaceData data;
+  if (!LoadPlaceFile(path, data, error)) return false;
+
+  parts_ = std::move(data.parts);
+
+  // Only a place that actually has a spawn point moves the player: an empty or
+  // half-written file should not drop them in the middle of nothing.
+  if (data.haveSpawn) spawn_ = data.spawn;
+
+  const size_t slash = path.find_last_of("\\/");
+  name_ = slash == std::string::npos ? path : path.substr(slash + 1);
+  return true;
+}
+
 void World::BuildDefault() {
   parts_.clear();
+  name_ = "built-in place";
 
   // The baseplate is an ordinary part: 80x1x80 studs, its top surface at y = 0.
   // Making it a part rather than a special case is what lets the same code draw
@@ -51,6 +71,7 @@ void World::BuildDefault() {
   Add("Step 1", {-16.0f, 0.5f, -14.0f}, {6.0f, 1.0f, 6.0f}, kBrickBlue);
   Add("Step 2", {-16.0f, 1.5f, -19.0f}, {6.0f, 1.0f, 4.0f}, kBrickBlue);
   Add("Step 3", {-16.0f, 2.5f, -23.0f}, {6.0f, 1.0f, 2.0f}, kBrickBlue);
+
 }
 
 }  // namespace fieldbrik
