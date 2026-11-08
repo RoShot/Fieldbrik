@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "Camera/Camera.h"
-#include "World/World.h"
+#include "World/Part.h"
 
 using namespace DirectX;
 
@@ -373,7 +373,7 @@ void Renderer::BeginFrame(const float clearColour[4]) {
   }
 }
 
-void Renderer::DrawWorld(const World& world, const Camera& camera) {
+void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera) {
   if (!context_ || !targetView_ || !cube_.Valid()) return;
 
   context_->IASetInputLayout(inputLayout_.Get());
@@ -398,7 +398,7 @@ void Renderer::DrawWorld(const World& world, const Camera& camera) {
   context_->VSSetConstantBuffers(1, 1, objectBuffers);
   context_->PSSetConstantBuffers(1, 1, objectBuffers);
 
-  for (const Part& part : world.Parts()) {
+  for (const Part& part : parts) {
     if (SUCCEEDED(context_->Map(objectBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
                                 &mapped))) {
       auto* object = static_cast<ObjectConstants*>(mapped.pData);
