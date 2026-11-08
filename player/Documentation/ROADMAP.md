@@ -7,18 +7,26 @@ buttons on a client that has never moved a box across a screen.
 
 The order below is the intended one. It is not a promise about dates.
 
-## 0.1 — Milestone 1: application foundation
+## 0.1 — Milestone 1: application foundation — done
 
 Win32 window, Direct3D 11 device, resize, clean close, a frame loop and an fps
 readout in the title bar. The screen is cleared to the sky colour and nothing
 else.
 
-## 0.2 — Milestone 2: the world
+## 0.2 — Milestone 2: the world — done
 
 A baseplate, a handful of rectangular bricks, a sky colour, a spawn point, and a
 `Part` type carrying position, rotation, size, colour and whether it collides.
 The world is built from individual parts, because that is what the building
 system and Studio will eventually edit.
+
+Shipped with an orbit camera (drag, arrow keys, Q/E zoom) and a depth buffer, so
+position, size, rotation and colour can all be checked from any angle.
+
+One thing this milestone taught, worth writing down: a flip-model swap chain
+rotates its buffers on `Present`, so a render target view cached at startup
+draws into a texture that is never shown. The symptom is an empty frame with the
+clear colour still visible — geometry drawn, nothing on screen.
 
 ## 0.3 — Milestone 3: the avatar
 
