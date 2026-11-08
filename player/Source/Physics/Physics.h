@@ -10,8 +10,9 @@
 // for the common case — a brick turned only about Y — the push comes out exactly
 // along a world axis.
 //
-// There is no stepping up: a 1-stud brick in front of you is something to jump
-// onto, not to walk up. That is listed as a known issue.
+// Stepping up is a player matter (see Player.cpp): the resolver only answers
+// "where am I pushed to" and "is this spot free", which is all a step up needs
+// to test whether there is room at the top.
 
 #pragma once
 
@@ -34,5 +35,15 @@ struct Contact {
 // Pushes the player's feet out of anything they overlap and reports what they
 // ended up touching.
 Contact ResolvePlayer(const std::vector<Part>& parts, DirectX::XMFLOAT3& feet);
+
+// True when the player would be pushed out of something standing here. Used to
+// test whether a step up has room before taking it.
+bool IsBlocked(const std::vector<Part>& parts, const DirectX::XMFLOAT3& feet);
+
+// Distance along `direction` (which must be normalised) to the nearest collidable
+// brick, or `maxDistance` when nothing is in the way. If the ray starts inside a
+// brick it reports zero, which is what keeps the camera from sitting in one.
+float RayCastParts(const std::vector<Part>& parts, const DirectX::XMFLOAT3& origin,
+                   const DirectX::XMFLOAT3& direction, float maxDistance);
 
 }  // namespace fieldbrik

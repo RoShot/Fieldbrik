@@ -17,7 +17,10 @@ class Input {
  public:
   static constexpr int kKeyCount = 256;
 
-  void Update();
+  // Polls the keyboard and mouse. When the client is not the foreground window
+  // nothing is read, because GetAsyncKeyState answers for the whole desktop and
+  // typing in another window would otherwise walk the player about.
+  void Update(bool active);
 
   bool KeyDown(int virtualKey) const;
   bool KeyPressed(int virtualKey) const;

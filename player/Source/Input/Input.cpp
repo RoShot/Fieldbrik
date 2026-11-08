@@ -4,8 +4,19 @@
 
 namespace fieldbrik {
 
-void Input::Update() {
+void Input::Update(bool active) {
   previous_ = current_;
+
+  if (!active) {
+    // Every key reads as up, and the mouse is re-anchored when focus returns so
+    // that clicking back into the window does not swing the camera.
+    current_.fill(false);
+    leftButton_ = false;
+    mouseDeltaX_ = 0.0f;
+    mouseDeltaY_ = 0.0f;
+    haveMouse_ = false;
+    return;
+  }
 
   for (int key = 0; key < kKeyCount; ++key) {
     current_[key] = (GetAsyncKeyState(key) & 0x8000) != 0;

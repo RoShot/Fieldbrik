@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <cmath>
 
 using namespace DirectX;
 
@@ -16,18 +17,11 @@ constexpr float kSkin = 0.001f;
 // pushing out of one can push it into the other.
 constexpr int kPasses = 2;
 
-XMMATRIX PartRotation(const Part& part) {
-  return XMMatrixRotationRollPitchYaw(
-      XMConvertToRadians(part.rotationDegrees.x),
-      XMConvertToRadians(part.rotationDegrees.y),
-      XMConvertToRadians(part.rotationDegrees.z));
-}
-
 // Pushes the player out of one brick, if they overlap it at all.
 void ResolveOne(const Part& part, XMFLOAT3& feet, Contact& contact) {
   if (!part.collides) return;
 
-  const XMMATRIX rotate = PartRotation(part);
+  const XMMATRIX rotate = part.RotationMatrix();
   const XMMATRIX inverseRotate = XMMatrixTranspose(rotate);
 
   // World -> part space: undo the brick's translation, then its rotation.
@@ -47,8 +41,11 @@ void ResolveOne(const Part& part, XMFLOAT3& feet, Contact& contact) {
 
     const XMVECTOR world = XMVectorAdd(
         playerCentre, XMVectorSet(offsetX, offsetY, offsetZ, 0.0f));
+
+    // Rotation only: the translation is already gone, and TransformCoord would
+    // divide by a w that is zero here, turning every corner into infinity.
     const XMVECTOR local =
-        XMVector3TransformCoord(XMVectorSubtract(world, partCentre), inverseRotate);
+        XMVector3TransformNormal(XMVectorSubtract(world, partCentre), inverseRotate);
 
     localMin = XMVectorMin(localMin, local);
     localMax = XMVectorMax(localMax, local);
@@ -116,6 +113,73 @@ Contact ResolvePlayer(const std::vector<Part>& parts, XMFLOAT3& feet) {
   }
 
   return contact;
+}
+
+bool IsBlocked(const std::vector<Part>& parts, const XMFLOAT3& feet) {
+  XMFLOAT3 probe = feet;
+  ResolvePlayer(parts, probe);
+
+  const float dx = probe.x - feet.x;
+  const float dy = probe.y - feet.y;
+  const float dz = probe.z - feet.z;
+  return dx * dx + dy * dy + dz * dz > 1e-6f;
+}
+
+float RayCastParts(const std::vector<Part>& parts, const XMFLOAT3& origin,
+                   const XMFLOAT3& direction, float maxDistance) {
+  float nearest = maxDistance;
+
+  const XMVECTOR originVector = XMLoadFloat3(&origin);
+  const XMVECTOR directionVector = XMLoadFloat3(&direction);
+
+  for (const Part& part : parts) {
+    if (!part.collides) continue;
+
+    // The ray is taken into the brick's own space, where the brick is an
+    // axis-aligned box and the test is three slabs.
+    const XMMATRIX rotate = part.RotationMatrix();
+    const XMMATRIX inverseRotate = XMMatrixTranspose(rotate);
+
+    XMFLOAT3 localOrigin{};
+    XMFLOAT3 localDirection{};
+    XMStoreFloat3(&localOrigin,
+                  XMVector3TransformNormal(
+                      XMVectorSubtract(originVector, XMLoadFloat3(&part.position)),
+                      inverseRotate));
+    XMStoreFloat3(&localDirection,
+                  XMVector3TransformNormal(directionVector, inverseRotate));
+
+    const float half[3] = {part.size.x * 0.5f, part.size.y * 0.5f,
+                           part.size.z * 0.5f};
+    const float start[3] = {localOrigin.x, localOrigin.y, localOrigin.z};
+    const float step[3] = {localDirection.x, localDirection.y, localDirection.z};
+
+    float enter = 0.0f;
+    float exit = nearest;
+    bool hit = true;
+
+    for (int axis = 0; axis < 3 && hit; ++axis) {
+      if (std::fabs(step[axis]) < 1e-6f) {
+        // Parallel to this pair of faces: either inside them for the whole ray or
+        // never touching them.
+        if (start[axis] < -half[axis] || start[axis] > half[axis]) hit = false;
+        continue;
+      }
+
+      const float inverse = 1.0f / step[axis];
+      float near = (-half[axis] - start[axis]) * inverse;
+      float far = (half[axis] - start[axis]) * inverse;
+      if (near > far) std::swap(near, far);
+
+      enter = std::max(enter, near);
+      exit = std::min(exit, far);
+      if (enter > exit) hit = false;
+    }
+
+    if (hit && enter < nearest) nearest = enter;
+  }
+
+  return nearest;
 }
 
 }  // namespace fieldbrik
