@@ -72,6 +72,12 @@ void Window::SetTitle(const std::wstring& title) {
   if (handle_) SetWindowTextW(handle_, title.c_str());
 }
 
+int Window::TakeWheel() {
+  const int notches = wheel_;
+  wheel_ = 0;
+  return notches;
+}
+
 LRESULT CALLBACK Window::WndProc(HWND handle, UINT message, WPARAM wparam,
                                  LPARAM lparam) {
   if (message == WM_NCCREATE) {
@@ -101,6 +107,20 @@ LRESULT Window::HandleMessage(UINT message, WPARAM wparam, LPARAM lparam) {
         width_ = width;
         height_ = height;
         if (resize_) resize_(width_, height_);
+      }
+      return 0;
+    }
+
+    case WM_MOUSEWHEEL: {
+      // A high-resolution wheel sends fractions of a notch, so a scroll smaller
+      // than one notch still counts once it is pointing anywhere at all.
+      const int delta = GET_WHEEL_DELTA_WPARAM(wparam);
+      if (delta >= WHEEL_DELTA) {
+        wheel_ += delta / WHEEL_DELTA;
+      } else if (delta <= -WHEEL_DELTA) {
+        wheel_ += delta / WHEEL_DELTA;
+      } else {
+        wheel_ += delta > 0 ? 1 : -1;
       }
       return 0;
     }

@@ -34,6 +34,12 @@ class Window {
 
   void SetTitle(const std::wstring& title);
 
+  // Mouse wheel notches gathered since the last call: +1 per notch scrolled up,
+  // -1 per notch down. Reading it clears it. The wheel arrives as a window
+  // message rather than a polled key, which is why it lives here and not in
+  // Input.
+  int TakeWheel();
+
   HWND Handle() const { return handle_; }
   int Width() const { return width_; }
   int Height() const { return height_; }
@@ -51,6 +57,7 @@ class Window {
   HWND handle_ = nullptr;
   int width_ = 0;
   int height_ = 0;
+  int wheel_ = 0;
   bool minimised_ = false;
   bool running_ = true;
 

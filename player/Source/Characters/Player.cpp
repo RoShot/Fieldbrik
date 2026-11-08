@@ -10,13 +10,18 @@ using namespace DirectX;
 namespace fieldbrik {
 namespace {
 
+// The era's own numbers. Roblox's gravity is 196.2 studs per second squared, the
+// walk is 16, and a jump leaves the ground at 50, which peaks about 6.4 studs up.
+// The one thing that is not a number from the engine is how quickly you get going
+// and how quickly you stop: those are tuned by feel, slow enough to carry
+// momentum and quick enough that letting go does not read as ice.
 constexpr float kWalkSpeed = 16.0f;        // studs per second
-constexpr float kGroundAccel = 110.0f;     // studs per second squared
-constexpr float kAirAccel = 22.0f;         // less steering in the air
-constexpr float kGroundDamping = 12.0f;    // how fast you come to a stop
-constexpr float kGravity = -60.0f;
-constexpr float kJumpSpeed = 24.0f;        // clears a 1-stud brick comfortably
-constexpr float kMaxFallSpeed = 140.0f;
+constexpr float kGroundAccel = 55.0f;      // studs per second squared
+constexpr float kGroundDecel = 90.0f;      // friction once the keys are let go
+constexpr float kAirAccel = 15.0f;         // less steering in the air
+constexpr float kGravity = -196.2f;
+constexpr float kJumpSpeed = 50.0f;
+constexpr float kMaxFallSpeed = 250.0f;
 constexpr float kTurnBlend = 14.0f;        // how quickly the body swings round
 
 // The player is moved in slices this small, so nothing is ever stepped over:
@@ -140,17 +145,17 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
     moveZ /= length;
   }
 
-  // Steering: reach walking speed in a fraction of a second on the ground, and
-  // slower in the air, so a jump keeps the momentum it started with.
+  // Steering: a steady acceleration up to walking speed, and less of it in the
+  // air, so a jump keeps the momentum it started with.
   const float accel = grounded_ ? kGroundAccel : kAirAccel;
   velocity_.x = Approach(velocity_.x, moveX * kWalkSpeed, accel * deltaSeconds);
   velocity_.z = Approach(velocity_.z, moveZ * kWalkSpeed, accel * deltaSeconds);
 
-  // Standing still on the ground means grip, not a long slide.
+  // Standing still on the ground means friction, not a long slide: a steady
+  // deceleration, so a stop takes about a fifth of a second from full speed.
   if (grounded_ && !wantsToMove) {
-    const float damping = std::exp(-kGroundDamping * deltaSeconds);
-    velocity_.x *= damping;
-    velocity_.z *= damping;
+    velocity_.x = Approach(velocity_.x, 0.0f, kGroundDecel * deltaSeconds);
+    velocity_.z = Approach(velocity_.z, 0.0f, kGroundDecel * deltaSeconds);
   }
 
   // Jump before gravity is applied, so the first frame of a jump is not eaten.
@@ -175,6 +180,7 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
 
   bool grounded = false;
   const bool wasGrounded = grounded_;
+  XMFLOAT3 pushed{0.0f, 0.0f, 0.0f};
 
   for (int step = 0; step < substeps; ++step) {
     const XMFLOAT3 before = position_;
@@ -194,6 +200,10 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
       }
     }
 
+    pushed.x += contact.push.x;
+    pushed.y += contact.push.y;
+    pushed.z += contact.push.z;
+
     if (contact.grounded) {
       // Landed: whatever is left of the fall stops here.
       grounded = true;
@@ -205,6 +215,21 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
 
   grounded_ = grounded;
   if (grounded_) velocity_.y = 0.0f;
+
+  // Slide along whatever the player was pushed out of, instead of stopping dead
+  // against it: only the part of the velocity heading into the brick is removed,
+  // so walking at a wall at an angle keeps the sideways motion and you slide.
+  const float pushLength = std::sqrt(pushed.x * pushed.x + pushed.z * pushed.z);
+  if (pushLength > 1e-4f) {
+    const float normalX = pushed.x / pushLength;
+    const float normalZ = pushed.z / pushLength;
+    const float into = velocity_.x * normalX + velocity_.z * normalZ;
+
+    if (into < 0.0f) {
+      velocity_.x -= into * normalX;
+      velocity_.z -= into * normalZ;
+    }
+  }
 
   // Face the direction of travel, easing so a tap of D does not snap the body.
   const float horizontalSpeed =

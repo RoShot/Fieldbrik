@@ -90,6 +90,10 @@ void ResolveOne(const Part& part, XMFLOAT3& feet, Contact& contact) {
   feet.y += correction.y;
   feet.z += correction.z;
 
+  contact.push.x += correction.x;
+  contact.push.y += correction.y;
+  contact.push.z += correction.z;
+
   // Pushed up out of a brick means standing on it; pushed down means the head hit
   // the underside of something.
   if (axis == 1) {

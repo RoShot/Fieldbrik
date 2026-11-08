@@ -30,6 +30,11 @@ constexpr float kPlayerHeight = 5.0f;
 struct Contact {
   bool grounded = false;
   bool hitCeiling = false;
+
+  // Everything the bricks pushed the player by this frame, added up. The
+  // horizontal part is the direction of whatever they were stood against, which
+  // is what lets the player slide along a wall instead of stopping dead on it.
+  DirectX::XMFLOAT3 push{0.0f, 0.0f, 0.0f};
 };
 
 // Pushes the player's feet out of anything they overlap and reports what they
