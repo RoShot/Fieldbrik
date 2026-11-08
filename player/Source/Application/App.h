@@ -65,6 +65,10 @@ class App {
   Avatar avatar_;
   Camera camera_;
 
+  // Where the avatar is drawn, which trails the player by a frame or two so a
+  // one-stud step up does not read as a snap.
+  DirectX::XMFLOAT3 renderedFeet_{0.0f, 0.0f, 0.0f};
+
   // Rebuilt each frame rather than allocated per frame.
   std::vector<Part> avatarParts_;
 

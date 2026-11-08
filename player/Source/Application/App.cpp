@@ -100,6 +100,7 @@ bool App::Initialise() {
 
   camera_.SetViewport(window_.Width(), window_.Height());
   player_.Spawn(world_.SpawnPoint());
+  renderedFeet_ = player_.Position();
 
   // Start already looking at the player instead of flying in from the origin.
   camera_.SetTarget(FocusPoint());
@@ -188,8 +189,16 @@ int App::Run() {
       pose = Avatar::Pose::Running;
     }
 
+    // The player can be moved a whole stud by a step up in a single frame. Where
+    // the avatar is drawn eases towards the real position instead, which is what
+    // stops the climb reading as a teleport.
+    const float ease = 1.0f - std::exp(-18.0f * delta);
+    renderedFeet_.x += (player_.Position().x - renderedFeet_.x) * ease;
+    renderedFeet_.y += (player_.Position().y - renderedFeet_.y) * ease;
+    renderedFeet_.z += (player_.Position().z - renderedFeet_.z) * ease;
+
     avatar_.Animate(pose, delta);
-    avatar_.SetPose(player_.Position(), player_.Facing());
+    avatar_.SetPose(renderedFeet_, player_.Facing());
     avatarParts_.clear();
     avatar_.CollectParts(avatarParts_);
 
@@ -230,6 +239,11 @@ void App::UpdateCamera(float deltaSeconds) {
   if (input_.KeyDown(VK_UP)) camera_.Orbit(0.0f, -6.0f);
   if (input_.KeyDown(VK_DOWN)) camera_.Orbit(0.0f, 6.0f);
 
+  // The wheel zooms, one notch per step, the way the era's camera did. Q and E
+  // stay for keyboards without one.
+  const int notches = window_.TakeWheel();
+  if (notches != 0) camera_.Zoom(-static_cast<float>(notches));
+
   if (input_.KeyDown('Q')) camera_.Zoom(1.0f);
   if (input_.KeyDown('E')) camera_.Zoom(-1.0f);
 
@@ -267,7 +281,7 @@ void App::UpdateCamera(float deltaSeconds) {
 void App::SetTitle(int framesPerSecond) {
   wchar_t buffer[512];
   swprintf_s(buffer,
-             L"FieldBrik Player 0.5 - %d x %d - %d parts - %d fps - %s",
+             L"FieldBrik Player 0.6 - %d x %d - %d parts - %d fps - %s",
              window_.Width(), window_.Height(),
              world_.PartCount() + static_cast<int>(avatarParts_.size()),
              framesPerSecond, Widen(world_.Name()).c_str());
