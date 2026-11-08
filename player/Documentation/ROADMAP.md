@@ -65,12 +65,12 @@ Also closed off with this milestone: ledges of up to 1.15 studs are stepped up,
 the camera collides so it cannot be pushed inside a brick, and input is read only
 while the client is the foreground window.
 
-## 0.6 — Milestone 6: the 2006 pass — in progress
+## 0.6 — Milestone 6: the 2006 pass — done
 
 The client the era actually had: an avatar that moves like a body rather than a
 box sliding around, a camera you can zoom, and the engine's own movement numbers.
 
-Done so far:
+Done:
 
 - The old `Animate` script, ported: joints chase a desired angle at a capped rate
   (Standing 0.1 rad at 1 rad/s, Running 1 rad at 9 rad/s, jump arms to pi), which
@@ -81,8 +81,26 @@ Done so far:
   instead of snapping a whole stud.
 - Mouse wheel zoom, alongside Q and E.
 
-Still to come in this pass: studs on bricks and body parts, the sky, a mesh and
-texture pipeline for the new head, textures from `TextureID`, the HUD, and tools.
+## 0.7 — Milestone 7: studs, sky and a proper head — in progress
+
+The look of the era, on top of its movement.
+
+Done so far:
+
+- Studs on every brick's top face, a stud apart, and on the avatar's body parts.
+  They are generated geometry in two batches: the world's built once at load
+  (158,880 triangles with the default place) and the avatar's rebuilt per frame.
+- The sky, as a gradient worked out per pixel from the view direction, so it
+  turns with the camera rather than sitting on the screen.
+- The head drawn as the era's rounded block instead of as a cube.
+- Strafing fixed. The right vector was mirrored, which only showed once the
+  camera was turned sideways: W stayed correct while A and D swapped over. Now
+  verified at two camera yaws against the direction the view expects.
+- The legs swing 43 degrees each way while running, down from the full radian the
+  sine asks for, which was reading as a stride rather than a walk.
+
+Still to come: the face as a texture rather than boxes, which needs a texture
+pipeline and the era's face image; textures from `TextureID`; the HUD; tools.
 
 ## The eras
 

@@ -3,10 +3,11 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.6**: a window, a world of bricks, and a blocky avatar that walks,
+This is **0.7**: a window, a world of bricks, and a blocky avatar that walks,
 jumps and falls with limbs that swing. Gravity pulls it down, bricks stop it, low
 bricks are walked up, and falling off the baseplate puts it back at the spawn
-point.
+point. Every brick wears its studs, the sky is a gradient rather than one flat
+fill, and the head is the era's rounded block instead of a second torso.
 
 The world it walks in comes out of a **place file**, not out of the exe. Point
 the client at a `.rbxl` and that is what loads.
@@ -73,14 +74,20 @@ world rather than showing an empty screen.
 
 ## The avatar
 
-Six rigid boxes, no animation, five studs tall and four wide: a 2×1×1 head on a
-2×2×1 torso, with 1×2×1 arms and legs. Yellow head and arms, blue torso, green
-legs, and a two-dot-and-a-smile face drawn as small boxes on the front of the
-head.
+Six parts, five studs tall and four wide: a 2×1×1 head on a 2×2×1 torso, with
+1×2×1 arms and legs. Yellow head and arms, blue torso, green legs, and a
+smile-and-two-eyes face on the front of the head.
 
-That is the 2005 default avatar from the DynaBlocks/early-Roblox era: blocky,
-robotic, made of the same bricks as the world. The round studs on the top faces
-belong to the 2006 pass and are not here yet.
+That is the default avatar of the DynaBlocks/early-Roblox era: blocky, robotic,
+made of the same bricks as the world, with studs on the top of every part the
+same as a brick has.
+
+The head is drawn as the era's rounded block rather than as a cube — rounded
+down its vertical edges, with the top and bottom faces drawn in — which is the
+one part of the body that was never a plain brick.
+
+The face is still made of small boxes rather than the era's face image: there is
+no texture pipeline yet, so it has to be geometry. It is the next thing to go.
 
 ## Animation
 
@@ -89,14 +96,32 @@ invented. Nothing is a keyframe clip: every joint chases a desired angle at a
 capped rate, which is what makes the arms lag behind the legs.
 
 - Standing sways by 0.1 radians at 1 radian per second — barely visible.
-- Running swings the hips a full radian at frequency 9, so a cycle takes about
-  0.7 seconds at any speed. The arms want the same swing but are limited to 0.15
-  radians per tick, so they trail at roughly a third of it.
+- Running swings the hips 0.75 of a radian at frequency 9, so a cycle takes
+  about 0.7 seconds at any speed and the legs reach about 43 degrees each way.
+  The arms want the same swing but are limited to 0.15 radians per tick, so they
+  trail at roughly a third of it.
 - Jumping and falling throw the arms up to 180 degrees and straighten the legs.
 
 The body swings round to face the direction of travel, limbs swinging from the
 shoulders and the hips, and a step up is eased over a couple of frames instead of
 teleporting a whole stud.
+
+## Studs and the sky
+
+Every brick wears studs on its top face, a stud apart, shrunk to fit a brick
+that is under a stud across. They are real geometry, generated at load: a stud
+is a small eight-sided cylinder, and the 80×80 baseplate's 6400 of them are
+built once into one buffer and drawn in a single call. The avatar's ten are
+rebuilt each frame, because it moves.
+
+The sky is a gradient from a pale horizon up to a deeper blue, worked out per
+pixel from the direction the camera is looking, so it turns with the view
+instead of being painted on the screen. The horizon is not a separate object:
+it is where the gradient reaches its palest, and the world covers the rest.
+
+The camera is unaffected by either, but both are drawn behind it: the sky goes
+down first with depth off, and the studs are drawn straight after the parts they
+sit on.
 
 ## Physics
 
@@ -130,6 +155,10 @@ The camera is kept out of the bricks too. It casts from the player's chest towar
 where it wants to sit and stops short of the first thing along that line, so
 zooming out with a wall behind you pulls the view in instead of putting the camera
 inside the wall.
+
+Movement is relative to the camera, and it is right in every direction now: the
+strafe vector was mirrored, which only showed once the view was turned sideways.
+Walking and strafing both go where the view says they should.
 
 ## What is in the world
 
@@ -169,7 +198,7 @@ player/
   Source/
     Application/   entry point, the frame loop, shutdown
     Window/        Win32 window, resize, clean close
-    Rendering/     Direct3D 11 device, depth buffer, cube mesh, shaders
+    Rendering/     Direct3D 11 device, depth buffer, meshes, shaders, sky
     Camera/        third-person follow camera
     Characters/    the avatar's body and the player's movement
     Physics/       collision against the bricks
@@ -202,6 +231,9 @@ empty folders.
 - **Flat shading, one fixed light.** No shadows, no ambient occlusion, no
   post-processing: a brick's colour is multiplied by a half-lambert term so its
   faces can be told apart.
+- **Studs carry their colour in the vertex.** Thousands of them come from bricks
+  of different colours, so baking the colour in is what lets them be one draw
+  call instead of one per brick.
 
 ## Known issues
 
@@ -217,9 +249,13 @@ empty folders.
 - Slopes are stood on rather than walked up, and nothing slides.
 - Input is only read while the client is the foreground window, so typing in
   another window cannot walk the player around.
+- No textures. The face is boxes rather than the era's face image, `TextureID`
+  is still read and ignored, and there is no loader for either.
+- Expensive studs. The baseplate's are built once into a buffer of about 160,000
+  triangles, which is fine on a desktop GPU and would not be on the hardware of
+  the era. A brick with more than 8192 studs gets none rather than stalling.
 - No tool poses yet: the arm does not come up to hold anything, because there is
   nothing to hold until tools arrive.
-- No studs on the avatar's body parts yet.
 - Back faces are not culled (`CULL_NONE`). A closed box hides them anyway, so it
   is invisible today; winding will be settled when a mesh importer needs to agree
   with it.
