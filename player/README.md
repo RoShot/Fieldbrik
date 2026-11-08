@@ -3,11 +3,11 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.7**: a window, a world of bricks, and a blocky avatar that walks,
+This is **0.8**: a window, a world of bricks, and a blocky avatar that walks,
 jumps and falls with limbs that swing. Gravity pulls it down, bricks stop it, low
 bricks are walked up, and falling off the baseplate puts it back at the spawn
 point. Every brick wears its studs, the sky is a gradient rather than one flat
-fill, and the head is the era's rounded block instead of a second torso.
+fill, and the avatar wears the era's own head model and face image.
 
 The world it walks in comes out of a **place file**, not out of the exe. Point
 the client at a `.rbxl` and that is what loads.
@@ -82,12 +82,20 @@ That is the default avatar of the DynaBlocks/early-Roblox era: blocky, robotic,
 made of the same bricks as the world, with studs on the top of every part the
 same as a brick has.
 
-The head is drawn as the era's rounded block rather than as a cube — rounded
-down its vertical edges, with the top and bottom faces drawn in — which is the
-one part of the body that was never a plain brick.
+The head is the era's own model rather than generated geometry: `head.obj`, the
+same 972-vertex rounded block the website's avatar renderer uses, drawn at its own
+size on the head part. It wears no studs, because the era's head never did.
 
-The face is still made of small boxes rather than the era's face image: there is
-no texture pipeline yet, so it has to be geometry. It is the next thing to go.
+The face is `face.png` — the classic smile — drawn as a square plane on the front
+of the head and alpha tested, so everything the artist did not draw is thrown away
+rather than blended: there is no white card where the image ends, and the head
+stays solid behind it. The plane is 0.82 of the head's height, which is where the
+website's renderer puts it, and the head model is symmetric the same way, so the
+face is centred to a hundredth of a stud.
+
+Both files live in `public/avatar/assets`, the one copy in the repository that the
+website already serves, and are compiled into the exe as Windows resources. There
+is nothing to install beside it.
 
 ## Animation
 
@@ -101,6 +109,11 @@ capped rate, which is what makes the arms lag behind the legs.
   The arms want the same swing but are limited to 0.15 radians per tick, so they
   trail at roughly a third of it.
 - Jumping and falling throw the arms up to 180 degrees and straighten the legs.
+- Landing does not snap the body back into the walk. The jump pose is held for
+  half a second after the feet touch down, and the idle then lowers the arms at
+  0.15 radians a tick, so they take two more seconds to come back down. Slow, and
+  a little wrong on purpose: the client this copies looked exactly like that, and
+  a smooth blend would be the one thing the era never had.
 
 The body swings round to face the direction of travel, limbs swinging from the
 shoulders and the hips, and a step up is eased over a couple of frames instead of
@@ -198,12 +211,13 @@ player/
   Source/
     Application/   entry point, the frame loop, shutdown
     Window/        Win32 window, resize, clean close
-    Rendering/     Direct3D 11 device, depth buffer, meshes, shaders, sky
+    Rendering/     Direct3D 11 device, meshes, shaders, sky, the head and its face
     Camera/        third-person follow camera
     Characters/    the avatar's body and the player's movement
     Physics/       collision against the bricks
     World/         the Part type, the place reader and the test world
     Input/         keyboard and mouse state
+  Tools/           the resource script that compiles the assets into the exe
   Documentation/   roadmap, milestone notes
 ```
 
@@ -216,6 +230,10 @@ empty folders.
   no DLLs beside the exe, so "download and double-click" actually works.
 - **No framework.** Win32 for the window, Direct3D 11 for the picture, DirectXMath
   for the maths. Everything else is written here, in small files.
+- **Assets travel inside the exe.** `head.obj` and `face.png` are compiled in as
+  Windows resources and the PNG is decoded by the Windows Imaging Component, which
+  is part of the operating system. That is what keeps one file to download without
+  vendoring a model loader or an image library.
 - **The device survives a resize.** Only the back buffer views and the depth
   buffer are rebuilt, which is what keeps the window resizable without flicker or
   crashes.
@@ -249,8 +267,9 @@ empty folders.
 - Slopes are stood on rather than walked up, and nothing slides.
 - Input is only read while the client is the foreground window, so typing in
   another window cannot walk the player around.
-- No textures. The face is boxes rather than the era's face image, `TextureID`
-  is still read and ignored, and there is no loader for either.
+- Only the face is textured. `TextureID` is still read and ignored, so bricks are
+  flat colours, and the client carries the classic smile alone rather than the
+  other seven faces the era had.
 - Expensive studs. The baseplate's are built once into a buffer of about 160,000
   triangles, which is fine on a desktop GPU and would not be on the hardware of
   the era. A brick with more than 8192 studs gets none rather than stalling.
