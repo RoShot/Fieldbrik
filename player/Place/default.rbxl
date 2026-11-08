@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A FieldBrik place, in the XML format .rbxl used before it went binary.
+
+  Everything is plain text: an Item per brick, and Properties inside it. What the
+  client reads is Name, size/Size, CFrame, Color3uint8 or Color3, CanCollide and
+  TextureID; anything else is ignored, so a map from elsewhere opens too.
+
+  This file is the built-in test world written out, which makes it a starting
+  point: copy it to place.rbxl beside FieldBrikPlayer.exe and edit it.
+
+  A spawn point is an Item of class SpawnLocation. Only its CFrame and size are
+  used — the player stands on its top surface. Uncomment the block at the end of
+  Workspace to move the spawn to the red slab.
+-->
+<roblox version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="Workspace" referent="RBX0">
+		<Properties>
+			<string name="Name">Workspace</string>
+		</Properties>
+		<Item class="Part" referent="RBX1">
+			<Properties>
+				<string name="Name">Baseplate</string>
+				<CoordinateFrame name="CFrame">
+					<X>0</X>
+					<Y>-0.5</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>80</X>
+					<Y>1</Y>
+					<Z>80</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4287402380</Color3uint8>
+				<bool name="Anchored">true</bool>
+			</Properties>
+		</Item>
+		<Item class="Part" referent="RBX2">
+			<Properties>
+				<string name="Name">Red slab</string>
+				<CoordinateFrame name="CFrame">
+					<X>0</X>
+					<Y>0.5</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>8</X>
+					<Y>1</Y>
+					<Z>8</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4290266424</Color3uint8>
+			</Properties>
+		</Item>
+		<Item class="Part" referent="RBX3">
+			<Properties>
+				<string name="Name">Blue block</string>
+				<CoordinateFrame name="CFrame">
+					<X>12</X>
+					<Y>1</Y>
+					<Z>2</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>4</X>
+					<Y>2</Y>
+					<Z>4</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4282543032</Color3uint8>
+			</Properties>
+		</Item>
+		<Item class="Part" referent="RBX4">
+			<Properties>
+				<string name="Name">Yellow pillar</string>
+				<CoordinateFrame name="CFrame">
+					<X>-11</X>
+					<Y>3</Y>
+					<Z>4</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>2</X>
+					<Y>6</Y>
+					<Z>2</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4292458562</Color3uint8>
+			</Properties>
+		</Item>
+		<Item class="Part" referent="RBX5">
+			<Properties>
+				<string name="Name">Green wall</string>
+				<CoordinateFrame name="CFrame">
+					<X>7</X>
+					<Y>1.5</Y>
+					<Z>-9</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>10</X>
+					<Y>3</Y>
+					<Z>1</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4283929682</Color3uint8>
+			</Properties>
+		</Item>
+		<Item class="Part" referent="RBX6">
+			<Properties>
+				<string name="Name">White cube</string>
+				<CoordinateFrame name="CFrame">
+					<X>-7</X>
+					<Y>1.5</Y>
+					<Z>-8</Z>
+					<R00>0.866025</R00>
+					<R01>0</R01>
+					<R02>0.5</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>-0.5</R20>
+					<R21>0</R21>
+					<R22>0.866025</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>3</X>
+					<Y>3</Y>
+					<Z>3</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4292796118</Color3uint8>
+			</Properties>
+		</Item>
+		<Item class="Part" referent="RBX7">
+			<Properties>
+				<string name="Name">Tilted plane</string>
+				<CoordinateFrame name="CFrame">
+					<X>0</X>
+					<Y>3</Y>
+					<Z>-16</Z>
+					<R00>0.951057</R00>
+					<R01>-0.074758</R01>
+					<R02>-0.299838</R02>
+					<R10>0</R10>
+					<R11>0.970296</R11>
+					<R12>-0.241922</R12>
+					<R20>0.309017</R20>
+					<R21>0.230081</R21>
+					<R22>0.922806</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>9</X>
+					<Y>0.6</Y>
+					<Z>5</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4288586152</Color3uint8>
+			</Properties>
+		</Item>
+		<Item class="Part" referent="RBX8">
+			<Properties>
+				<string name="Name">Step 1</string>
+				<CoordinateFrame name="CFrame">
+					<X>-16</X>
+					<Y>0.5</Y>
+					<Z>-14</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>6</X>
+					<Y>1</Y>
+					<Z>6</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4282543032</Color3uint8>
+			</Properties>
+		</Item>
+		<Item class="Part" referent="RBX9">
+			<Properties>
+				<string name="Name">Step 2</string>
+				<CoordinateFrame name="CFrame">
+					<X>-16</X>
+					<Y>1.5</Y>
+					<Z>-19</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>6</X>
+					<Y>1</Y>
+					<Z>4</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4282543032</Color3uint8>
+			</Properties>
+		</Item>
+		<Item class="Part" referent="RBX10">
+			<Properties>
+				<string name="Name">Step 3</string>
+				<CoordinateFrame name="CFrame">
+					<X>-16</X>
+					<Y>2.5</Y>
+					<Z>-23</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>6</X>
+					<Y>1</Y>
+					<Z>2</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4282543032</Color3uint8>
+			</Properties>
+		</Item>
+		<!--
+		<Item class="SpawnLocation" referent="RBX11">
+			<Properties>
+				<string name="Name">SpawnLocation</string>
+				<CoordinateFrame name="CFrame">
+					<X>0</X>
+					<Y>1.5</Y>
+					<Z>8</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size">
+					<X>4</X>
+					<Y>1</Y>
+					<Z>4</Z>
+				</Vector3>
+				<Color3uint8 name="Color3uint8">4289048356</Color3uint8>
+			</Properties>
+		</Item>
+		-->
+	</Item>
+</roblox>

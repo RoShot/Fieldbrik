@@ -53,10 +53,17 @@ pillar. Falling below the world puts the player back at spawn.
 Still missing from the era: stepping up small ledges, sliding on slopes, and any
 collision on the camera, which can still be zoomed inside a brick.
 
-## 0.5 — Milestone 5: first playable build
+## 0.5 — Milestone 5: place files — done
 
-All of the above in one exe: walk around a world with bricks, from a downloadable
-release.
+All of the above in one exe, with the world read from a place file instead of
+being compiled in: a pre-2013 XML `.rbxl` (and `.rbxlx`, `.xml`), one `Item` per
+brick carrying its name, size, CFrame, colour, whether it collides and its texture
+gid, plus spawn locations. `.fbrx` is recognised and refused with a clear message
+until Studio can write it.
+
+Also closed off with this milestone: ledges of up to 1.15 studs are stepped up,
+the camera collides so it cannot be pushed inside a brick, and input is read only
+while the client is the foreground window.
 
 ## The eras
 
