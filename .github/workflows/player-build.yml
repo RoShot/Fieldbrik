@@ -1,0 +1,46 @@
+name: Player
+
+# Builds the desktop client and hands over a single exe.
+#
+# Filtered to player/** on purpose: committing a site page should not rebuild
+# the client, and committing the client should not touch the site deploy.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'player/**'
+      - '.github/workflows/player-build.yml'
+  pull_request:
+    paths:
+      - 'player/**'
+      - '.github/workflows/player-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S player -B player/build -A x64
+
+      # Release, because the exe handed over is the Release one: static CRT and
+      # no debug runtime, so it runs on a machine with no tools installed.
+      - name: Build
+        run: cmake --build player/build --config Release
+
+      - name: Show what was built
+        shell: pwsh
+        run: |
+          $exe = "player/build/Release/FieldBrikPlayer.exe"
+          if (-not (Test-Path $exe)) { throw "FieldBrikPlayer.exe was not produced." }
+          Get-Item $exe | Format-List Name, Length, LastWriteTime
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FieldBrikPlayer-win64
+          path: player/build/Release/FieldBrikPlayer.exe
+          if-no-files-found: error
