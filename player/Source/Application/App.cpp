@@ -98,6 +98,17 @@ bool App::Initialise() {
     return false;
   }
 
+  // The head and its face are compiled into the exe. If they could not be read
+  // the client still runs, but the avatar has no face, so say why instead of
+  // leaving it a mystery.
+  if (!renderer_.HeadAssetError().empty()) {
+    const std::wstring message =
+        L"The head and face could not be loaded:\n\n" + renderer_.HeadAssetError() +
+        L"\n\nThe avatar will be drawn without them.";
+    MessageBoxW(nullptr, message.c_str(), L"FieldBrik Player",
+                MB_OK | MB_ICONWARNING);
+  }
+
   LoadWorld();
 
   // The world never moves, so its studs are built once instead of every frame.
@@ -190,6 +201,10 @@ int App::Run() {
     if (!player_.Grounded()) {
       pose = player_.VerticalSpeed() > 0.0f ? Avatar::Pose::Jumping
                                             : Avatar::Pose::FreeFall;
+    } else if (player_.Landing()) {
+      // On the ground again, but the jump pose is still being held: the arms stay
+      // up for half a second before the idle starts lowering them.
+      pose = Avatar::Pose::Jumping;
     } else if (player_.HorizontalSpeed() > 0.5f) {
       pose = Avatar::Pose::Running;
     }
@@ -289,7 +304,7 @@ void App::UpdateCamera(float deltaSeconds) {
 void App::SetTitle(int framesPerSecond) {
   wchar_t buffer[512];
   swprintf_s(buffer,
-             L"FieldBrik Player 0.7 - %d x %d - %d parts - %d fps - %s",
+             L"FieldBrik Player 0.8 - %d x %d - %d parts - %d fps - %s",
              window_.Width(), window_.Height(),
              world_.PartCount() + static_cast<int>(avatarParts_.size()),
              framesPerSecond, Widen(world_.Name()).c_str());
