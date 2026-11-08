@@ -81,11 +81,11 @@ Done:
   instead of snapping a whole stud.
 - Mouse wheel zoom, alongside Q and E.
 
-## 0.7 — Milestone 7: studs, sky and a proper head — in progress
+## 0.7 — Milestone 7: studs, sky and a proper head — done
 
 The look of the era, on top of its movement.
 
-Done so far:
+Done:
 
 - Studs on every brick's top face, a stud apart, and on the avatar's body parts.
   They are generated geometry in two batches: the world's built once at load
@@ -99,8 +99,32 @@ Done so far:
 - The legs swing 43 degrees each way while running, down from the full radian the
   sine asks for, which was reading as a stride rather than a walk.
 
-Still to come: the face as a texture rather than boxes, which needs a texture
-pipeline and the era's face image; textures from `TextureID`; the HUD; tools.
+## 0.8 — Milestone 8: the head and its face — done
+
+The avatar's head is the era's own model, and its face is the era's own image,
+rather than geometry generated in code.
+
+- `head.obj` and `face.png` are the files the website's avatar renderer already
+  uses, and they stay in `public/avatar/assets` so the repository holds one copy
+  of each. CMake compiles them into the exe as Windows resources and the client
+  reads them back by id at startup, so the build is still one file to download.
+- A small OBJ reader of the client's own: positions, texture coordinates, normals,
+  triangles and quads, split per face corner because the shader wants one index
+  per vertex.
+- PNG decoding through the Windows Imaging Component, which ships with the
+  operating system: no image library and no third-party code. The face is alpha
+  tested rather than blended, so the head stays solid behind the artwork.
+- The five face boxes are gone from the avatar; the head wears no studs, because
+  the era's head never did.
+- If either asset cannot be read, the client says so and draws the generated
+  rounded block instead of a faceless head.
+- A jump with a hang in it. The arms go to 180 degrees as the script asks, stay
+  there for the whole flight, and are still up for half a second after the feet
+  touch down; the idle then lowers them at the script's own 0.15 a tick, which is
+  two seconds of slow descent rather than a drop. Nothing is blended, so a
+  landing looks like the era's: abrupt, briefly frozen, then lazy.
+
+Still to come: textures from `TextureID`; the HUD; tools.
 
 ## The eras
 

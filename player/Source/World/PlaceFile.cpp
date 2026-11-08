@@ -88,6 +88,7 @@ std::string DecodeEntities(const std::string& text) {
     } else if (entity == "apos") {
       out.push_back('\'');
     } else if (!entity.empty() && entity[0] == '#') {
+      // Numeric references are used for the odd character in a name.
       const int code = std::strtol(entity.c_str() + 1, nullptr, 10);
       if (code > 0 && code < 128) out.push_back(static_cast<char>(code));
     } else {
@@ -154,6 +155,7 @@ bool ParseElement(const std::string& text, size_t& position, Element& element,
 
   ++position;
 
+  // The tag's own name.
   const size_t nameStart = position;
   while (position < text.size() && !std::isspace(static_cast<unsigned char>(
                                        text[position])) &&
@@ -166,6 +168,7 @@ bool ParseElement(const std::string& text, size_t& position, Element& element,
     return false;
   }
 
+  // Attributes.
   for (;;) {
     SkipSpace(text, position);
     if (position >= text.size()) {
@@ -183,7 +186,7 @@ bool ParseElement(const std::string& text, size_t& position, Element& element,
         return false;
       }
       ++position;
-      return true;
+      return true;  // self-closing
     }
 
     const size_t keyStart = position;
@@ -219,6 +222,7 @@ bool ParseElement(const std::string& text, size_t& position, Element& element,
     ++position;
   }
 
+  // Content: text, children, and the matching closing tag.
   for (;;) {
     const size_t textStart = position;
     while (position < text.size() && text[position] != '<') ++position;
