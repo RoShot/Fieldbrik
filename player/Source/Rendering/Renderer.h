@@ -22,7 +22,7 @@
 namespace fieldbrik {
 
 class Camera;
-class World;
+struct Part;
 
 class Renderer {
  public:
@@ -39,7 +39,11 @@ class Renderer {
   void Resize(int width, int height);
 
   void BeginFrame(const float clearColour[4]);
-  void DrawWorld(const World& world, const Camera& camera);
+
+  // Draws a list of parts. The world and the avatar are drawn as separate lists
+  // so a future second player, or a selection outline, needs no special case.
+  void DrawParts(const std::vector<Part>& parts, const Camera& camera);
+
   void EndFrame();
 
   void WaitForGpu();
