@@ -217,6 +217,7 @@ class Hud {
   Rect healthTrack_;
   Rect healthFill_;
 
+  Rect topStrip_;
   Rect topFullscreen_;
   Rect topHelp_;
   Rect topExit_;

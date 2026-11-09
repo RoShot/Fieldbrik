@@ -26,21 +26,27 @@ constexpr float kChatWidth = 32.0f;
 constexpr float kChatHeight = 23.0f;
 constexpr float kCameraButton = 24.0f;
 constexpr float kReport = 48.0f;
-constexpr float kTopButtonHeight = 22.0f;
-constexpr float kLeaderboardWidth = 170.0f;
-constexpr float kLeaderboardHeader = 26.0f;
+constexpr float kTopButtonHeight = 36.0f;
+constexpr float kLeaderboardWidth = 210.0f;
+constexpr float kLeaderboardHeader = 34.0f;
 constexpr float kLeaderboardRow = 20.0f;
-constexpr int kLeaderboardRows = 3;
+constexpr int kLeaderboardRows = 1;
 constexpr float kChatBarHeight = 22.0f;
+constexpr float kBottomStrip = 22.0f;
+constexpr float kSlotWidth = 72.0f;
+constexpr float kSlotHeight = 55.0f;
 
 // The era's palette: flat, opaque greys and hard edges. 2008's interface was
 // solid rectangles with one-pixel borders, not translucent modern panels, so
 // there is no soft shadow or rounded shell anywhere in these colours.
 const XMFLOAT4 kPanel(0.13f, 0.13f, 0.13f, 0.96f);
 const XMFLOAT4 kRowText(0.92f, 0.94f, 0.97f, 1.0f);
+const XMFLOAT4 kTopStrip(0.80f, 0.80f, 0.80f, 1.0f);
+const XMFLOAT4 kTopStripTop(0.90f, 0.90f, 0.90f, 1.0f);
+const XMFLOAT4 kTopStripBottom(0.62f, 0.62f, 0.62f, 1.0f);
 const XMFLOAT4 kTopButton(0.75f, 0.75f, 0.75f, 1.0f);
-const XMFLOAT4 kTopButtonHover(0.83f, 0.83f, 0.83f, 1.0f);
-const XMFLOAT4 kTopButtonDown(0.67f, 0.67f, 0.67f, 1.0f);
+const XMFLOAT4 kTopButtonHover(0.90f, 0.90f, 0.90f, 1.0f);
+const XMFLOAT4 kTopButtonDown(0.68f, 0.68f, 0.68f, 1.0f);
 const XMFLOAT4 kTopText(0.07f, 0.07f, 0.07f, 1.0f);
 const XMFLOAT4 kWhite(1.0f, 1.0f, 1.0f, 1.0f);
 const XMFLOAT4 kDim(0.0f, 0.0f, 0.0f, 0.55f);
@@ -48,13 +54,17 @@ const XMFLOAT4 kQuickPanel(0.16f, 0.16f, 0.16f, 0.97f);
 const XMFLOAT4 kQuickBorder(0.62f, 0.62f, 0.62f, 1.0f);
 const XMFLOAT4 kQuickHover(0.20f, 0.32f, 0.55f, 1.0f);
 const XMFLOAT4 kChatPrompt(1.0f, 1.0f, 1.0f, 1.0f);
-const XMFLOAT4 kPlayerName(0.44f, 0.20f, 0.40f, 1.0f);
+const XMFLOAT4 kPlayerName(0.37f, 0.30f, 0.55f, 1.0f);
 const XMFLOAT4 kEditText(0.07f, 0.07f, 0.07f, 0.35f);
 
 // The backpack strip along the bottom, as the era drew it: a flat dark bar with
 // six square slots and a number under each one.
-const XMFLOAT4 kBackpack(0.10f, 0.10f, 0.10f, 0.62f);
-const XMFLOAT4 kSlotFill(0.24f, 0.24f, 0.24f, 0.80f);
+const XMFLOAT4 kBackpack(0.72f, 0.72f, 0.72f, 0.98f);
+const XMFLOAT4 kBackpackTop(0.83f, 0.83f, 0.83f, 0.98f);
+const XMFLOAT4 kBackpackBottom(0.58f, 0.58f, 0.58f, 0.98f);
+const XMFLOAT4 kSlotLine(0.46f, 0.46f, 0.46f, 1.0f);
+const XMFLOAT4 kBottomStripFill(0.42f, 0.42f, 0.42f, 0.92f);
+const XMFLOAT4 kBottomStripEdge(0.72f, 0.72f, 0.72f, 1.0f);
 const XMFLOAT4 kHealthTrack(0.03f, 0.03f, 0.03f, 0.55f);
 const XMFLOAT4 kHealthFill(0.20f, 0.72f, 0.16f, 1.0f);
 const XMFLOAT4 kHealthLabel(0.10f, 0.18f, 0.55f, 1.0f);
@@ -233,8 +243,8 @@ bool Hud::MakeLabels() {
     if (!MakeLabel(number, 10, false, hotbarNumbers_[slot])) return false;
   }
 
-  if (!MakeLabel(L"Players", 18, true, players_)) return false;
-  if (!MakeLabel(L"You", 14, false, you_)) return false;
+  if (!MakeLabel(L"Players", 26, true, players_)) return false;
+  if (!MakeLabel(L"You", 15, false, you_)) return false;
   if (!MakeLabel(L"Help", 16, true, helpTitle_)) return false;
   if (!MakeLabel(L"Close", 12, false, helpClose_)) return false;
 
@@ -282,38 +292,41 @@ void Hud::Layout() {
   const float width = static_cast<float>(width_);
   const float height = static_cast<float>(height_);
 
-  // Top left: the three buttons the 2007 client put along the top edge.
-  const float fullscreenWidth = fullscreen_.width + 16.0f;
-  const float helpWidth = helpButton_.width + 16.0f;
-  const float exitWidth = exit_.width + 16.0f;
+  // Top left: one grey strip along the top edge, carrying the three buttons the
+  // 2008 client put there and the Tools and Edit switches after them. Each
+  // button is as wide as its text plus a little breathing room, so the strip is
+  // only as long as it needs to be rather than a row of equal blocks.
+  const float widths[] = {fullscreen_.width + 18.0f, helpButton_.width + 18.0f,
+                          exit_.width + 18.0f, tools_.width + 18.0f,
+                          edit_.width + 18.0f};
 
-  topFullscreen_ = {0.0f, 0.0f, fullscreenWidth, kTopButtonHeight};
-  topHelp_ = {fullscreenWidth, 0.0f, helpWidth, kTopButtonHeight};
-  topExit_ = {fullscreenWidth + helpWidth, 0.0f, exitWidth, kTopButtonHeight};
+  float stripWidth = 0.0f;
+  for (const float w : widths) stripWidth += w;
 
-  // Tools and Edit sit after Exit, where the era's client kept its own switches.
-  // Tools shows and hides the backpack strip; Edit is a placeholder and reads as
-  // a greyed-out tab rather than a button that does nothing.
-  const float toolsWidth = tools_.width + 16.0f;
-  const float editWidth = edit_.width + 16.0f;
-  const float afterExit = fullscreenWidth + helpWidth + exitWidth;
-  topTools_ = {afterExit, 0.0f, toolsWidth, kTopButtonHeight};
-  topEdit_ = {afterExit + toolsWidth, 0.0f, editWidth, kTopButtonHeight};
+  topStrip_ = {0.0f, 0.0f, stripWidth, kTopButtonHeight};
 
-  // The backpack strip: six square slots, centred on the bottom edge.
-  constexpr float kSlot = 40.0f;
-  constexpr float kSlotGap = 4.0f;
+  float topX = 0.0f;
+  topFullscreen_ = {topX, 0.0f, widths[0], kTopButtonHeight};
+  topX += widths[0];
+  topHelp_ = {topX, 0.0f, widths[1], kTopButtonHeight};
+  topX += widths[1];
+  topExit_ = {topX, 0.0f, widths[2], kTopButtonHeight};
+  topX += widths[2];
+  topTools_ = {topX, 0.0f, widths[3], kTopButtonHeight};
+  topX += widths[3];
+  topEdit_ = {topX, 0.0f, widths[4], kTopButtonHeight};
+
+  // The backpack strip: six slots along the bottom left, sitting straight on the
+  // bottom bar the way the era drew it, rather than centred and floating.
   constexpr int kSlots = 6;
-  const float hotbarWidth = kSlots * kSlot + (kSlots + 1) * kSlotGap;
-  const float hotbarHeight = kSlot + kSlotGap * 2.0f;
-  hotbar_ = {(width - hotbarWidth) * 0.5f, height - kPad - hotbarHeight,
-             hotbarWidth, hotbarHeight};
+  const float hotbarWidth = kSlots * kSlotWidth;
+  hotbar_ = {0.0f, height - kBottomStrip - kSlotHeight, hotbarWidth,
+             kSlotHeight};
 
   hotbarSlots_.clear();
   for (int slot = 0; slot < kSlots; ++slot) {
     hotbarSlots_.push_back(
-        {hotbar_.x + kSlotGap + slot * (kSlot + kSlotGap),
-         hotbar_.y + kSlotGap, kSlot, kSlot});
+        {hotbar_.x + slot * kSlotWidth, hotbar_.y, kSlotWidth, kSlotHeight});
   }
 
   // The health meter stands on the right edge, its label underneath it.
@@ -323,8 +336,8 @@ void Hud::Layout() {
   healthFill_ = healthTrack_;
 
   // Top right: the player list, which the camera buttons sit underneath.
-  leaderboard_ = {width - kPad - kLeaderboardWidth, 8.0f, kLeaderboardWidth,
-                  kLeaderboardHeader + kLeaderboardRow * kLeaderboardRows + 6.0f};
+  leaderboard_ = {width - 20.0f - kLeaderboardWidth, 30.0f, kLeaderboardWidth,
+                  kLeaderboardHeader + kLeaderboardRow * kLeaderboardRows + 2.0f};
 
   const float cameraTop = leaderboard_.y + leaderboard_.height + 8.0f;
   const float cameraRight = width - kPad - kCameraButton * 2.0f - kKeyGap;
@@ -344,7 +357,7 @@ void Hud::Layout() {
   const float clusterWidth = kKey * 3.0f + kKeyGap * 2.0f;
   const float clusterHeight = kKey * 2.0f + kKeyGap;
   const float clusterX = width - kPad - clusterWidth;
-  const float clusterY = height - kPad - clusterHeight;
+  const float clusterY = height - kBottomStrip - 8.0f - clusterHeight;
 
   wasdW_ = {clusterX + kKey + kKeyGap, clusterY, kKey, kKey};
   wasdA_ = {clusterX, clusterY + kKey + kKeyGap, kKey, kKey};
@@ -445,7 +458,7 @@ ID3D11ShaderResourceView* Hud::Art(ID3D11ShaderResourceView* base,
 XMFLOAT4 Hud::TopColour(Hit hit) const {
   if (pressed_ == hit) return kTopButtonDown;
   if (hover_ == hit) return kTopButtonHover;
-  return kTopButton;
+  return {1.0f, 1.0f, 1.0f, 0.0f};
 }
 
 Hud::Action Hud::Update(const Input& input) {
@@ -606,6 +619,15 @@ void Hud::Collect(std::vector<Renderer::HudSprite>& sprites) const {
 
   // The top left strip. These have no art of their own, so they answer the
   // pointer with the colour of the strip.
+  // The strip is drawn once and the buttons only tint the part of it they own
+  // while they are hovered or held, so at rest the chrome reads as one band.
+  Add(sprites, topStrip_, kTopStrip, nullptr);
+  Add(sprites, {topStrip_.x, topStrip_.y, topStrip_.width, 1.0f}, kTopStripTop,
+      nullptr);
+  Add(sprites, {topStrip_.x, topStrip_.y + topStrip_.height - 1.0f,
+                topStrip_.width, 1.0f},
+      kTopStripBottom, nullptr);
+
   Add(sprites, topFullscreen_, TopColour(Hit::Fullscreen), nullptr);
   AddCentred(sprites, fullscreen_, topFullscreen_, kTopText);
   Add(sprites, topHelp_, TopColour(Hit::Help), nullptr);
@@ -614,7 +636,6 @@ void Hud::Collect(std::vector<Renderer::HudSprite>& sprites) const {
   AddCentred(sprites, exit_, topExit_, kTopText);
   Add(sprites, topTools_, TopColour(Hit::Tools), nullptr);
   AddCentred(sprites, tools_, topTools_, kTopText);
-  Add(sprites, topEdit_, kTopButton, nullptr);
   AddCentred(sprites, edit_, topEdit_, kEditText);
 
   CollectChat(sprites);
@@ -638,7 +659,8 @@ void Hud::Collect(std::vector<Renderer::HudSprite>& sprites) const {
     lineY += label.height + 10.0f;
   }
 
-  Add(sprites, helpCloseButton_, TopColour(Hit::HelpClose), nullptr);
+  Add(sprites, helpCloseButton_,
+      hover_ == Hit::HelpClose ? kTopButtonHover : kTopButton, nullptr);
   AddCentred(sprites, helpClose_, helpCloseButton_, kTopText);
 }
 
@@ -747,14 +769,14 @@ void Hud::LayoutChat() {
   // client put it. Its rectangle is only the click target for starting a
   // message.
   const float barWidth = std::min(330.0f, width - kPad * 2.0f - 140.0f);
-  chatBar_ = {kPad, height - 22.0f, barWidth, 18.0f};
+  chatBar_ = {5.0f, height - 20.0f, barWidth, 18.0f};
 
   // The chat button sits above the backpack strip, which now owns the bottom
   // centre, so the icon never lands on a slot.
   chatButton_ = {kPad, hotbar_.y - 6.0f - kChatHeight, kChatWidth, kChatHeight};
 
   // The log is plain text under the top strip, with no panel around it.
-  chatLog_ = {kPad, kTopButtonHeight + 8.0f, 460.0f, 8 * 15.0f};
+  chatLog_ = {kPad, kTopButtonHeight + 10.0f, 460.0f, 8 * 15.0f};
 
   // The quick chat panel opens upwards out of the chat button.
   constexpr float kRowHeight = 18.0f;
@@ -775,36 +797,35 @@ void Hud::LayoutChat() {
 void Hud::CollectBackpack(std::vector<Renderer::HudSprite>& sprites) const {
   if (!hotbarVisible_) return;
 
-  // A flat dark strip, one-pixel border, six empty slots and a number under each:
-  // the backpack as the era's client showed it before a tool was put in hand.
+  // The backpack as the era drew it: one light grey strip with a light top edge
+  // and a dark bottom one, vertical rules between the six slots, and a small
+  // white number in the bottom left of each. No gaps, no dark modern panel.
   Add(sprites, hotbar_, kBackpack, nullptr);
-  Add(sprites, {hotbar_.x, hotbar_.y, hotbar_.width, 1.0f}, kQuickBorder,
+  Add(sprites, {hotbar_.x, hotbar_.y, hotbar_.width, 1.0f}, kTopStripTop,
       nullptr);
+  Add(sprites, {hotbar_.x, hotbar_.y + 1.0f, hotbar_.width, 9.0f},
+      kBackpackTop, nullptr);
+  Add(sprites, {hotbar_.x, hotbar_.y + hotbar_.height - 10.0f, hotbar_.width,
+                9.0f},
+      kBackpackBottom, nullptr);
   Add(sprites, {hotbar_.x, hotbar_.y + hotbar_.height - 1.0f, hotbar_.width,
                 1.0f},
-      kQuickBorder, nullptr);
-  Add(sprites, {hotbar_.x, hotbar_.y, 1.0f, hotbar_.height}, kQuickBorder,
-      nullptr);
-  Add(sprites, {hotbar_.x + hotbar_.width - 1.0f, hotbar_.y, 1.0f,
-                hotbar_.height},
-      kQuickBorder, nullptr);
+      kTopStripBottom, nullptr);
 
   for (size_t slot = 0; slot < hotbarSlots_.size(); ++slot) {
     const Rect& where = hotbarSlots_[slot];
-    Add(sprites, where, kSlotFill, nullptr);
-    Add(sprites, {where.x, where.y, where.width, 1.0f}, kQuickBorder, nullptr);
-    Add(sprites, {where.x, where.y + where.height - 1.0f, where.width, 1.0f},
-        kQuickBorder, nullptr);
-    Add(sprites, {where.x, where.y, 1.0f, where.height}, kQuickBorder,
-        nullptr);
-    Add(sprites, {where.x + where.width - 1.0f, where.y, 1.0f, where.height},
-        kQuickBorder, nullptr);
+
+    // One rule between neighbours; the strip's own ends close the outside.
+    if (slot > 0) {
+      Add(sprites, {where.x, where.y + 1.0f, 1.0f, where.height - 2.0f},
+          kSlotLine, nullptr);
+    }
 
     if (slot < hotbarNumbers_.size()) {
       const Label& number = hotbarNumbers_[slot];
-      Rect text = {where.x + (where.width - number.width) * 0.5f,
-                   where.y + where.height - number.height, number.width,
-                   number.height};
+      Rect text = {where.x + 4.0f,
+                   where.y + where.height - number.height - 2.0f,
+                   number.width, number.height};
       AddLabel(sprites, number, text, kWhite);
     }
   }
@@ -812,6 +833,16 @@ void Hud::CollectBackpack(std::vector<Renderer::HudSprite>& sprites) const {
 
 void Hud::CollectChat(std::vector<Renderer::HudSprite>& sprites) const {
   const std::vector<Chat::Line>& lines = chatModel_.Lines();
+
+  // The bottom bar: a grey strip the full width of the window, the prompt sitting
+  // on it. The backpack strip stands directly on top of it, so the two read as
+  // one piece of chrome the way they did in 2008.
+  Add(sprites, {0.0f, static_cast<float>(height_) - kBottomStrip,
+                static_cast<float>(width_), kBottomStrip},
+      kBottomStripFill, nullptr);
+  Add(sprites, {0.0f, static_cast<float>(height_) - kBottomStrip,
+                static_cast<float>(width_), 1.0f},
+      kBottomStripEdge, nullptr);
 
   // The era's log was outlined text lying on the world: no panel, no shadow, no
   // rounded shell. Lines sit on the tab strip's own line height and the log

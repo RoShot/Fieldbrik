@@ -936,12 +936,25 @@ void Renderer::DrawAvatarStuds(const std::vector<Part>& parts,
   context_->PSSetShaderResources(2, 1, tiles);
 
   for (const Part& part : parts) {
-    // The arms are the shoulders: one stud on each, and nothing on the torso, the
-    // legs or the head.
-    if (part.name.find("arm") == std::string::npos) continue;
+    const bool arm = part.name.find("arm") != std::string::npos;
+    const bool leg = part.name.find("leg") != std::string::npos;
+    if (!arm && !leg) continue;
 
     const XMFLOAT4 colour(part.colour.x, part.colour.y, part.colour.z, 1.0f);
-    SetObject(part.ModelMatrix(), colour, false, &part.size, true);
+
+    // The arms carry a stud on the shoulder: the top face of the limb.
+    if (arm) {
+      SetObject(part.ModelMatrix(), colour, false, &part.size, true);
+      topFace_.Draw(context_.Get());
+    }
+
+    // And the hands and feet carry the same flat stud on the underside. Turning
+    // the limb's own frame over puts the quad on its bottom face, so it travels
+    // with the joint through the walk and the jump instead of being a second,
+    // rounder piece of geometry stuck to it.
+    Part underside = part;
+    underside.rotationDegrees.x += 180.0f;
+    SetObject(underside.ModelMatrix(), colour, false, &underside.size, true);
     topFace_.Draw(context_.Get());
   }
 
