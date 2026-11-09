@@ -205,7 +205,11 @@ void App::LoadWorld() {
 
 DirectX::XMFLOAT3 App::FocusPoint() const {
   const DirectX::XMFLOAT3 feet = player_.Position();
-  return {feet.x, feet.y + 3.0f, feet.z};
+
+  // First person watches from the eyes rather than the chest: at zero distance the
+  // eye sits exactly on the follow point, so the point is the head.
+  const float height = camera_.FirstPerson() ? 4.5f : 3.0f;
+  return {feet.x, feet.y + height, feet.z};
 }
 
 int App::Run() {
@@ -244,7 +248,12 @@ int App::Run() {
     if (clockReset_) {
       clockReset_ = false;
       previous = now;
+
+      // Time away is not something that happened in the world. Drop any landing
+      // pose still being held, and put the body back at rest rather than easing an
+      // arm down from a jump the player did before they alt-tabbed.
       player_.CancelLanding();
+      avatar_.Settle();
     }
 
     const double elapsed =
@@ -320,6 +329,11 @@ int App::Run() {
     avatarParts_.clear();
     avatar_.CollectParts(avatarParts_);
 
+    // First person puts the eye inside the body, and nothing is culled, so the
+    // inside of the torso would fill the screen. The avatar is simply not drawn
+    // while the camera is in its head.
+    if (camera_.FirstPerson()) avatarParts_.clear();
+
     // A minimised window has nothing to draw; skip the frame but keep pumping
     // messages so it can be restored.
     if (!window_.IsMinimised()) {
@@ -374,12 +388,19 @@ void App::UpdateCamera(float deltaSeconds) {
   // stay for keyboards without one; the notches themselves are read in the
   // frame loop, so the quick chat menu can take them first.
   if (!modal) {
-    if (input_.KeyDown('Q')) camera_.Zoom(1.0f);
-    if (input_.KeyDown('E')) camera_.Zoom(-1.0f);
+    // One notch per press, not per frame: zoom is discrete now, so holding a key
+    // would otherwise jump the whole range in a fraction of a second.
+    if (input_.KeyPressed('Q')) camera_.Zoom(1.0f);
+    if (input_.KeyPressed('E')) camera_.Zoom(-1.0f);
     if (input_.KeyPressed(VK_HOME)) camera_.Reset();
   }
 
   camera_.Update(deltaSeconds);
+
+  // First person sits at the head itself: there is nothing to keep the eye out of,
+  // and clamping the distance above zero would push the camera back out of the
+  // avatar.
+  if (camera_.FirstPerson()) return;
 
   // Keep the camera out of the bricks: cast from what it looks at towards where it
   // wants to sit, and stop short of anything in between.

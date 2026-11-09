@@ -33,7 +33,12 @@ constexpr int kMaxSubsteps = 64;
 // A ledge this high is walked up rather than jumped onto. It clears a one-stud
 // brick and the steps, and stops short of anything that should really be jumped.
 constexpr float kStepHeight = 1.15f;
-constexpr int kStepSettleSteps = 10;
+
+// How many slices the step-up settle scans downwards in. It has to be finer than
+// the forward bite one substep takes, or the resolver reports the step's side as
+// the shallowest overlap and pushes the player back out instead of setting them
+// on top. That is why walking into a step slowly used to be stopped by it.
+constexpr int kStepSettleSteps = 24;
 
 // Below this there is nothing left to stand on, so the player is put back.
 constexpr float kRespawnBelow = -60.0f;
@@ -79,22 +84,41 @@ bool TryStepUp(const std::vector<Part>& parts, const XMFLOAT3& before, float ste
   // No room at the top means it is a wall, not a ledge.
   if (IsBlocked(parts, raised)) return false;
 
-  // Come back down until there is something under the player again.
-  for (int step = 0; step < kStepSettleSteps; ++step) {
-    raised.y -= kStepHeight / static_cast<float>(kStepSettleSteps);
+  // Come back down in slices until something is under the player. Asking
+  // IsBlocked rather than watching for a grounded resolve matters: a shallow
+  // forward bite makes the sideways overlap smaller than the drop, so the
+  // resolver would rather push the player off the step than up onto it. IsBlocked
+  // only answers "would this spot be moved", so it stops at the step's top either
+  // way.
+  const float drop = kStepHeight / static_cast<float>(kStepSettleSteps);
 
-    XMFLOAT3 settled = raised;
-    const Contact contact = ResolvePlayer(parts, settled);
-    if (!contact.grounded) continue;
-
-    // A step up, not a fall: anything lower is left to gravity.
-    if (settled.y < before.y - 0.01f) return false;
-
-    out = settled;
-    return true;
+  bool supported = false;
+  float freeY = raised.y;
+  for (int step = 1; step <= kStepSettleSteps; ++step) {
+    const XMFLOAT3 probe{raised.x, raised.y - drop * static_cast<float>(step),
+                         raised.z};
+    if (IsBlocked(parts, probe)) {
+      supported = true;
+      break;
+    }
+    freeY = probe.y;
   }
 
-  return false;
+  // Nothing under the player at the top of the step: it was a drop, not a ledge.
+  if (!supported) return false;
+
+  // A step up, not a fall: anything lower is left to gravity.
+  if (freeY < before.y - 0.01f) return false;
+
+  // Sink a hair into the surface and let the resolver put the player exactly on
+  // top of it, so they finish this frame standing rather than falling.
+  XMFLOAT3 settled{raised.x, freeY - 0.02f, raised.z};
+  const Contact contact = ResolvePlayer(parts, settled);
+  if (!contact.grounded) return false;
+  if (settled.y < before.y - 0.01f) return false;
+
+  out = settled;
+  return true;
 }
 
 }  // namespace
@@ -215,6 +239,13 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
       if (TryStepUp(parts, before, stepX, stepZ, position_, stepped)) {
         position_ = stepped;
         contact = ResolvePlayer(parts, position_);
+
+        // A step up is not a fall. The player never left the ground, so this frame
+        // must not read as airborne: otherwise the jump pose fires on every climb
+        // and the arms go up as you walk up the steps.
+        contact.grounded = true;
+        grounded = true;
+        velocity_.y = 0.0f;
       }
     }
 
@@ -228,6 +259,23 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
       velocity_.y = 0.0f;
     } else if (contact.hitCeiling) {
       velocity_.y = std::min(velocity_.y, 0.0f);
+    }
+  }
+
+  // A frame can end with no contact and still not be airborne: standing exactly
+  // one skin above a surface, or being set down by a step up, resolves to nothing
+  // at all. Probe a hair below the feet before believing the player is falling,
+  // or a standing player flickers into the jump pose and the arms snap up - which
+  // is the reported "jump pose comes back" bug.
+  if (!grounded && velocity_.y <= 0.0f) {
+    XMFLOAT3 probe = position_;
+    probe.y -= 0.05f;
+
+    const Contact ground = ResolvePlayer(parts, probe);
+    if (ground.grounded) {
+      position_ = probe;
+      grounded = true;
+      velocity_.y = 0.0f;
     }
   }
 

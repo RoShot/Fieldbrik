@@ -206,6 +206,14 @@ void Avatar::SetPose(const XMFLOAT3& feetPosition, float facingDegrees) {
   facing_ = facingDegrees;
 }
 
+void Avatar::Settle() {
+  pose_ = Pose::Standing;
+  rightShoulder_ = Joint{};
+  leftShoulder_ = Joint{};
+  rightHip_ = Joint{};
+  leftHip_ = Joint{};
+}
+
 void Avatar::CollectParts(std::vector<Part>& out) const {
   const float facing = XMConvertToRadians(facing_);
   const float sine = std::sin(facing);

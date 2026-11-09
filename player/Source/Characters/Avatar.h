@@ -65,6 +65,13 @@ class Avatar {
   // Feet position in the world and a facing angle in degrees, where 0 faces +Z.
   void SetPose(const DirectX::XMFLOAT3& feetPosition, float facingDegrees);
 
+  // Puts the whole body back at rest, dropping whatever pose was being held. The
+  // client calls this when the window comes back to the foreground: an arm still
+  // up from a landing that happened while the client was in the background is not
+  // something the returning player did, and easing it down would look like the
+  // jump had just happened.
+  void Settle();
+
   // Appends the body parts, already placed in the world, to the list.
   void CollectParts(std::vector<Part>& out) const;
 

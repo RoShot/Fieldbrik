@@ -226,6 +226,36 @@ talks to a server.
   half the block size, so one tile per stud samples the same pixels and the long
   strip serves every face.
 
+## 0.13 — Milestone 13: the fixes and the 2008 camera — done
+
+Two movement defects and the camera the era actually had.
+
+- **Walking up a step no longer depends on how fast you were walking.** The settle
+  dropped the player in 0.115-stud slices and took whatever axis the resolver
+  preferred, which on a slow approach was the step's side: the player was pushed
+  back out instead of set on top, so a step could block you. It now scans down
+  finely and asks whether a spot would be moved at all, which does not care which
+  axis is shallower. A climb also marks itself grounded, so it is not read as the
+  end of a fall.
+- **The jump pose stopped coming back.** A standing player could end a frame with no
+  contact at all and be read as airborne for one frame, which fired the jump pose
+  and left the arms up; a probe just below the feet settles that. Coming back to the
+  window now also drops any held pose and puts the body at rest, instead of easing
+  an arm down from a jump the player made before they alt-tabbed.
+- **The camera is click-zoom.** Thirty notches, two studs apart, from first person
+  out to 60 studs, with nothing between notches and no distance easing. The default
+  sits at 14 studs, a little closer than the old 20. Looking still eases, because
+  dragging is a movement rather than a step.
+- **First person is the last notch in**, at the head itself, with the avatar not
+  drawn and a wider look range than third person has. Q, E and the HUD buttons move
+  one notch per press rather than one per frame.
+- The view direction now comes from the yaw and pitch instead of a LookAt at the
+  focus point, which is what makes a zero distance possible at all: an eye and a
+  target in the same place have no direction between them.
+
+Still open: the exact era constants, which need an archived CameraScript rather than
+a modern description of the behaviour.
+
 ## The eras
 
 After the first playable build, the look is moved forward era by era:

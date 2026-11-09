@@ -3,13 +3,17 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.9**: a window, a world of bricks, and a blocky avatar that walks,
+This is **0.13**: a window, a world of bricks, and a blocky avatar that walks,
 jumps and falls with limbs that swing. Gravity pulls it down, bricks stop it, low
 bricks are walked up, and falling off the baseplate puts it back at the spawn
 point. Every brick's faces wear the era's surface strip — studs on top, inlets
 underneath, weld on the sides, one per stud — the sky is the era's own six-faced
 skybox with the sun and the moon in it, and the avatar wears the era's own head
 model and face image.
+
+The camera zooms in notches rather than sliding: two studs per notch from 60 studs
+out, and the last notch in is first person, where you look out of the avatar's own
+eyes and it stops drawing the body.
 
 The world it walks in comes out of a **place file**, not out of the exe. Point
 the client at a `.rbxl` and that is what loads.
@@ -36,8 +40,8 @@ The window opens at 1024×768, can be resized, and closes with the title bar X o
 | Space | Jump (only when standing on something) |
 | Left-drag | Look around (drag right and the view turns right) |
 | Arrow keys | Look around without the mouse |
-| Mouse wheel | Zoom out / in |
-| Q / E | Zoom out / in, for a keyboard without a wheel |
+| Mouse wheel | Zoom out / in one notch at a time, all the way into first person |
+| Q / E | Zoom out / in one notch, for a keyboard without a wheel |
 | Home | Put the camera back behind the player |
 | Escape | Close the client |
 
@@ -302,6 +306,9 @@ empty folders.
 
 ## Known issues
 
+- The camera is the era's shape rather than its measured numbers: the notch size,
+  the 14-stud default and the pitch limits are tuned to look right, not read out of
+  an archived 2008 CameraScript. They may move once that reference is found.
 - No scripts. Nothing in a place file runs: no Lua, no buttons, no damage, no
   sound, no tools. A place is geometry plus where you start.
 - Boxes only. Every part is a rectangular brick: no spheres, wedges or cylinders,
