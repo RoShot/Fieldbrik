@@ -3,9 +3,10 @@
 An independent online building and gaming community, in the style of the
 building platforms of 2006–2008.
 
-**Status:** Phase 1 — front end. The backend, database and authentication arrive
-in Phase 2.
+**Status:** the site is live at fieldbrik.com, Studio is 0.9.2 and the client is
+Player 0.16.
 
+- [docs/HANDOFF.md](docs/HANDOFF.md) — the whole state of the project; read this first
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — the design
 - [docs/PROGRESS.md](docs/PROGRESS.md) — where the build has reached, and open questions
 - [docs/DECISIONS.md](docs/DECISIONS.md) — every settled choice and its reason
