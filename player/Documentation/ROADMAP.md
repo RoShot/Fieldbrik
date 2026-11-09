@@ -294,6 +294,113 @@ Still to come: shape-accurate collision, and the brick art itself.
 Still to come: true edge-against-edge resolution for a box against a rotated wedge,
 and the brick art.
 
+## 0.16 — Studio 0.1 and 0.2: the editor shell — done
+
+The editor exists as its own executable, `FieldBrikStudio.exe`, installed beside
+the player and linked against the player's renderer, world reader and camera.
+
+- 0.1 put up the first shell: menu bar, one icon toolbar, Explorer, Properties,
+  Output, a free camera, Open Place and read-only properties.
+- 0.2 rebuilds the load layout against the 2008 reference. The chrome is now the
+  menu bar, two icon toolbars, a tab strip with the text strip beneath it
+  (Tools / Insert / Fullscreen / Help... / Exit), Explorer and Properties
+  docked right, Output hidden until asked for, and a status bar.
+- A new place, at startup or File > New, is a small grey studded baseplate (40 x
+  1 x 40, top at y = 0) named `Place1`, `Place2` and so on, rather than an empty
+  world.
+- Tabs are `FieldBrik` and the open place. Explorer lists the place under
+  `Workspace` plus the era's services, and picking in the viewport selects the
+  matching part. Selection draws the twelve blue box edges and eight white
+  corner handles, and Properties groups its rows under bold **Appearance** and
+  **Data** headings with a full-width `Part "Name"` title.
+- The full 2008 menu tree is laid out: File, Edit (with Find and Replace and
+  Script submenus), View (with toolbar checks), Insert, Format, Tools (with the
+  Test submenu), Window and Help. New, Open, Exit, the panel toggles, Game
+  Layout, Fullscreen and About are wired; the editing entries stay disabled. The
+  camera flies as before and Home frames the place again.
+- The sky's cube faces are mounted in the set's own ring order
+  (`rt -> ft -> lf -> bk` onto +Z, +X, -Z, -X), not in name order. That is what
+  removes the hard vertical seams both the player and Studio used to show at
+  every join; the face names are not the cube's axes.
+- Studio's art is drop-in. `studio/content/icons` is read at startup and every
+  PNG in `studio/content/textures/bricks` joins the texture table without a
+  rebuild, so the toolbar and the brick art are drag and drop rather than
+  compiled in. The shipped icons are drawn by `Tools/make-icons.ps1`.
+- The player's own behaviour is unchanged: the camera's free mode and the
+  renderer's texture directory do nothing unless Studio turns them on, and 0.15
+  still titles itself 0.15 and runs at the same frame rate.
+
+Still to come: editing and manipulation, undo and redo, saving `.fbrx`, the
+Toolbox, the Start Page, Play Solo, and the brick art itself.
+
+## 0.17 — Studio 0.3: insert, Start Page and Toolbox — done
+
+Studio can put bricks into a place now, and the two panels the first pass only
+named are real.
+
+- The second toolbar's four shape buttons and Insert > Object (Block, Sphere,
+  Cylinder, Wedge) add a part where the camera is looking. It is dropped onto
+  the build plane, kept over the baseplate, named `Part`, `Part 2`, `Sphere` and
+  so on, added to Explorer and selected. The camera now derives its pitch from
+  the eye, so the view is centred on the place instead of skimming over it.
+- The Start Page (home tab or View > Start Page) offers three templates made on
+  this machine: grey Baseplate, green Grass Baseplate and Empty Place. Picking
+  one starts a new `PlaceN`, replacing the open place; nothing can be saved yet.
+- The Toolbox (View > Toolbox) docks on the left with Block, Sphere, Cylinder and
+  Wedge. Clicking a row inserts it, and the viewport and Output make room.
+- The Start Page idles the frame loop instead of spinning it at thousands of
+  frames a second, so the status readout stays honest.
+- The player is unchanged: `World` grew `AddPart`, `Clear` and a coloured
+  `BuildBaseplate`, and 0.15 still titles itself 0.15 at the same frame rate.
+
+Still to come: moving, resizing and deleting parts, undo and redo, saving
+`.fbrx`, Models, Services and Tools, Play Solo, and the brick art itself.
+
+## 0.18 — Studio 0.4: editing — done
+
+Studio changes a place in place now, without a second renderer or a second
+editing model.
+
+- Dragging a selected part moves it on the X/Z build plane; Shift makes the same
+  drag vertical. The drag starts from the point under the cursor, so the part
+  does not jump when it is picked up.
+- Delete removes the selected part. Ctrl+X, Ctrl+C, Ctrl+V and Ctrl+D cut, copy,
+  paste and duplicate it, through an internal clipboard that survives deleting
+  the original. Pasted and duplicated parts get unique names.
+- Ctrl+Z and Ctrl+Y undo and redo whole-world snapshots, 64 deep. New, a Start
+  Page template and Open clear both stacks so history never leaks between
+  places. The Edit menu's enabled states and eleven accelerators follow.
+- Each edit refreshes Explorer, Properties, the selection outline and the status
+  line; Properties shows the new position and size immediately.
+- Corner handles resize an axis-aligned part on X and Z. The hit test was moved
+  from projected screen points to a ray against the eight corners, but it still
+  needs a precise hit and is the known rough edge of this pass.
+- `World` gained `RemovePart`, `ReplaceParts` and `MutablePart`; the player still
+  draws the same built-in place at 0.15.
+
+Still to come: dependable corner-handle resizing, rotation and recolouring,
+saving `.fbrx`, Models, Services and Tools, Play Solo, and the brick art itself.
+
+## 0.19 — Studio 0.5: save and reopen — done
+
+A place can leave the editor now, and the player can open it.
+
+- File > Save (Ctrl+S) writes the open place; Save As writes a new `.fbrx`. The
+  writer emits the same readable XML the player already reads, so `.fbrx` has no
+  second parser and no binary version to maintain.
+- Names, positions, sizes, colours, rotation matrices, shapes, collision flags,
+  TextureID and per-face decals all round-trip. A harness saves two parts and
+  compares every field after loading them back.
+- Studio accepts a place path on the command line, so double-clicking a `.fbrx`
+  edits it and Save goes back to that file instead of opening a dialog.
+- The player accepts `.fbrx` and opens Studio's output directly. It moves to
+  0.16; the editor is 0.5.
+- Empty `.fbrx` places are valid, unlike the older formats, so the Empty Place
+  template can be saved and reopened.
+
+Still to come: dependable corner-handle resizing, rotation and recolouring,
+Models, Services and Tools, Play Solo, and the brick art itself.
+
 ## The eras
 
 After the first playable build, the look is moved forward era by era:

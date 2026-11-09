@@ -94,7 +94,30 @@ void Camera::Reset() {
   zoom_ = kDefaultZoomLevel;
 }
 
+void Camera::SetFreePose(const XMFLOAT3& eye, float yawDegrees,
+                         float pitchDegrees) {
+  free_ = true;
+  eye_ = eye;
+  freeYaw_ = yawDegrees;
+  freePitch_ = std::clamp(pitchDegrees, -89.0f, 89.0f);
+}
+
+void Camera::SetFreeAngles(float yawDegrees, float pitchDegrees) {
+  free_ = true;
+  freeYaw_ = yawDegrees;
+  freePitch_ = std::clamp(pitchDegrees, -89.0f, 89.0f);
+}
+
+void Camera::MoveFree(const XMFLOAT3& delta) {
+  free_ = true;
+  eye_.x += delta.x;
+  eye_.y += delta.y;
+  eye_.z += delta.z;
+}
+
 XMFLOAT3 Camera::Position() const {
+  if (free_) return eye_;
+
   // A brick behind the player wins over the distance being asked for.
   const float distance = std::min(Distance(), maxDistance_);
   const XMFLOAT3 direction = EyeDirection(yaw_, pitch_);
@@ -108,7 +131,8 @@ XMFLOAT3 Camera::Position() const {
 
 XMMATRIX Camera::ViewProjection() const {
   const XMFLOAT3 position = Position();
-  const XMFLOAT3 direction = EyeDirection(yaw_, pitch_);
+  const XMFLOAT3 direction =
+      EyeDirection(free_ ? freeYaw_ : yaw_, free_ ? freePitch_ : pitch_);
 
   const XMVECTOR eye = XMLoadFloat3(&position);
 
@@ -133,7 +157,8 @@ Camera::SkyBasis Camera::SkyRayBasis() const {
   // The same axes the view matrix is built from, so the sky and the bricks look
   // out along exactly the same directions.
   const XMFLOAT3 position = Position();
-  const XMFLOAT3 direction = EyeDirection(yaw_, pitch_);
+  const XMFLOAT3 direction =
+      EyeDirection(free_ ? freeYaw_ : yaw_, free_ ? freePitch_ : pitch_);
   const XMVECTOR eye = XMLoadFloat3(&position);
   const XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 

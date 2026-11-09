@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.21)
 # Built by .github/workflows/player-build.yml on every push that touches this
 # folder, and by hand with the commands in README.md.
 
-project(FieldBrikPlayer VERSION 0.15 LANGUAGES CXX)
+project(FieldBrikPlayer VERSION 0.16 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -73,9 +73,13 @@ set(sky_cube_complete 1)
 set(sky_cube_id 151)
 set(sky_cube_resources "")
 
-# In the order Direct3D numbers a cube's faces: +X, -X, +Y, -Y, +Z, -Z, which is
-# the order the generated table and the shader agree on.
-foreach(side rt lf up dn ft bk)
+# Mounted in the order Direct3D numbers a cube's faces: +X, -X, +Y, -Y, +Z,
+# -Z. The era's pictures form a continuous ring rt -> ft -> lf -> bk, and
+# Direct3D's +Z face meets +X along its right edge, so the ring has to be
+# mounted rotated: the front picture in +Z, the right picture in +X. Mounting
+# them in name order instead is what used to put non-adjacent pictures together
+# and draw a hard seam at every join.
+foreach(side ft bk up dn rt lf)
   file(GLOB sky_side_files
     "${PLAYER_TEXTURE_DIR}/sky/*_${side}.png"
     "${PLAYER_TEXTURE_DIR}/sky/*_${side}.jpg")

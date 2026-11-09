@@ -3,7 +3,7 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.15**: a window, a world of bricks, and a blocky avatar that walks,
+This is **0.16**: a window, a world of bricks, and a blocky avatar that walks,
 jumps and falls with limbs that swing. Gravity pulls it down, bricks stop it, low
 bricks are walked up, shallow slopes are walked up too, and falling off the
 baseplate puts it back at the spawn point. A brick can be a box, a sphere, a
@@ -19,7 +19,7 @@ out, and the last notch in is first person, where you look out of the avatar's o
 eyes and it stops drawing the body.
 
 The world it walks in comes out of a **place file**, not out of the exe. Point
-the client at a `.rbxl` and that is what loads.
+the client at a `.rbxl` or at a `.fbrx` saved by Studio and that is what loads.
 
 ## Run it
 
@@ -58,8 +58,8 @@ opens in Notepad, diffs, and can be fixed by hand. Put a file called
 FieldBrikPlayer.exe "C:\maps\crossroads2006.rbxl"
 ```
 
-`.rbxl`, `.rbxlx` and `.xml` are read. `.fbrx` — the format Studio will save — is
-not yet: the client names the file and says so rather than loading nothing.
+`.rbxl`, `.rbxlx`, `.xml` and Studio's `.fbrx` are read. Studio writes the same
+XML schema, so a place saved in the editor opens here without conversion.
 
 Every `<Item>` is one brick, and says what you would expect a brick to say:
 
@@ -324,8 +324,6 @@ empty folders.
 - Shapes collide as themselves, with one approximation: the player's box is taken
   into the part's own space, so a wedge rotated on two axes can be a fraction of a
   stud out at a corner. There are no surfaces or materials yet either.
-- `.fbrx` is recognised and refused for now, with a message saying it is not
-  supported yet.
 - Unanchored parts stay exactly where the file put them. Physics is the player's,
   not the world's.
 - Slopes are walkable up to forty-five degrees and act as walls past it. There is

@@ -27,6 +27,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cwctype>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -41,6 +45,68 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
 namespace fieldbrik {
+
+bool Renderer::AddTexturesFromDirectory(const std::wstring& directory) {
+  namespace fs = std::filesystem;
+
+  std::error_code failure;
+  if (!fs::is_directory(directory, failure)) return false;
+
+  int added = 0;
+  for (const fs::directory_entry& entry :
+       fs::directory_iterator(directory, failure)) {
+    if (failure) break;
+    if (!entry.is_regular_file(failure)) continue;
+
+    std::wstring extension = entry.path().extension().wstring();
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   [](wchar_t letter) {
+                     return static_cast<wchar_t>(std::towlower(letter));
+                   });
+    if (extension != L".png") continue;
+
+    const std::wstring file = entry.path().filename().wstring();
+    std::string name(file.size(), '\0');
+    const int length = WideCharToMultiByte(
+        CP_ACP, 0, file.c_str(), static_cast<int>(file.size()), name.data(),
+        static_cast<int>(name.size()), nullptr, nullptr);
+    if (length <= 0) continue;
+    name.resize(static_cast<size_t>(length));
+
+    std::ifstream source(entry.path(), std::ios::binary);
+    if (!source) continue;
+
+    std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(source)),
+                                     std::istreambuf_iterator<char>());
+    if (bytes.empty()) continue;
+
+    ComPtr<ID3D11ShaderResourceView> view;
+    std::wstring message;
+    if (!CreateTextureFromPng(device_.Get(), bytes.data(), bytes.size(),
+                              view.GetAddressOf(), message)) {
+      continue;
+    }
+
+    // The embedded table is searched first, so a name that is already compiled in
+    // keeps the exe's art and this copy is only a decoy. The key is the same one
+    // TextureKey below builds: last path segment, lowercased.
+    std::string key = name;
+    const std::size_t cut = key.find_last_of("/\\");
+    if (cut != std::string::npos) key.erase(0, cut + 1);
+    std::transform(key.begin(), key.end(), key.begin(), [](unsigned char letter) {
+      return static_cast<char>(std::tolower(letter));
+    });
+
+    TextureEntry texture;
+    texture.name = key;
+    texture.view = view;
+    textures_.push_back(texture);
+    ++added;
+  }
+
+  return added > 0;
+}
+
 namespace {
 
 // RCDATA, as a number because the resource script carries no headers.

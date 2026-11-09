@@ -27,6 +27,25 @@ class World {
   // different sizes, colours and angles.
   void BuildDefault();
 
+  // A fresh place: one small grey baseplate and nothing else, which is what
+  // Studio's New Place and its first launch both show. The player's built-in
+  // place stays the busier one above; this is the editor's empty canvas. The
+  // colour overload is what the Start Page's grass template asks for.
+  void BuildBaseplate();
+  void BuildBaseplate(DirectX::XMFLOAT3 colour);
+
+  // Studio's editing surface: a part appended as given, and everything gone.
+  // Naming and placement belong to the caller; the world only holds the list.
+  void AddPart(const Part& part) { parts_.push_back(part); }
+  void RemovePart(int index) {
+    if (index >= 0 && index < PartCount()) parts_.erase(parts_.begin() + index);
+  }
+  void ReplaceParts(const std::vector<Part>& parts) { parts_ = parts; }
+  Part* MutablePart(int index) {
+    return index >= 0 && index < PartCount() ? &parts_[index] : nullptr;
+  }
+  void Clear();
+
   const std::vector<Part>& Parts() const { return parts_; }
   int PartCount() const { return static_cast<int>(parts_.size()); }
 

@@ -40,4 +40,10 @@ struct PlaceData {
 // broken map should leave the client running on its built-in place.
 bool LoadPlaceFile(const std::string& path, PlaceData& out, std::string& error);
 
+// Writes the place as the same XML the reader understands. Studio saves .fbrx
+// through this; the player can open the result because the extension is the only
+// difference from an XML .rbxl.
+bool SavePlaceFile(const std::string& path, const std::vector<Part>& parts,
+                   std::string& error);
+
 }  // namespace fieldbrik

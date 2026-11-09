@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 
 using namespace DirectX;
@@ -519,16 +520,15 @@ bool LoadPlaceFile(const std::string& path, PlaceData& out, std::string& error) 
                                                   ? path.size()
                                                   : path.find_last_of('.')));
 
-  if (extension != ".rbxl" && extension != ".rbxlx" && extension != ".xml") {
-    // .fbrx is reserved for the format Studio will write. Saying so is friendlier
-    // than "unknown file".
-    if (extension == ".fbrx") {
-      error = ".fbrx places are not supported yet";
-    } else {
-      error = "only .rbxl places are supported so far";
-    }
+  if (extension != ".rbxl" && extension != ".rbxlx" && extension != ".xml" &&
+      extension != ".fbrx") {
+    error = "only .rbxl and .fbrx places are supported so far";
     return false;
   }
+
+  // Studio writes .fbrx with the same XML schema. An empty .fbrx is a valid
+  // empty place; the older formats still have to contain something to open.
+  const bool fieldBrikPlace = extension == ".fbrx";
 
   std::string text;
   if (!ReadWholeFile(path, text, error)) return false;
@@ -540,8 +540,134 @@ bool LoadPlaceFile(const std::string& path, PlaceData& out, std::string& error) 
   out.parts.clear();
   WalkItems(root, out);
 
-  if (out.parts.empty()) {
+  if (out.parts.empty() && !fieldBrikPlace) {
     error = "the file has no parts in it";
+    return false;
+  }
+
+  return true;
+}
+
+bool SavePlaceFile(const std::string& path, const std::vector<Part>& parts,
+                   std::string& error) {
+  std::ofstream file(path, std::ios::binary);
+  if (!file) {
+    error = "the place file could not be written";
+    return false;
+  }
+
+  const auto escape = [](const std::string& text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char character : text) {
+      switch (character) {
+        case '&': out += "&amp;"; break;
+        case '<': out += "&lt;"; break;
+        case '>': out += "&gt;"; break;
+        case '"': out += "&quot;"; break;
+        case '\'': out += "&apos;"; break;
+        default: out.push_back(character); break;
+      }
+    }
+    return out;
+  };
+
+  file << std::fixed << std::setprecision(6);
+  file << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+  file << "<roblox version=\"4\">\n";
+  file << "  <Item class=\"Workspace\" referent=\"RBX0\">\n";
+  file << "    <Properties>\n";
+  file << "      <string name=\"Name\">Workspace</string>\n";
+  file << "    </Properties>\n";
+
+  for (size_t index = 0; index < parts.size(); ++index) {
+    const Part& part = parts[index];
+
+    const char* className = "Part";
+    if (part.shape == PartShape::Cylinder) {
+      className = "CylinderPart";
+    } else if (part.shape == PartShape::Wedge) {
+      className = "WedgePart";
+    }
+
+    XMFLOAT3X3 rotation{};
+    XMStoreFloat3x3(&rotation, part.RotationMatrix());
+
+    const uint32_t red = static_cast<uint32_t>(
+        std::min(255.0f, std::max(0.0f, part.colour.x)) * 255.0f + 0.5f);
+    const uint32_t green = static_cast<uint32_t>(
+        std::min(255.0f, std::max(0.0f, part.colour.y)) * 255.0f + 0.5f);
+    const uint32_t blue = static_cast<uint32_t>(
+        std::min(255.0f, std::max(0.0f, part.colour.z)) * 255.0f + 0.5f);
+    const uint32_t packed = 0xFF000000u | (red << 16) | (green << 8) | blue;
+
+    file << "    <Item class=\"" << className << "\" referent=\"RBX"
+         << (index + 1) << "\">\n";
+    file << "      <Properties>\n";
+    file << "        <string name=\"Name\">" << escape(part.name)
+         << "</string>\n";
+
+    file << "        <CoordinateFrame name=\"CFrame\">\n";
+    file << "          <X>" << part.position.x << "</X>\n";
+    file << "          <Y>" << part.position.y << "</Y>\n";
+    file << "          <Z>" << part.position.z << "</Z>\n";
+    for (int row = 0; row < 3; ++row) {
+      for (int column = 0; column < 3; ++column) {
+        file << "          <R" << row << column << ">"
+             << rotation.m[column][row] << "</R" << row << column
+             << ">\n";
+      }
+    }
+    file << "        </CoordinateFrame>\n";
+
+    file << "        <Vector3 name=\"size\">\n";
+    file << "          <X>" << part.size.x << "</X>\n";
+    file << "          <Y>" << part.size.y << "</Y>\n";
+    file << "          <Z>" << part.size.z << "</Z>\n";
+    file << "        </Vector3>\n";
+
+    file << "        <Color3uint8 name=\"Color3uint8\">" << packed
+         << "</Color3uint8>\n";
+
+    if (part.shape == PartShape::Sphere) {
+      file << "        <token name=\"Shape\">Ball</token>\n";
+    }
+
+    file << "        <bool name=\"CanCollide\">"
+         << (part.collides ? "true" : "false") << "</bool>\n";
+
+    if (!part.textureId.empty()) {
+      file << "        <Content name=\"TextureID\"><url>"
+           << escape(part.textureId) << "</url></Content>\n";
+    }
+
+    file << "      </Properties>\n";
+
+    static const char* kFaceNames[kPartFaceCount] = {
+        "Top", "Bottom", "Front", "Back", "Right", "Left"};
+    for (int face = 0; face < kPartFaceCount; ++face) {
+      const std::string& texture = part.faceTextures[static_cast<size_t>(face)];
+      if (texture.empty()) continue;
+
+      file << "      <Item class=\"Decal\" referent=\"RBX" << (index + 1)
+           << "Decal" << face << "\">\n";
+      file << "        <Properties>\n";
+      file << "          <token name=\"Face\">" << kFaceNames[face]
+           << "</token>\n";
+      file << "          <Content name=\"Texture\"><url>" << escape(texture)
+           << "</url></Content>\n";
+      file << "        </Properties>\n";
+      file << "      </Item>\n";
+    }
+
+    file << "    </Item>\n";
+  }
+
+  file << "  </Item>\n";
+  file << "</roblox>\n";
+
+  if (!file) {
+    error = "the place file could not be finished";
     return false;
   }
 

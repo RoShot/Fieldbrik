@@ -99,6 +99,12 @@ class Renderer {
   // in the wrong colour is a bug that hides.
   std::vector<std::string> MissingTextures(const std::vector<Part>& parts) const;
 
+  // Adds every PNG in a folder to the brick texture table, keyed by file name in
+  // lower case, which is the way a TextureID is looked up. Studio uses this so
+  // dropped-in art works without a rebuild; images already compiled into the exe
+  // are found first and win. Returns true when at least one image was added.
+  bool AddTexturesFromDirectory(const std::wstring& directory);
+
  private:
   bool CreatePipeline();
   bool CreateHudPipeline();

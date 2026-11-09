@@ -74,4 +74,22 @@ void World::BuildDefault() {
 
 }
 
+void World::BuildBaseplate() { BuildBaseplate(kBaseplateColour); }
+
+void World::BuildBaseplate(DirectX::XMFLOAT3 colour) {
+  parts_.clear();
+  name_ = "untitled place";
+  spawn_ = {0.0f, 0.0f, 14.0f};
+
+  // The new-place canvas: one baseplate, forty studs across, its top at y = 0.
+  // Small on purpose, so the first brick put on it is not lost in a field.
+  Add("Baseplate", {0.0f, -0.5f, 0.0f}, {40.0f, 1.0f, 40.0f}, colour);
+}
+
+void World::Clear() {
+  parts_.clear();
+  name_ = "untitled place";
+  spawn_ = {0.0f, 0.0f, 14.0f};
+}
+
 }  // namespace fieldbrik

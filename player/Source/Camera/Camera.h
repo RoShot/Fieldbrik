@@ -75,6 +75,18 @@ class Camera {
   float Pitch() const { return pitch_; }
   float Yaw() const { return yaw_; }
 
+  // Studio's free camera. The eye is wherever the editor put it and the angles
+  // are the camera's own, rather than an orbit around a point, so flying does not
+  // drag the thing being looked at along. Nothing in the player turns this on.
+  void SetFreePose(const DirectX::XMFLOAT3& eye, float yawDegrees,
+                   float pitchDegrees);
+  void SetFreeAngles(float yawDegrees, float pitchDegrees);
+  void MoveFree(const DirectX::XMFLOAT3& delta);
+  bool Free() const { return free_; }
+  DirectX::XMFLOAT3 FreeEye() const { return eye_; }
+  float FreeYaw() const { return freeYaw_; }
+  float FreePitch() const { return freePitch_; }
+
  private:
   // Zoom is a notch count rather than a distance: each notch snaps the camera to
   // the next step out, so the view never creeps between two distances.
@@ -98,6 +110,11 @@ class Camera {
 
   int width_ = 1024;
   int height_ = 768;
+
+  bool free_ = false;
+  DirectX::XMFLOAT3 eye_{0.0f, 20.0f, 30.0f};
+  float freeYaw_ = 180.0f;
+  float freePitch_ = 20.0f;
 };
 
 }  // namespace fieldbrik

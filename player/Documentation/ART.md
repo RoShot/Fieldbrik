@@ -47,12 +47,17 @@ The sky is six cube faces:
 
 | file | face |
 | --- | --- |
-| `null_plainsky512_rt.jpg` | +X, right |
-| `null_plainsky512_lf.jpg` | -X, left |
+| `null_plainsky512_ft.jpg` | +X, right |
+| `null_plainsky512_bk.jpg` | -X, left |
 | `null_plainsky512_up.jpg` | +Y, up |
 | `null_plainsky512_dn.jpg` | -Y, down |
-| `null_plainsky512_ft.jpg` | +Z, front |
-| `null_plainsky512_bk.jpg` | -Z, back |
+| `null_plainsky512_rt.jpg` | +Z, front |
+| `null_plainsky512_lf.jpg` | -Z, back |
+
+The file names are the set's own; they are not the cube's axes. The pictures
+are a continuous ring `rt -> ft -> lf -> bk`, and Direct3D joins +Z to +X along
+its right edge, so the ring is mounted rotated by one face. Mounting them in
+name order instead is what used to draw a hard seam at every join.
 
 - All six or nothing: a partial set means no sky pass and the window's clear colour
   shows.
