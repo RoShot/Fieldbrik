@@ -2783,7 +2783,7 @@ function encode_char(c) {
 },
   "pages/game": function anonymous(locals, escapeFn, include, rethrow
 ) {
-var Draft = locals.Draft, Offline = locals.Offline, Online = locals.Online, Play = locals.Play, Publish = locals.Publish, Published = locals.Published, The = locals.The, This = locals.This, Unpublish = locals.Unpublish, a = locals.a, avatar = locals.avatar, btn = locals.btn, button = locals.button, created = locals.created, creator = locals.creator, description = locals.description, fb = locals.fb, file = locals.file, filename = locals.filename, footer = locals.footer, formatLabel = locals.formatLabel, head = locals.head, header = locals.header, here = locals.here, id = locals.id, img = locals.img, is = locals.is, isOwner = locals.isOwner, listing = locals.listing, md = locals.md, name = locals.name, not = locals.not, notice = locals.notice, now = locals.now, online = locals.online, pageTitle = locals.pageTitle, partials = locals.partials, place = locals.place, placeFile = locals.placeFile, primary = locals.primary, published = locals.published, ready = locals.ready, real = locals.real, size = locals.size, slug = locals.slug, thumb = locals.thumb, thumbUrl = locals.thumbUrl, thumbnailUrl = locals.thumbnailUrl, toFixed = locals.toFixed, updated = locals.updated, username = locals.username, version = locals.version, yet = locals.yet;
+var Draft = locals.Draft, FieldBrik = locals.FieldBrik, Offline = locals.Offline, Online = locals.Online, Play = locals.Play, Press = locals.Press, Publish = locals.Publish, Published = locals.Published, This = locals.This, Unpublish = locals.Unpublish, a = locals.a, avatar = locals.avatar, btn = locals.btn, client = locals.client, created = locals.created, creator = locals.creator, description = locals.description, fb = locals.fb, file = locals.file, filename = locals.filename, footer = locals.footer, formatLabel = locals.formatLabel, head = locals.head, header = locals.header, id = locals.id, img = locals.img, is = locals.is, isOwner = locals.isOwner, joinUrl = locals.joinUrl, listing = locals.listing, md = locals.md, name = locals.name, notice = locals.notice, now = locals.now, online = locals.online, open = locals.open, pageTitle = locals.pageTitle, partials = locals.partials, place = locals.place, placeFile = locals.placeFile, primary = locals.primary, published = locals.published, ready = locals.ready, size = locals.size, slug = locals.slug, the = locals.the, thumb = locals.thumb, thumbUrl = locals.thumbUrl, thumbnailUrl = locals.thumbnailUrl, to = locals.to, toFixed = locals.toFixed, updated = locals.updated, username = locals.username, version = locals.version;
 
 escapeFn = escapeFn || function (markup) {
   return markup == undefined
@@ -2842,7 +2842,15 @@ function encode_char(c) {
     ; __append(escapeFn( placeFile.version ))
     ; __append(", marked\r\n             <span class=\"fb-muted\">")
     ; __append(escapeFn( placeFile.filename ))
-    ; __append("</span>.</p>\r\n          <p>\r\n            <a class=\"fb-btn fb-btn--primary\" href=\"/games/")
+    ; __append("</span>.</p>\r\n          <p>\r\n            ")
+    ;  if (typeof joinUrl !== 'undefined' && joinUrl) { 
+    ; __append("\r\n              <a class=\"fb-btn fb-btn--primary\" href=\"")
+    ; __append(escapeFn( joinUrl ))
+    ; __append("\">Play</a>\r\n            ")
+    ;  } else { 
+    ; __append("\r\n              <a class=\"fb-btn fb-btn--primary\" href=\"/login\">Sign in to play</a>\r\n            ")
+    ;  } 
+    ; __append("\r\n            <a class=\"fb-btn\" href=\"/games/")
     ; __append(escapeFn( place.slug ))
     ; __append("/file\">Download place file</a>\r\n            <span class=\"fb-muted\">")
     ; __append(escapeFn( placeFile.formatLabel ))
@@ -2879,10 +2887,10 @@ function encode_char(c) {
     ; __append("</td>\r\n              </tr>\r\n              <tr>\r\n                <th scope=\"row\">Last updated</th>\r\n                <td>")
     ; __append(escapeFn( place.updated ))
     ; __append("</td>\r\n              </tr>\r\n              <tr>\r\n                <th scope=\"row\">Visits</th>\r\n                <td>Not counted yet</td>\r\n              </tr>\r\n            </tbody>\r\n          </table>\r\n        </div>\r\n      </section>\r\n\r\n      <div class=\"fb-notice\">\r\n        <p><strong>")
-    ; __append(escapeFn( placeFile ? 'The place file is real. The Play button is not here yet.' : 'This listing is ready for a file.' ))
+    ; __append(escapeFn( placeFile ? 'Press Play to open this place in the FieldBrik client.' : 'This listing is ready for a file.' ))
     ; __append("</strong></p>\r\n        <p>")
     ;  if (placeFile) { 
-    ; __append("Downloading gives you the exact XML Studio published. Playing it needs the FieldBrik\r\n           client, which is still being built; that is why there is no Play button and no visit count yet.")
+    ; __append("Play hands the place to the client along with your account name, user id and\r\n           avatar. If Windows asks what to open it with, choose FieldBrik Player: the client registers\r\n           the link the first time it runs. The exact XML Studio published can still be downloaded below.")
     ;  } else { 
     ; __append("Publishing a .fbrx from Studio, or uploading one here, stores it as version 1 and makes\r\n           it downloadable. Publishing again keeps the older version on the place's record rather\r\n           than overwriting it.")
     ;  } 
