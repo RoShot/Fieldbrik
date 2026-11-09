@@ -278,14 +278,18 @@ std::vector<std::string> Renderer::MissingTextures(
     const std::vector<Part>& parts) const {
   std::vector<std::string> missing;
 
-  for (const Part& part : parts) {
-    if (part.textureId.empty()) continue;
-    if (FindTexture(part.textureId) != nullptr) continue;
+  // A part's own TextureID and each of its per-face decals, checked once per
+  // distinct id: the same picture on a dozen bricks is one missing file.
+  const auto report = [this, &missing](const std::string& id) {
+    if (id.empty()) return;
+    if (FindTexture(id) != nullptr) return;
+    if (std::find(missing.begin(), missing.end(), id) != missing.end()) return;
+    missing.push_back(id);
+  };
 
-    // The same id on a dozen bricks is one missing file, not twelve.
-    if (std::find(missing.begin(), missing.end(), part.textureId) == missing.end()) {
-      missing.push_back(part.textureId);
-    }
+  for (const Part& part : parts) {
+    report(part.textureId);
+    for (const std::string& face : part.faceTextures) report(face);
   }
 
   return missing;

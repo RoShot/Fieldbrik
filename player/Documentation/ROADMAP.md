@@ -256,6 +256,27 @@ Two movement defects and the camera the era actually had.
 Still open: the exact era constants, which need an archived CameraScript rather than
 a modern description of the behaviour.
 
+## 0.14 — Milestone 14: the other shapes, decals and slopes — done
+
+- Parts are drawn as a box, a sphere, a cylinder or a wedge. The three new shapes
+  are generated in `Mesh.cpp` as unit geometry and scaled by the part's own size,
+  so a 2x1x1 sphere is the ellipsoid it should be. A place names a `Shape` on the
+  part, or uses the era's own `WedgePart` and `CylinderPart` classes.
+- Decals go on any of the six faces. A brick still wears the surface strip, and a
+  `Decal` child naming a face covers that face with a picture instead: top,
+  bottom, front, back, left or right, each mapped so it reads the right way round
+  rather than mirrored. A brick's own `TextureID` remains the top face, and a
+  decal on the top overrides it.
+- Shallow slopes are walkable. The push out of a brick is its surface normal, so
+  the player's velocity is flattened onto that surface: up to forty-five degrees
+  he climbs, and anything steeper stays a wall. Walls keep the old behaviour of
+  removing only the part of the velocity heading into them.
+- Brick texture ids moved to 301. Brick art and the HUD's art both began at 201,
+  which the linker rejected as a duplicate resource the first time a brick texture
+  existed; no brick art ships yet, so nobody had hit it.
+
+Still to come: shape-accurate collision, and the brick art itself.
+
 ## The eras
 
 After the first playable build, the look is moved forward era by era:

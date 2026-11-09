@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.21)
 # Built by .github/workflows/player-build.yml on every push that touches this
 # folder, and by hand with the commands in README.md.
 
-project(FieldBrikPlayer VERSION 0.13 LANGUAGES CXX)
+project(FieldBrikPlayer VERSION 0.14 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -50,7 +50,10 @@ list(FILTER BRICK_TEXTURE_FILES EXCLUDE REGEX "/Surfaces(Strip)?\\.png$")
 
 set(TEXTURE_RESOURCES "")
 set(TEXTURE_ENTRIES "")
-set(texture_id 201)
+# Brick textures start at 301: the HUD's own art already uses 180 to 227, so a
+# brick texture numbered from 201 collided with it and the linker refused the
+# duplicate resource.
+set(texture_id 301)
 
 foreach(texture ${BRICK_TEXTURE_FILES})
   file(REAL_PATH "${texture}" texture_path)

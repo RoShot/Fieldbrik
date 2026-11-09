@@ -3,11 +3,13 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.13**: a window, a world of bricks, and a blocky avatar that walks,
+This is **0.14**: a window, a world of bricks, and a blocky avatar that walks,
 jumps and falls with limbs that swing. Gravity pulls it down, bricks stop it, low
-bricks are walked up, and falling off the baseplate puts it back at the spawn
-point. Every brick's faces wear the era's surface strip — studs on top, inlets
-underneath, weld on the sides, one per stud — the sky is the era's own six-faced
+bricks are walked up, shallow slopes are walked up too, and falling off the
+baseplate puts it back at the spawn point. A brick can be a box, a sphere, a
+cylinder or a wedge. Its faces wear the era's surface strip — studs on top, inlets
+underneath, weld on the sides, one per stud — unless a decal covers a face, and a
+brick's own `TextureID` still paints its top. The sky is the era's own six-faced
 skybox with the sun and the moon in it, and the avatar wears the era's own head
 model and face image.
 
@@ -70,6 +72,13 @@ Every `<Item>` is one brick, and says what you would expect a brick to say:
 - `TextureID`, e.g. `rbxasset://textures/Brick.png`. The last segment of the
   path names an image in `player/content/textures/bricks`, and that image covers
   the brick's top face.
+- A child `<Item class="Decal">` puts an image on one named face instead of its
+  studs: a `Face` of `Top`, `Bottom`, `Front`, `Back`, `Left` or `Right`, and a
+  `Texture` the same way. A decal on the top face wins over the part's
+  `TextureID`, because it says more specifically where it belongs.
+- A `Shape` token of `Ball`, `Cylinder` or `Wedge` changes the mesh a `Part` is
+  drawn as; `WedgePart` and `CylinderPart` classes are read too, which is how the
+  era wrote them.
 
 A `SpawnLocation` item puts the player on top of it instead of at the default
 spawn. `player/Place/default.rbxl` is a working sample that rebuilds the built-in
@@ -311,17 +320,28 @@ empty folders.
   an archived 2008 CameraScript. They may move once that reference is found.
 - No scripts. Nothing in a place file runs: no Lua, no buttons, no damage, no
   sound, no tools. A place is geometry plus where you start.
-- Boxes only. Every part is a rectangular brick: no spheres, wedges or cylinders,
-  and no surfaces or materials.
+- Shapes are drawn, not collided. A sphere, cylinder or wedge is still a box to
+  the physics resolver, so you stand on the flat top of its box rather than on the
+  slope of a wedge or the side of a cylinder. There are no surfaces or materials
+  yet either.
 - `.fbrx` is recognised and refused for now, with a message saying it is not
   supported yet.
 - Unanchored parts stay exactly where the file put them. Physics is the player's,
   not the world's.
-- Slopes are stood on rather than walked up, and nothing slides.
+- Slopes are walkable up to forty-five degrees and act as walls past it. There is
+  no sliding on a slope you can stand on: the push out of the brick is along its
+  own surface normal, and the player's velocity is flattened onto the slope.
 - Input is only read while the client is the foreground window, so typing in
   another window cannot walk the player around.
-- Only the top face of a brick is textured, and only the classic smile is
-  compiled in: the other seven faces arrive with the website tie-in.
+- No brick art is compiled in yet. `content/textures/bricks` holds the surface
+  strip and nothing else, so a place that asks for a `TextureID` or a decal is
+  refused at startup with the missing names listed — the classic smile is the only
+  picture that ships. The decal path itself is finished and takes any image that
+  arrives in that folder.
+- A decal is drawn unlit, exactly as the top face always was, so a picture on a
+  face turned away from the light reads brighter than the brick around it.
+- A decal on a sphere, cylinder or wedge sits on the face of its bounding box, not
+  on the curved surface: that is a slab of geometry a curved face has no room for.
 - `SurfacesStrip.png` is not read, and that is now a decision rather than an open
   question: it is the same four tiles at half the block size — 2x2 studs of the
   same 32 pixels in a 64-pixel block, where `Surfaces.png` has 4x4 in 128. One

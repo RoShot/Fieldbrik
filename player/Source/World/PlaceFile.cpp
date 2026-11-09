@@ -361,13 +361,55 @@ void ReadCFrame(const Element* property, XMFLOAT3& position, Part& part) {
   part.hasRotationMatrix = true;
 }
 
+// Which mesh a place asks for. The era named the shape on the Part itself, and
+// also had WedgePart and CylinderPart classes, so both are read.
+PartShape ReadShape(const Element& item, const std::string& className) {
+  if (EqualsIgnoreCase(className, "WedgePart")) return PartShape::Wedge;
+  if (EqualsIgnoreCase(className, "CylinderPart")) return PartShape::Cylinder;
+
+  if (const Element* shape = FindProperty(item, "Shape")) {
+    const std::string value = Trim(shape->text);
+    if (EqualsIgnoreCase(value, "Ball") || EqualsIgnoreCase(value, "Sphere")) {
+      return PartShape::Sphere;
+    }
+    if (EqualsIgnoreCase(value, "Cylinder")) return PartShape::Cylinder;
+    if (EqualsIgnoreCase(value, "Wedge")) return PartShape::Wedge;
+  }
+
+  return PartShape::Cube;
+}
+
+// Which face a Decal names. Unknown faces are skipped rather than guessed at.
+int FaceIndex(const std::string& name) {
+  if (EqualsIgnoreCase(name, "Top")) return 0;
+  if (EqualsIgnoreCase(name, "Bottom")) return 1;
+  if (EqualsIgnoreCase(name, "Front")) return 2;
+  if (EqualsIgnoreCase(name, "Back")) return 3;
+  if (EqualsIgnoreCase(name, "Right")) return 4;
+  if (EqualsIgnoreCase(name, "Left")) return 5;
+  return -1;
+}
+
+// A texture property is either a Content (with a url child) or a bare id.
+std::string ReadTextureId(const Element& item) {
+  const Element* texture = FindProperty(item, "Texture");
+  if (!texture) texture = FindProperty(item, "TextureID");
+  if (!texture) return std::string();
+
+  if (const Element* url = texture->Child("url")) return Trim(url->text);
+  return Trim(texture->text);
+}
+
 // Reads one Item, if it is something this client draws.
 bool ReadItem(const Element& item, PlaceData& place) {
   const std::string* className = item.Attribute("class");
   if (!className) return false;
 
   const bool isSpawn = EqualsIgnoreCase(*className, "SpawnLocation");
-  if (!isSpawn && !EqualsIgnoreCase(*className, "Part")) return false;
+  const bool isPart = EqualsIgnoreCase(*className, "Part") ||
+                      EqualsIgnoreCase(*className, "WedgePart") ||
+                      EqualsIgnoreCase(*className, "CylinderPart");
+  if (!isSpawn && !isPart) return false;
 
   Part part;
   part.name = Text(FindProperty(item, "Name"));
@@ -397,13 +439,29 @@ bool ReadItem(const Element& item, PlaceData& place) {
     part.collides = !EqualsIgnoreCase(Trim(canCollide->text), "false");
   }
 
-  if (const Element* texture = FindProperty(item, "TextureID")) {
-    if (const Element* url = texture->Child("url")) {
-      part.textureId = Trim(url->text);
-    } else if (!Trim(texture->text).empty()) {
-      part.textureId = Trim(texture->text);
+  part.textureId = ReadTextureId(item);
+
+  // Decals are children of the brick they cover, each naming a face. A decal on
+  // the top face wins over the part's own TextureID, because it is the more
+  // specific statement.
+  for (const Element& child : item.children) {
+    const std::string* decalClass = child.Attribute("class");
+    if (!decalClass) continue;
+    if (!EqualsIgnoreCase(*decalClass, "Decal") &&
+        !EqualsIgnoreCase(*decalClass, "Texture")) {
+      continue;
+    }
+
+    const int face = FaceIndex(Text(FindProperty(child, "Face")));
+    if (face < 0) continue;
+
+    const std::string id = ReadTextureId(child);
+    if (!id.empty()) {
+      part.faceTextures[static_cast<size_t>(face)] = id;
     }
   }
+
+  if (!isSpawn) part.shape = ReadShape(item, *className);
 
   if (isSpawn) {
     // Stand on top of the spawn brick, not inside it.

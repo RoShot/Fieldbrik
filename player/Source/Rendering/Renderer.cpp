@@ -464,6 +464,34 @@ bool Renderer::CreatePipeline() {
     return false;
   }
 
+  // The other shapes the era had, and the six faces a decal can sit on. All are
+  // unit-sized; the part's matrix scales them to its own size.
+  BuildSphere(vertices, indices);
+  if (!sphere_.Create(device_.Get(), vertices, indices)) {
+    lastError_ = L"The sphere geometry could not be uploaded.";
+    return false;
+  }
+
+  BuildCylinder(vertices, indices);
+  if (!cylinder_.Create(device_.Get(), vertices, indices)) {
+    lastError_ = L"The cylinder geometry could not be uploaded.";
+    return false;
+  }
+
+  BuildWedge(vertices, indices);
+  if (!wedge_.Create(device_.Get(), vertices, indices)) {
+    lastError_ = L"The wedge geometry could not be uploaded.";
+    return false;
+  }
+
+  for (int face = 0; face < 6; ++face) {
+    BuildDecalQuad(face, vertices, indices);
+    if (!decalFaces_[face].Create(device_.Get(), vertices, indices)) {
+      lastError_ = L"A decal face could not be uploaded.";
+      return false;
+    }
+  }
+
   // The quad the sun, the moon and the flare are drawn on: one unit across, in
   // the camera's own plane, so it always faces the viewer.
   {
@@ -816,17 +844,21 @@ void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera,
 
   BindGeometry(camera);
 
-  const bool strip = surfaces && surfacesTexture_ && surfacesSampler_;
-
   for (const Part& part : parts) {
     const XMFLOAT4 colour(part.colour.x, part.colour.y, part.colour.z, 1.0f);
 
     // The head is a model and a face rather than a scaled cube, so it has its own
-    // path; everything else in the world is a brick.
+    // path; everything else in the world is a scaled unit shape.
     if (part.shape == PartShape::RoundedHead) {
       DrawHead(part, colour);
       continue;
     }
+
+    // The surface strip is a brick's own faces: it is generated for a cube and
+    // reads wrong on a sphere or a wedge, so those are drawn in flat colour with
+    // only the light on them.
+    const bool strip = surfaces && surfacesTexture_ && surfacesSampler_ &&
+                       part.shape == PartShape::Cube;
 
     // The strip wraps, where the face and a decal clamp, so the sampler is
     // swapped for the brick and put back before anything is drawn over it.
@@ -838,28 +870,37 @@ void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera,
       context_->PSSetShaderResources(2, 1, tiles);
     }
 
+    const Mesh* body = &cube_;
+    if (part.shape == PartShape::Sphere && sphere_.Valid()) body = &sphere_;
+    if (part.shape == PartShape::Cylinder && cylinder_.Valid()) body = &cylinder_;
+    if (part.shape == PartShape::Wedge && wedge_.Valid()) body = &wedge_;
+
     SetObject(part.ModelMatrix(), colour, false, &part.size, strip);
-    cube_.Draw(context_.Get());
+    body->Draw(context_.Get());
 
     if (strip) {
       ID3D11SamplerState* clamp[] = {samplerState_.Get()};
       context_->PSSetSamplers(0, 1, clamp);
     }
 
-    // A painted top wins over the strip: a decal covers the surface, so no studs
-    // are drawn under one. The texture covers the top face only, stretched once
-    // across the whole square, which is what a decal sat on in the era.
-    if (part.textureId.empty() || !topFace_.Valid()) continue;
+    // Decals, one face at a time. The part's own TextureID is the top face, which
+    // is where the era put it; a Decal child naming a face overrides that face.
+    // Each texture covers its whole face once, clamped, so a decal never tiles.
+    for (int face = 0; face < 6; ++face) {
+      std::string id = part.faceTextures[static_cast<std::size_t>(face)];
+      if (id.empty() && face == 0) id = part.textureId;
+      if (id.empty()) continue;
 
-    const ID3D11ShaderResourceView* texture = FindTexture(part.textureId);
-    if (!texture) continue;
+      const ID3D11ShaderResourceView* texture = FindTexture(id);
+      if (!texture) continue;
 
-    ID3D11ShaderResourceView* painted[] = {
-        const_cast<ID3D11ShaderResourceView*>(texture)};
-    context_->PSSetShaderResources(0, 1, painted);
+      ID3D11ShaderResourceView* painted[] = {
+          const_cast<ID3D11ShaderResourceView*>(texture)};
+      context_->PSSetShaderResources(0, 1, painted);
 
-    SetObject(part.ModelMatrix(), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), true);
-    topFace_.Draw(context_.Get());
+      SetObject(part.ModelMatrix(), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), true);
+      decalFaces_[face].Draw(context_.Get());
+    }
 
     ID3D11ShaderResourceView* plain[] = {whiteTexture_.Get()};
     context_->PSSetShaderResources(0, 1, plain);
@@ -915,6 +956,10 @@ void Renderer::Shutdown() {
   hudPixelShader_.Reset();
   hudVertexShader_.Reset();
   topFace_.Release();
+  for (Mesh& face : decalFaces_) face.Release();
+  wedge_.Release();
+  cylinder_.Release();
+  sphere_.Release();
   textures_.clear();
   billboard_.Release();
   flareTexture_.Reset();

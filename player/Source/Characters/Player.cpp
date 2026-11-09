@@ -40,6 +40,11 @@ constexpr float kStepHeight = 1.15f;
 // on top. That is why walking into a step slowly used to be stopped by it.
 constexpr int kStepSettleSteps = 24;
 
+// The steepest slope that can be walked up, as the cosine of its angle: the normal
+// of flat ground is 1, a vertical wall is 0, and this is forty-five degrees. The
+// era's characters walked up ramps and were stopped by anything steeper.
+constexpr float kWalkableSlopeNormal = 0.7f;
+
 // Below this there is nothing left to stand on, so the player is put back.
 constexpr float kRespawnBelow = -60.0f;
 
@@ -288,18 +293,40 @@ void Player::Update(const Input& input, const std::vector<Part>& parts,
   if (grounded_ && !wasGrounded) landingHold_ = kLandingHoldSeconds;
   if (landingHold_ > 0.0f) landingHold_ -= deltaSeconds;
 
-  // Slide along whatever the player was pushed out of, instead of stopping dead
-  // against it: only the part of the velocity heading into the brick is removed,
-  // so walking at a wall at an angle keeps the sideways motion and you slide.
-  const float pushLength = std::sqrt(pushed.x * pushed.x + pushed.z * pushed.z);
+  // Walk on whatever the player was pushed out of instead of stopping dead
+  // against it. The push is along the surface's own normal, so the velocity is
+  // flattened onto that surface: on flat ground nothing is left to remove, against
+  // a wall only the part heading into it goes (so walking at a wall at an angle
+  // slides along it), and on a shallow slope the velocity turns upwards and the
+  // player climbs. Steeper than forty-five degrees is still a wall, which is the
+  // cliff the era would not let you walk up.
+  const float pushLength =
+      std::sqrt(pushed.x * pushed.x + pushed.y * pushed.y + pushed.z * pushed.z);
   if (pushLength > 1e-4f) {
     const float normalX = pushed.x / pushLength;
+    const float normalY = pushed.y / pushLength;
     const float normalZ = pushed.z / pushLength;
-    const float into = velocity_.x * normalX + velocity_.z * normalZ;
 
-    if (into < 0.0f) {
-      velocity_.x -= into * normalX;
-      velocity_.z -= into * normalZ;
+    if (normalY >= kWalkableSlopeNormal) {
+      const float along =
+          velocity_.x * normalX + velocity_.y * normalY + velocity_.z * normalZ;
+      velocity_.x -= along * normalX;
+      velocity_.y -= along * normalY;
+      velocity_.z -= along * normalZ;
+    } else {
+      // The wall case: the normal is taken flat, so the downward part of a push
+      // out of a wall's side does not read as lifting the player.
+      const float horizontal = std::sqrt(normalX * normalX + normalZ * normalZ);
+      if (horizontal > 1e-4f) {
+        const float flatX = normalX / horizontal;
+        const float flatZ = normalZ / horizontal;
+        const float into = velocity_.x * flatX + velocity_.z * flatZ;
+
+        if (into < 0.0f) {
+          velocity_.x -= into * flatX;
+          velocity_.z -= into * flatZ;
+        }
+      }
     }
   }
 

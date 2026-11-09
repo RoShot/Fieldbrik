@@ -15,13 +15,23 @@
 
 #include <DirectXMath.h>
 
+#include <array>
 #include <string>
 
 namespace fieldbrik {
 
-// Almost everything is a brick, and a brick is a box. The head is the one part
-// drawn as something else: the rounded block the era's head mesh was.
-enum class PartShape { Cube, RoundedHead };
+// What generated mesh draws a part. Everything is scaled from a unit shape, so a
+// sphere of any size is the same geometry. The head is the era's own model and
+// keeps its own path; RoundedHead is the generated block used when that model
+// cannot be read.
+//
+// Collision is still a box for every shape: the physics resolver has no sphere or
+// wedge test, and pretending it does would be worse than saying so.
+enum class PartShape { Cube, RoundedHead, Sphere, Cylinder, Wedge };
+
+// The six faces a decal can sit on, in the order the renderer's quads are built.
+enum class PartFace { Top = 0, Bottom, Front, Back, Right, Left };
+constexpr int kPartFaceCount = 6;
 
 struct Part {
   DirectX::XMFLOAT3 position{0.0f, 0.0f, 0.0f};
@@ -38,10 +48,15 @@ struct Part {
   DirectX::XMFLOAT3 colour{0.6f, 0.6f, 0.6f};
   bool collides = true;
 
-  // Asset id or path of the part's texture, straight out of the place file. The
-  // renderer draws the head's face from a texture, but a brick's is still carried
-  // rather than used: that needs the era's brick textures, not just a face.
+  // The part's own TextureID, which the era put on the top face. Kept as its own
+  // field so every existing place keeps working; the renderer treats it as a
+  // decal on the top face.
   std::string textureId;
+
+  // A decal per face, from Decal children in the place file. Empty means the face
+  // keeps its surface strip. The lookup is the same last-segment-by-name one the
+  // top-face texture has always used.
+  std::array<std::string, kPartFaceCount> faceTextures{};
 
   std::string name;
 

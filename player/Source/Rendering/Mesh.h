@@ -64,4 +64,23 @@ void BuildUnitCube(std::vector<Vertex>& vertices,
 void BuildHead(std::vector<Vertex>& vertices,
                std::vector<unsigned int>& indices);
 
+// The other shapes a part can be, all unit-sized (-0.5 to +0.5 on every axis) so
+// a part's own size scales them. A sphere stretched by a part's size is an
+// ellipsoid, which is what a sphere of 2x1x1 is meant to look like.
+void BuildSphere(std::vector<Vertex>& vertices,
+                 std::vector<unsigned int>& indices);
+void BuildCylinder(std::vector<Vertex>& vertices,
+                   std::vector<unsigned int>& indices);
+
+// A wedge: the back face stands full height at -Z and the top slopes down to the
+// bottom edge at +Z, the shape a brick ramp was built from.
+void BuildWedge(std::vector<Vertex>& vertices,
+                std::vector<unsigned int>& indices);
+
+// A unit square for one face of a brick, lifted a hair clear of the surface and
+// carrying its texture coordinates in the colour channel. `face` is 0 top,
+// 1 bottom, 2 front (-Z), 3 back (+Z), 4 right (+X), 5 left (-X).
+void BuildDecalQuad(int face, std::vector<Vertex>& vertices,
+                    std::vector<unsigned int>& indices);
+
 }  // namespace fieldbrik

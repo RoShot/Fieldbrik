@@ -167,6 +167,17 @@ class Renderer {
   Mesh cube_;
   Mesh head_;
 
+  // The other part shapes, built once and scaled by each part's own size. A
+  // part whose mesh failed to build falls back to the cube rather than vanishing.
+  Mesh sphere_;
+  Mesh cylinder_;
+  Mesh wedge_;
+
+  // One square per face of a brick, in the order PartFace lists them: top,
+  // bottom, front (-Z), back (+Z), right (+X), left (-X). A face with a decal is
+  // drawn with its own texture; the rest keep the surface strip.
+  Mesh decalFaces_[6];
+
   // The era's head model and the plane its face is drawn on.
   Mesh headModel_;
   Mesh faceQuad_;
