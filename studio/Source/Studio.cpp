@@ -99,6 +99,8 @@ enum : int {
   kViewToolbarCustomize,
   kFormatRotate,
   kFormatTilt,
+  kFormatRoll,
+  kFormatColour,
   kFormatCameraPosition,
   kFormatGroup,
   kFormatUngroup,
@@ -145,7 +147,7 @@ const ToolButton kStandardButtons[] = {
     {L"save", kFileSave, true, true},
     {L"undo", kEditUndo, false, false},
     {L"redo", kEditRedo, true, false},
-    {L"play", kToolsPlaySolo, false, false},
+    {L"play", kToolsPlaySolo, false, true},
 };
 
 const ToolButton kToolsButtons[] = {
@@ -512,8 +514,10 @@ void Studio::CreateMenuBar() {
               L"&Insert");
 
   HMENU format = CreatePopupMenu();
-  item(format, kFormatRotate, L"&Rotate...");
-  item(format, kFormatTilt, L"&Tilt...");
+  item(format, kFormatRotate, L"Rotate 15 degrees (&Y)", true);
+  item(format, kFormatTilt, L"Tilt 15 degrees (&X)", true);
+  item(format, kFormatRoll, L"Roll 15 degrees (&Z)", true);
+  item(format, kFormatColour, L"&Colour...", true);
   item(format, kFormatCameraPosition, L"Camera &Positioning...");
   AppendMenuW(format, MF_SEPARATOR, 0, nullptr);
   item(format, kFormatGroup, L"&Group\tCtrl+G");
@@ -532,7 +536,7 @@ void Studio::CreateMenuBar() {
   AppendMenuW(tools, MF_SEPARATOR, 0, nullptr);
 
   HMENU test = CreatePopupMenu();
-  item(test, kToolsPlaySolo, L"&Play Solo");
+  item(test, kToolsPlaySolo, L"&Play Solo", true);
   item(test, kToolsStartPlayer, L"Start &Player");
   item(test, kToolsStartServer, L"Start &Server");
   AppendMenuW(tools, MF_POPUP, reinterpret_cast<UINT_PTR>(test), L"&Test");
@@ -1011,6 +1015,8 @@ void Studio::ShowStartPage(bool show) {
 }
 
 void Studio::ApplyTemplate(int index) {
+  if (!ConfirmDiscard()) return;
+
   undoStack_.clear();
   redoStack_.clear();
   switch (index) {
@@ -1028,6 +1034,7 @@ void Studio::ApplyTemplate(int index) {
 
   placePath_.clear();
   placeName_ = L"Place" + std::to_wstring(++placeCounter_);
+  dirty_ = false;
   selected_ = -1;
   startPage_ = false;
   hotCard_ = -1;
@@ -1055,6 +1062,7 @@ void Studio::PushUndo() {
   undoStack_.push_back({world_.Parts(), selected_});
   if (undoStack_.size() > 64) undoStack_.erase(undoStack_.begin());
   redoStack_.clear();
+  MarkDirty();
   UpdateEditMenu();
 }
 
@@ -1067,6 +1075,7 @@ void Studio::Undo() {
 
   world_.ReplaceParts(snapshot.parts);
   selected_ = snapshot.selected;
+  MarkDirty();
   RefreshAfterEdit();
   Log(L"Undo.");
 }
@@ -1080,6 +1089,7 @@ void Studio::Redo() {
 
   world_.ReplaceParts(snapshot.parts);
   selected_ = snapshot.selected;
+  MarkDirty();
   RefreshAfterEdit();
   Log(L"Redo.");
 }
@@ -1110,6 +1120,10 @@ void Studio::UpdateEditMenu() {
   set(kEditPaste, hasClipboard_);
   set(kEditClear, hasSelection);
   set(kEditDuplicate, hasSelection);
+  set(kFormatRotate, hasSelection);
+  set(kFormatTilt, hasSelection);
+  set(kFormatRoll, hasSelection);
+  set(kFormatColour, hasSelection);
 }
 
 void Studio::CopySelected() {
@@ -1242,28 +1256,17 @@ int Studio::HandleAt(int x, int y) const {
   GetClientRect(viewport_, &client);
   if (client.right <= 0 || client.bottom <= 0) return -1;
 
-  const float ndcX =
-      (2.0f * static_cast<float>(x) / static_cast<float>(client.right)) - 1.0f;
-  const float ndcY =
-      1.0f - (2.0f * static_cast<float>(y) / static_cast<float>(client.bottom));
-
-  const DirectX::XMMATRIX inverse =
-      DirectX::XMMatrixInverse(nullptr, camera_.ViewProjection());
-  const DirectX::XMVECTOR nearPoint = DirectX::XMVector3TransformCoord(
-      DirectX::XMVectorSet(ndcX, ndcY, 0.0f, 1.0f), inverse);
-  const DirectX::XMVECTOR farPoint = DirectX::XMVector3TransformCoord(
-      DirectX::XMVectorSet(ndcX, ndcY, 1.0f, 1.0f), inverse);
-  const DirectX::XMVECTOR ray = DirectX::XMVector3Normalize(
-      DirectX::XMVectorSubtract(farPoint, nearPoint));
-
   const Part& part = world_.Parts()[selected_];
   const DirectX::XMMATRIX rotation = part.RotationMatrix();
   const float hx = part.size.x * 0.5f;
   const float hy = part.size.y * 0.5f;
   const float hz = part.size.z * 0.5f;
 
+  // Pick the handle the pointer is actually over. The corners are drawn as
+  // screen-space points, so comparing projected pixels is what makes the
+  // visible handle the thing that gets grabbed.
   int bestCorner = -1;
-  float bestDistance = 0.0f;
+  float bestPixels = 12.0f * 12.0f;
 
   for (int corner = 0; corner < 8; ++corner) {
     const DirectX::XMFLOAT3 offset{(corner & 1) ? hx : -hx,
@@ -1271,28 +1274,25 @@ int Studio::HandleAt(int x, int y) const {
                                    (corner & 4) ? hz : -hz};
     const DirectX::XMVECTOR turned = DirectX::XMVector3TransformCoord(
         DirectX::XMLoadFloat3(&offset), rotation);
-    const DirectX::XMVECTOR world = DirectX::XMVectorAdd(
-        turned, DirectX::XMLoadFloat3(&part.position));
+    DirectX::XMFLOAT3 world{};
+    DirectX::XMStoreFloat3(
+        &world, DirectX::XMVectorAdd(
+                    turned, DirectX::XMLoadFloat3(&part.position)));
 
-    const DirectX::XMVECTOR toCorner =
-        DirectX::XMVectorSubtract(world, nearPoint);
-    const float along = DirectX::XMVectorGetX(
-        DirectX::XMVector3Dot(toCorner, ray));
-    if (along <= 0.0f) continue;
+    int screenX = 0;
+    int screenY = 0;
+    if (!ProjectToScreen(world, &screenX, &screenY)) continue;
 
-    const DirectX::XMVECTOR closest = DirectX::XMVectorAdd(
-        nearPoint, DirectX::XMVectorScale(ray, along));
-    const float distance = DirectX::XMVectorGetX(DirectX::XMVector3Length(
-        DirectX::XMVectorSubtract(world, closest)));
-
-    if (bestCorner < 0 || distance < bestDistance) {
+    const float dx = static_cast<float>(screenX - x);
+    const float dy = static_cast<float>(screenY - y);
+    const float pixels = dx * dx + dy * dy;
+    if (pixels < bestPixels) {
+      bestPixels = pixels;
       bestCorner = corner;
-      bestDistance = distance;
     }
   }
 
-  // Two studs is roughly the generous grab radius the era's handles had.
-  return bestDistance <= 2.0f ? bestCorner : -1;
+  return bestCorner;
 }
 
 void Studio::ApplyMove(int mouseX, int mouseY) {
@@ -1503,8 +1503,8 @@ void Studio::DrawStartPage(HDC dc, const RECT& area) {
   RECT footer{area.left + 24, area.bottom - 26, area.right - 24,
               area.bottom - 8};
   DrawTextW(dc,
-            L"Starting a template replaces the open place; nothing can be "
-            L"saved yet.",
+            L"Starting a template replaces the open place. Unsaved work is "
+            L"never discarded without asking.",
             -1, &footer, DT_SINGLELINE | DT_LEFT | DT_END_ELLIPSIS);
 
   SelectObject(dc, previous);
@@ -1563,6 +1563,7 @@ void Studio::LoadStartingPlace(const std::wstring& path) {
   placePath_.clear();
   placeName_ = L"Place1";
   placeCounter_ = 1;
+  dirty_ = false;
   selected_ = -1;
   PopulateExplorer();
   ShowProperties(-1);
@@ -1571,11 +1572,14 @@ void Studio::LoadStartingPlace(const std::wstring& path) {
 }
 
 void Studio::NewPlace() {
+  if (!ConfirmDiscard()) return;
+
   undoStack_.clear();
   redoStack_.clear();
   world_.BuildBaseplate();
   placePath_.clear();
   placeName_ = L"Place" + std::to_wstring(++placeCounter_);
+  dirty_ = false;
   selected_ = -1;
   startPage_ = false;
   if (menu_) {
@@ -1607,16 +1611,12 @@ void Studio::OpenPlace() {
   if (GetOpenFileNameW(&dialog)) LoadPlace(path);
 }
 
-void Studio::SavePlace() {
-  if (placePath_.empty()) {
-    SavePlaceAs();
-    return;
-  }
-
-  SaveTo(placePath_);
+bool Studio::SavePlace() {
+  if (placePath_.empty()) return SavePlaceAs();
+  return SaveTo(placePath_);
 }
 
-void Studio::SavePlaceAs() {
+bool Studio::SavePlaceAs() {
   std::wstring stem = placeName_;
   const size_t dot = stem.find_last_of(L'.');
   if (dot != std::wstring::npos && dot > 0) stem = stem.substr(0, dot);
@@ -1638,7 +1638,7 @@ void Studio::SavePlaceAs() {
   dialog.lpstrDefExt = L"fbrx";
   dialog.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;
 
-  if (GetSaveFileNameW(&dialog)) SaveTo(path);
+  return GetSaveFileNameW(&dialog) && SaveTo(path);
 }
 
 bool Studio::SaveTo(const std::wstring& path) {
@@ -1654,6 +1654,7 @@ bool Studio::SaveTo(const std::wstring& path) {
 
   placePath_ = path;
   placeName_ = FileNameOf(path);
+  dirty_ = false;
   SetPlaceTitle();
   AddRecent(path);
   InvalidateRect(frame_, nullptr, FALSE);
@@ -1662,7 +1663,178 @@ bool Studio::SaveTo(const std::wstring& path) {
   return true;
 }
 
+bool Studio::ConfirmDiscard() {
+  if (!dirty_) return true;
+
+  const std::wstring message = L"Save changes to " + placeName_ + L"?";
+  const int answer = MessageBoxW(frame_, message.c_str(), L"FieldBrik Studio",
+                                 MB_YESNOCANCEL | MB_ICONWARNING);
+  if (answer == IDCANCEL) return false;
+  if (answer == IDYES) return SavePlace();
+  return true;
+}
+
+bool Studio::RequestClose() {
+  if (!ConfirmDiscard()) return false;
+
+  running_ = false;
+  if (frame_) DestroyWindow(frame_);
+  frame_ = nullptr;
+  return true;
+}
+
+void Studio::MarkDirty() {
+  if (dirty_) return;
+
+  dirty_ = true;
+  SetPlaceTitle();
+  UpdateStatus();
+}
+
+std::wstring Studio::FindPlayerExecutable() const {
+  const std::wstring directory = ExecutableDirectory();
+  const std::wstring candidates[] = {
+      directory + L"FieldBrikPlayer.exe",
+      directory + L"..\\..\\player\\build\\Release\\FieldBrikPlayer.exe",
+      directory + L"..\\..\\player\\build\\FieldBrikPlayer.exe",
+      directory + L"..\\..\\..\\player\\build\\Release\\FieldBrikPlayer.exe",
+      directory + L"..\\..\\..\\player\\build\\FieldBrikPlayer.exe",
+  };
+
+  for (const std::wstring& candidate : candidates) {
+    const DWORD attributes = GetFileAttributesW(candidate.c_str());
+    if (attributes != INVALID_FILE_ATTRIBUTES &&
+        (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+      return candidate;
+    }
+  }
+  return std::wstring();
+}
+
+bool Studio::PlaySolo() {
+  if (startPage_) {
+    Log(L"Open a place before Play Solo.");
+    return false;
+  }
+
+  const std::wstring player = FindPlayerExecutable();
+  if (player.empty()) {
+    MessageBoxW(frame_,
+                L"FieldBrikPlayer.exe was not found beside Studio. Keep the "
+                L"player in the same folder as the editor, or build it into "
+                L"player\\build\\Release.",
+                L"FieldBrik Studio", MB_OK | MB_ICONWARNING);
+    Log(L"Play Solo could not find FieldBrikPlayer.exe.");
+    return false;
+  }
+
+  wchar_t tempDirectory[MAX_PATH] = L"";
+  if (GetTempPathW(MAX_PATH, tempDirectory) == 0) {
+    MessageBoxW(frame_, L"Windows did not provide a temporary folder.",
+                L"FieldBrik Studio", MB_OK | MB_ICONWARNING);
+    return false;
+  }
+
+  const std::wstring playPath =
+      std::wstring(tempDirectory) + L"FieldBrikStudioPlay.fbrx";
+  std::string error;
+  if (!SavePlaceFile(Narrow(playPath), world_.Parts(), error)) {
+    MessageBoxW(frame_,
+                (L"Play Solo could not prepare the place:\n\n" + Widen(error))
+                    .c_str(),
+                L"FieldBrik Studio", MB_OK | MB_ICONWARNING);
+    Log(L"Play Solo could not save its temporary place: " + Widen(error));
+    return false;
+  }
+
+  std::wstring command = L"\"" + player + L"\" \"" + playPath + L"\"";
+  std::vector<wchar_t> mutableCommand(command.begin(), command.end());
+  mutableCommand.push_back(L'\0');
+
+  STARTUPINFOW startup{};
+  startup.cb = sizeof(startup);
+  PROCESS_INFORMATION process{};
+  const std::wstring directory =
+      player.substr(0, player.find_last_of(L"\\/") + 1);
+
+  if (!CreateProcessW(player.c_str(), mutableCommand.data(), nullptr, nullptr,
+                      FALSE, 0, nullptr, directory.c_str(), &startup,
+                      &process)) {
+    MessageBoxW(frame_, L"FieldBrikPlayer.exe could not be started.",
+                L"FieldBrik Studio", MB_OK | MB_ICONWARNING);
+    Log(L"Play Solo could not start the player.");
+    return false;
+  }
+
+  CloseHandle(process.hThread);
+  CloseHandle(process.hProcess);
+  Log(L"Play Solo opened " + placeName_ + L" in the player.");
+  return true;
+}
+
+void Studio::RotateSelected(int axis) {
+  Part* part = world_.MutablePart(selected_);
+  if (!part) return;
+
+  PushUndo();
+  const float radians = DirectX::XMConvertToRadians(15.0f);
+
+  if (!part->hasRotationMatrix) {
+    if (axis == 0) part->rotationDegrees.x += 15.0f;
+    if (axis == 1) part->rotationDegrees.y += 15.0f;
+    if (axis == 2) part->rotationDegrees.z += 15.0f;
+  } else {
+    DirectX::XMMATRIX turn = DirectX::XMMatrixIdentity();
+    if (axis == 0) turn = DirectX::XMMatrixRotationX(radians);
+    if (axis == 1) turn = DirectX::XMMatrixRotationY(radians);
+    if (axis == 2) turn = DirectX::XMMatrixRotationZ(radians);
+
+    const DirectX::XMMATRIX old =
+        DirectX::XMLoadFloat3x3(&part->rotationMatrix);
+    DirectX::XMStoreFloat3x3(&part->rotationMatrix,
+                             DirectX::XMMatrixMultiply(turn, old));
+  }
+
+  RefreshAfterEdit();
+  if (axis == 0) {
+    Log(L"Tilted the selected part 15 degrees.");
+  } else if (axis == 1) {
+    Log(L"Rotated the selected part 15 degrees.");
+  } else {
+    Log(L"Rolled the selected part 15 degrees.");
+  }
+}
+
+void Studio::ChooseColour() {
+  Part* part = world_.MutablePart(selected_);
+  if (!part) return;
+
+  const auto channel = [](float value) {
+    return static_cast<BYTE>(
+        std::lround(std::clamp(value, 0.0f, 1.0f) * 255.0f));
+  };
+
+  CHOOSECOLORW choose{};
+  choose.lStructSize = sizeof(choose);
+  choose.hwndOwner = frame_;
+  choose.rgbResult = RGB(channel(part->colour.x), channel(part->colour.y),
+                         channel(part->colour.z));
+  choose.lpCustColors = customColours_;
+  choose.Flags = CC_FULLOPEN | CC_RGBINIT;
+
+  if (!ChooseColorW(&choose)) return;
+
+  PushUndo();
+  part->colour = {GetRValue(choose.rgbResult) / 255.0f,
+                  GetGValue(choose.rgbResult) / 255.0f,
+                  GetBValue(choose.rgbResult) / 255.0f};
+  RefreshAfterEdit();
+  Log(L"Changed the selected part's colour.");
+}
+
 void Studio::LoadPlace(const std::wstring& path) {
+  if (!ConfirmDiscard()) return;
+
   std::string error;
   if (!world_.Load(Narrow(path), error)) {
     const std::wstring message =
@@ -1677,6 +1849,7 @@ void Studio::LoadPlace(const std::wstring& path) {
   redoStack_.clear();
   placePath_ = path;
   placeName_ = FileNameOf(path);
+  dirty_ = false;
   selected_ = -1;
   PopulateExplorer();
   ShowProperties(-1);
@@ -2060,7 +2233,7 @@ void Studio::UpdateCamera(float deltaSeconds) {
   CameraForward(&forward);
 
   const float yaw = DirectX::XMConvertToRadians(yaw_);
-  const DirectX::XMFLOAT3 right{-std::cos(yaw), 0.0f, -std::sin(yaw)};
+  const DirectX::XMFLOAT3 right{std::cos(yaw), 0.0f, std::sin(yaw)};
 
   DirectX::XMFLOAT3 move{0.0f, 0.0f, 0.0f};
   if (down('W')) {
@@ -2373,8 +2546,8 @@ void Studio::UpdateStatus() {
 
 void Studio::SetPlaceTitle() {
   if (!frame_) return;
-  const std::wstring title =
-      L"FieldBrik - [" + placeName_ + L"]";
+  const std::wstring title = L"FieldBrik - [" + placeName_ +
+                            (dirty_ ? L"*" : L"") + L"]";
   SetWindowTextW(frame_, title.c_str());
 }
 
@@ -2442,8 +2615,27 @@ void Studio::OnCommand(int command) {
       break;
 
     case kFileExit:
-      running_ = false;
-      if (frame_) DestroyWindow(frame_);
+      RequestClose();
+      break;
+
+    case kToolsPlaySolo:
+      PlaySolo();
+      break;
+
+    case kFormatRotate:
+      RotateSelected(1);
+      break;
+
+    case kFormatTilt:
+      RotateSelected(0);
+      break;
+
+    case kFormatRoll:
+      RotateSelected(2);
+      break;
+
+    case kFormatColour:
+      ChooseColour();
       break;
 
     case kEditUndo:
@@ -2600,17 +2792,18 @@ void Studio::OnCommand(int command) {
       Log(L"Toolbar customisation is not built yet.");
       break;
 
-    case kHelpAbout:
-      MessageBoxW(frame_,
-                  L"FieldBrik Studio 0.4\n\n"
-                  L"A 2008-style place editor: Explorer, Properties, a tabbed\n"
-                  L"viewport and the era's menus. Pick a template on the Start\n"
-                  L"Page, add blocks from the Toolbox or Insert menu, then drag\n"
-                  L"a part to move it or drag a corner handle to resize it.\n"
-                  L"Delete, cut, copy, paste, duplicate and undo all work.\n\n"
-                  L"Saving, Play Solo and the brick art are the next pass.",
-                  L"About FieldBrik", MB_OK | MB_ICONINFORMATION);
+    case kHelpAbout: {
+      const std::wstring about =
+          std::wstring(L"FieldBrik Studio ") + kClientVersion +
+          L"\n\nA 2008-style place editor: Explorer, Properties, a tabbed\n"
+          L"viewport and the era's menus. Drag a part to move it, drag a\n"
+          L"corner handle to resize it, and use Format > Rotate, Tilt, Roll\n"
+          L"or Colour for the selected part. Play Solo saves the place to a\n"
+          L"temporary .fbrx and opens it in FieldBrikPlayer.exe.";
+      MessageBoxW(frame_, about.c_str(), L"About FieldBrik",
+                  MB_OK | MB_ICONINFORMATION);
       break;
+    }
 
     default:
       break;
@@ -2809,9 +3002,7 @@ LRESULT Studio::HandleMessage(HWND handle, UINT message, WPARAM wparam,
       return 0;
 
     case WM_CLOSE:
-      running_ = false;
-      DestroyWindow(handle);
-      frame_ = nullptr;
+      RequestClose();
       return 0;
 
     case WM_DESTROY:

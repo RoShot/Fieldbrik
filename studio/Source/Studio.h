@@ -35,9 +35,16 @@ class Studio {
   void NewPlace();
   void OpenPlace();
   void LoadPlace(const std::wstring& path);
-  void SavePlace();
-  void SavePlaceAs();
+  bool SavePlace();
+  bool SavePlaceAs();
   bool SaveTo(const std::wstring& path);
+  bool ConfirmDiscard();
+  bool RequestClose();
+  void MarkDirty();
+  bool PlaySolo();
+  std::wstring FindPlayerExecutable() const;
+  void RotateSelected(int axis);
+  void ChooseColour();
   void InsertPart(PartShape shape);
   void ShowStartPage(bool show);
   void ApplyTemplate(int index);
@@ -156,6 +163,7 @@ class Studio {
   bool looking_ = false;
   int placeCounter_ = 1;
 
+  bool dirty_ = false;
   int selected_ = -1;
   int hotRow_ = -1;
   int hotButton_ = -1;
@@ -165,6 +173,7 @@ class Studio {
   RECT windowedRect_{0, 0, 0, 0};
   LONG_PTR windowedStyle_ = 0;
   std::vector<bool> propertyHeaders_;
+  COLORREF customColours_[16]{};
 
   // The blue box and white corner handles, rebuilt whenever the selection
   // changes and drawn after the world.

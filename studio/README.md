@@ -9,11 +9,12 @@ toolbars, a tab strip with the text strip beneath it (Tools / Insert / Fullscree
 / Help... / Exit), the Explorer and Properties docked right, Output hidden until
 asked for, a status bar, and the viewport filling the rest.
 
-This is 0.5. The shell, the viewport, the panels, the full menu tree, selection,
+This is 0.6. The shell, the viewport, the panels, the full menu tree, selection,
 object insertion, the Start Page, the Toolbox and in-place editing are real:
 parts drag across the build plane, duplicate, cut/copy/paste and delete, undo/redo
-covers the last 64 edits, and places save and reopen as `.fbrx`. Play Solo is
-next; its menu entry is drawn disabled rather than quietly doing nothing.
+covers the last 64 edits, and places save and reopen as `.fbrx`. Format > Rotate,
+Tilt, Roll and Colour change the selected part, Play Solo opens the current place
+in the player, and closing or replacing a changed place asks before discarding it.
 
 ## Building
 
@@ -69,8 +70,8 @@ dependencies.
   dragging to move it vertically. Delete removes it, and Ctrl+X / Ctrl+C /
   Ctrl+V / Ctrl+D cut, copy, paste and duplicate. Ctrl+Z and Ctrl+Y undo and
   redo up to 64 whole-world steps; New, a template and Open start a fresh
-  history. Corner handles resize an axis-aligned part on X and Z, but they still
-  need a precise hit — see Known issues.
+  history. Corner handles resize an axis-aligned part on X and Z; the handle you
+  can see is the handle the pointer picks.
 - **Properties**, docked right — a bold `Part "Name"` title across the panel,
   then **Appearance** (Colour, Shape) and **Data** (Name, Parent, Position,
   Size, Rotation, CanCollide, TextureID, face decals). The fields are read-only,
@@ -91,7 +92,13 @@ dependencies.
 - **Save** (Ctrl+S) — saves the open place; **Save As** writes XML `.fbrx`,
   which the player opens directly. Parts, names, colours, sizes, rotations,
   textures and per-face decals round-trip. The save commands are no longer
-  placeholders.
+  placeholders. Closing or replacing a changed place offers Save, Discard and
+  Cancel instead of throwing the work away.
+- **Format** — Rotate, Tilt and Roll turn the selected part 15 degrees at a time,
+  and Colour opens the Windows colour picker. The change is one undo step.
+- **Play Solo** — writes the current place to a temporary `.fbrx` and launches
+  `FieldBrikPlayer.exe` beside Studio. In a development build it also finds the
+  player under `player/build/Release`.
 - **Game Layout** (Home) restores the default arrangement; **Fullscreen** (F11)
   goes borderless and back.
 - **Free camera** — fly around the place without touching it. The orbit camera
@@ -164,20 +171,15 @@ compiled into Studio directly. `Camera` gained a free mode, `Renderer` gained
 
 ## Known issues
 
-- Corner-handle resizing is present but still needs a precise hit; if a drag
-  starts on the baseplate instead of a handle it moves the part. Moving,
-  deleting, history and saving are the dependable paths in this pass.
-- Parts cannot be rotated or recoloured yet, and there is no Play Solo.
-- Closing a changed place does not ask whether to save yet. Use Ctrl+S before
-  closing, or File > Save As for a copy.
+- Rotation is in 15-degree steps from the Format menu; there is no rotate tool
+  or arbitrary-angle dialog yet.
 - Diagnostics and Task Scheduler have no panel yet, and Models, Services and
   Tools are still placeholders.
 - The Toolbox is click-to-insert; there is no drag-and-drop from it.
-- Starting a template or File > New replaces the open place; with no save yet,
-  unsaved work is lost.
 - The Explorer's services are labels, not runtime objects, and the place is a
   flat list under `Workspace` rather than a real hierarchy.
-- Properties fields are read-only; edits are made in the viewport.
+- Properties fields are read-only; edits are made in the viewport or through
+  the Format menu.
 - The status line shows parts, frame rate and the place name; the era's
   Sleep/Wait/Scheduler readout is not reproduced.
 - No DPI scaling: the chrome is sized in pixels for a 100% display.

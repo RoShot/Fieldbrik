@@ -381,7 +381,7 @@ editing model.
 Still to come: dependable corner-handle resizing, rotation and recolouring,
 saving `.fbrx`, Models, Services and Tools, Play Solo, and the brick art itself.
 
-## 0.19 — Studio 0.5: save and reopen — done
+## 0.19 — Studio 0.5/0.6: save, edit and Play Solo — done
 
 A place can leave the editor now, and the player can open it.
 
@@ -394,12 +394,18 @@ A place can leave the editor now, and the player can open it.
 - Studio accepts a place path on the command line, so double-clicking a `.fbrx`
   edits it and Save goes back to that file instead of opening a dialog.
 - The player accepts `.fbrx` and opens Studio's output directly. It moves to
-  0.16; the editor is 0.5.
+  0.16; the editor is 0.6.
 - Empty `.fbrx` places are valid, unlike the older formats, so the Empty Place
   template can be saved and reopened.
+- 0.6 closes the editing loop: screen-space corner-handle picking, 15-degree
+  Format rotation/tilt/roll, a colour picker, Play Solo, and Save/Discard/Cancel
+  prompts for changed places.
 
-Still to come: dependable corner-handle resizing, rotation and recolouring,
-Models, Services and Tools, Play Solo, and the brick art itself.
+Studio 0.6 closes the editor loop: corner handles pick in screen space, Format
+rotates, tilts, rolls and recolours a part, Play Solo writes a temporary `.fbrx`
+and launches the player, and dirty places prompt before they are closed or
+replaced. Still to come: editable Properties fields, Models, Services and Tools,
+DPI-aware chrome, a real Explorer hierarchy, and the brick art itself.
 
 ## The eras
 
