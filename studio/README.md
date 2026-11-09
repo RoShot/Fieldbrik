@@ -9,7 +9,7 @@ toolbars, a tab strip with the text strip beneath it (Tools / Insert / Fullscree
 / Help... / Exit), the Explorer and Properties docked right, Output hidden until
 asked for, a status bar, and the viewport filling the rest.
 
-This is 0.9.1. The shell, the viewport, the panels, the full menu tree, selection,
+This is 0.9.2. The shell, the viewport, the panels, the full menu tree, selection,
 object insertion, the browser-framed Start Page, the Toolbox and in-place editing are real:
 parts drag across the build plane, duplicate, cut/copy/paste and delete, undo/redo
 covers the last 64 edits, and places save and reopen as `.fbrx`. Format > Rotate,

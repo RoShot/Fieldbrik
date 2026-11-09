@@ -2056,8 +2056,13 @@ void Studio::ApplyMove(int mouseX, int mouseY) {
 // Stretches the part along the axis of the handle that was grabbed, keeping the
 // opposite face exactly where it was. The axis is taken in the part's own
 // rotation, so a turned brick grows along its own face rather than along world
-// X, and the vertical handles size height, which the old corner handles could
-// not reach at all.
+// X, and the vertical handles size height.
+//
+// The drag is measured on the screen line the axis projects to, not with a ray
+// against a plane: a plane square to the axis cannot move along the axis it is
+// square to, so that version measured a constant and collapsed the part to the
+// minimum. One stud of the axis is projected to get pixels per stud, and the
+// pointer's movement along that screen line is turned back into studs.
 void Studio::ApplyResize(int mouseX, int mouseY) {
   Part* part = world_.MutablePart(selected_);
   if (!part) return;
@@ -2076,27 +2081,43 @@ void Studio::ApplyResize(int mouseX, int mouseY) {
       DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&axisLocal),
                                         part->RotationMatrix()));
 
-  const float half =
-      (axis == 0 ? dragStartSize_.x
-                 : axis == 1 ? dragStartSize_.y : dragStartSize_.z) *
-      0.5f;
+  const float startSize = axis == 0 ? dragStartSize_.x
+                           : axis == 1 ? dragStartSize_.y
+                                       : dragStartSize_.z;
 
-  const DirectX::XMVECTOR start = DirectX::XMLoadFloat3(&dragStartPosition_);
+  // The opposite face, which the drag must leave alone.
   const DirectX::XMVECTOR fixedFace = DirectX::XMVectorAdd(
-      start, DirectX::XMVectorScale(direction, -sign * half));
+      DirectX::XMLoadFloat3(&dragStartPosition_),
+      DirectX::XMVectorScale(direction, -sign * startSize * 0.5f));
 
-  DirectX::XMFLOAT3 normal{};
-  DirectX::XMStoreFloat3(&normal, direction);
+  DirectX::XMFLOAT3 fixed{};
+  DirectX::XMFLOAT3 step{};
+  DirectX::XMStoreFloat3(&fixed, fixedFace);
+  DirectX::XMStoreFloat3(&step, direction);
 
-  DirectX::XMFLOAT3 hit{};
-  if (!ScreenToPlane(mouseX, mouseY, dragStartPosition_, normal, &hit)) return;
+  int baseX = 0;
+  int baseY = 0;
+  int tipX = 0;
+  int tipY = 0;
+  if (!ProjectToScreen(fixed, &baseX, &baseY)) return;
+  if (!ProjectToScreen(
+          DirectX::XMFLOAT3{fixed.x + step.x, fixed.y + step.y, fixed.z + step.z},
+          &tipX, &tipY)) {
+    return;
+  }
 
-  float size = DirectX::XMVectorGetX(DirectX::XMVector3Dot(
-                   DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&hit),
-                                             fixedFace),
-                   direction)) *
-               sign;
-  size = std::clamp(size, 1.0f, 2048.0f);
+  const float perStudX = static_cast<float>(tipX - baseX);
+  const float perStudY = static_cast<float>(tipY - baseY);
+  const float perStudSquared = perStudX * perStudX + perStudY * perStudY;
+  // Under half a pixel a stud the axis is pointing at the camera, and there is
+  // no screen line to drag along.
+  if (perStudSquared < 0.25f) return;
+
+  const float dragX = static_cast<float>(mouseX - dragStartMouse_.x);
+  const float dragY = static_cast<float>(mouseY - dragStartMouse_.y);
+  const float studs = (dragX * perStudX + dragY * perStudY) / perStudSquared;
+
+  const float size = std::clamp(startSize + sign * studs, 1.0f, 2048.0f);
 
   if (axis == 0) part->size.x = size;
   else if (axis == 1) part->size.y = size;

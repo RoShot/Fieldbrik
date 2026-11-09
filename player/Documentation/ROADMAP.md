@@ -525,6 +525,14 @@ drag each.
 - The typed `#RRGGBB` field in Properties still works; both routes write the same
   colour.
 
+A correction shipped in 0.9.2: the first version of the face handles measured the
+drag with a ray against a plane square to the part's axis, and such a plane
+cannot move along the axis it is square to. The measurement was therefore
+constant and every drag collapsed the part to the one-stud minimum. The drag is
+now measured on the axis's own projected screen line — one stud of the axis is
+projected to get pixels per stud — which behaves the same for all six
+directions and for a rotated part.
+
 Still open: there is no colour swatch beside the value in the panel itself.
 
 ## 0.25 — Studio 0.10: finishing pass one
