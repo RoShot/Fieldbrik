@@ -60,6 +60,9 @@ Hard rules that come from the project itself:
   `fieldbrik://play` link carrying the place file URL, account name, user id, the
   six avatar colours and the face id. A guest sees Sign in to play. Single-player:
   the link is trusted, with no server proof, presence or visit counting.
+  The Worker builds its request object by hand, so a route must read
+  `req.headers.host` and `req.secure`; Express's `req.get()` and `req.protocol`
+  do not exist there and took every file place down with a 500.
 
 ### Website — not done
 
