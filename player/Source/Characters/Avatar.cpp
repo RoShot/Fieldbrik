@@ -15,7 +15,11 @@ constexpr XMFLOAT3 kTorsoColour{0.06f, 0.41f, 0.67f};
 constexpr XMFLOAT3 kLegColour{0.64f, 0.74f, 0.28f};
 
 
-constexpr float kRunHipRate = 0.55f;      // radians per 0.1 s tick, running
+// Radians per 0.1 s tick while running. The script feeds the hips the negated
+// shoulder angle but gives them no MaxVelocity of their own; this cap is what
+// keeps the legs from swinging the full radian the sine asks for and settles the
+// stride at about 43 degrees each way, which is what 2008 footage measures.
+constexpr float kRunHipRate = 0.70f;
 constexpr float kRunHipAmplitude = 0.75f;  // radians, so about 43 degrees each way
 
 // Which motor a part hangs off.

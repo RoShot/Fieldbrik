@@ -1,8 +1,10 @@
 // Collision between the player and the bricks.
 //
-// The player is collided as a box — 1.8 studs across and 5 tall, standing on its
-// feet — rather than as the avatar's true silhouette. That is what the era did
-// (everything was a box), and it keeps every test exact instead of approximate.
+// The player is collided as a box — 2 studs across and 5 tall, standing on its
+// feet — rather than as the avatar's true silhouette. That is the era's humanoid
+// box: the torso and the two legs span exactly 2 studs, so a 1.8-wide box let the
+// shoulders clip a wall the body was still clear of. Everything was a box, and
+// using the body's real width keeps every test exact instead of approximate.
 //
 // Each part is resolved in its own space: the player's eight corners are taken
 // into the brick's local frame, turned into a local bounding box, and pushed out
@@ -39,7 +41,7 @@
 
 namespace fieldbrik {
 
-constexpr float kPlayerHalfWidth = 0.9f;
+constexpr float kPlayerHalfWidth = 1.0f;
 constexpr float kPlayerHeight = 5.0f;
 
 // A surface whose normal leans up by at least this much is one the player stands
