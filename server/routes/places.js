@@ -309,7 +309,18 @@ router.get('/games/:slug', (req, res, next) => {
     let joinUrl = null;
     if (placeFile && req.viewer && req.db) {
       const avatar = await avatarRepository.get(req.db, req.viewer.id);
-      const origin = `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
+
+      // Read the headers directly instead of req.get()/req.protocol: the Worker
+      // builds its request by hand and has neither, and calling one there took
+      // every place page with a file down with a 500.
+      const host = req.headers['x-forwarded-host'] || req.headers.host || site.domain;
+      const forwarded = req.headers['x-forwarded-proto'];
+      const protocol = forwarded
+        ? String(forwarded).split(',')[0].trim()
+        : req.secure
+          ? 'https'
+          : 'http';
+      const origin = `${protocol}://${host}`;
       const placeUrl = `${origin}/games/${encodeURIComponent(place.slug)}/file`;
       const colours = [
         avatar.head,
