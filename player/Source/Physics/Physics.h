@@ -10,6 +10,21 @@
 // for the common case — a brick turned only about Y — the push comes out exactly
 // along a world axis.
 //
+// The three other shapes are resolved rather than drawn around:
+//
+// - A wedge is five planes, and the player leaves by whichever plane is cheapest
+//   to cross. Standing on the slope means the slope plane is cheapest, so the
+//   push is along the slope's own normal and the slope - not the bounding box -
+//   is what stops the player.
+// - A sphere is an ellipsoid: the closest point on the player's box to its centre,
+//   measured in the space where the ellipsoid is a unit sphere.
+// - A cylinder is an elliptical barrel: the box is tested against its round side
+//   and its two caps, and the cheapest of the three ways out is taken.
+//
+// All three still work from the player's bounding box in the part's own space, so
+// a box against a wedge rotated on two axes can be a fraction of a stud out. That
+// is the same approximation the box path has always made.
+//
 // Stepping up is a player matter (see Player.cpp): the resolver only answers
 // "where am I pushed to" and "is this spot free", which is all a step up needs
 // to test whether there is room at the top.
@@ -26,6 +41,11 @@ namespace fieldbrik {
 
 constexpr float kPlayerHalfWidth = 0.9f;
 constexpr float kPlayerHeight = 5.0f;
+
+// A surface whose normal leans up by at least this much is one the player stands
+// on and can walk up: 0.7 is forty-five degrees. Walls and ceilings fall below
+// it, so this is also what decides whether a push along a slant is ground.
+constexpr float kWalkableSlopeNormal = 0.7f;
 
 struct Contact {
   bool grounded = false;

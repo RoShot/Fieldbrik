@@ -40,11 +40,6 @@ constexpr float kStepHeight = 1.15f;
 // on top. That is why walking into a step slowly used to be stopped by it.
 constexpr int kStepSettleSteps = 24;
 
-// The steepest slope that can be walked up, as the cosine of its angle: the normal
-// of flat ground is 1, a vertical wall is 0, and this is forty-five degrees. The
-// era's characters walked up ramps and were stopped by anything steeper.
-constexpr float kWalkableSlopeNormal = 0.7f;
-
 // Below this there is nothing left to stand on, so the player is put back.
 constexpr float kRespawnBelow = -60.0f;
 

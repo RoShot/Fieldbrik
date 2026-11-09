@@ -171,6 +171,17 @@ float4 PSMain(VertexOut input) : SV_TARGET
     {
         float4 texel = sceneTexture.Sample(sceneSampler, input.colour.rg);
         clip(texel.a - 0.5f);
+
+        // A decal is part of the brick, so it takes the same light the brick's own
+        // faces do. The head's face clears options.w and stays at full
+        // brightness, because line art on a head should not dim with the angle.
+        if (options.w > 0.5f)
+        {
+            const float3 lightDirection = normalize(float3(0.45f, 0.80f, 0.35f));
+            const float diffuse = saturate(dot(input.normal, lightDirection));
+            texel.rgb *= 0.55f + 0.45f * diffuse;
+        }
+
         return float4(texel.rgb, 1.0f);
     }
 
@@ -220,7 +231,7 @@ struct FrameConstants {
 struct ObjectConstants {
   XMFLOAT4X4 world;
   XMFLOAT4 colour;
-  XMFLOAT4 options;   // x: textured draw, y: surface strip
+  XMFLOAT4 options;   // x: textured draw, y: surface strip, z: billboard, w: lit
   XMFLOAT4 partSize;  // xyz: the part's size in studs
 };
 
@@ -823,7 +834,7 @@ void Renderer::BindGeometry(const Camera& camera) {
 
 void Renderer::SetObject(const XMFLOAT4X4& world, const XMFLOAT4& colour,
                          bool textured, const XMFLOAT3* size, bool surfaces,
-                         bool billboard) {
+                         bool billboard, bool litTexture) {
   D3D11_MAPPED_SUBRESOURCE mapped{};
   if (SUCCEEDED(context_->Map(objectBuffer_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0,
                               &mapped))) {
@@ -831,7 +842,8 @@ void Renderer::SetObject(const XMFLOAT4X4& world, const XMFLOAT4& colour,
     object->world = world;
     object->colour = colour;
     object->options = XMFLOAT4(textured ? 1.0f : 0.0f, surfaces ? 1.0f : 0.0f,
-                               billboard ? 1.0f : 0.0f, 0.0f);
+                               billboard ? 1.0f : 0.0f,
+                               litTexture ? 1.0f : 0.0f);
     object->partSize = size ? XMFLOAT4(size->x, size->y, size->z, 0.0f)
                             : XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f);
     context_->Unmap(objectBuffer_.Get(), 0);
@@ -898,7 +910,8 @@ void Renderer::DrawParts(const std::vector<Part>& parts, const Camera& camera,
           const_cast<ID3D11ShaderResourceView*>(texture)};
       context_->PSSetShaderResources(0, 1, painted);
 
-      SetObject(part.ModelMatrix(), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), true);
+      SetObject(part.ModelMatrix(), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), true,
+                nullptr, false, false, true);
       decalFaces_[face].Draw(context_.Get());
     }
 

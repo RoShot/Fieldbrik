@@ -118,10 +118,13 @@ class Renderer {
   // sampling and alpha-testing instead of shading a flat colour, which is how the
   // face is drawn over the head. `surfaces` samples the surface strip instead of
   // the object's colour, and `size` is the part's extent in studs, which is what
-  // decides how many studs a face shows.
+  // decides how many studs a face shows. `litTexture` gives a textured draw the
+  // same shading as the face it covers, which is what makes a decal belong to its
+  // brick; the head's face leaves it off and stays at full brightness.
   void SetObject(const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4& colour,
                  bool textured = false, const DirectX::XMFLOAT3* size = nullptr,
-                 bool surfaces = false, bool billboard = false);
+                 bool surfaces = false, bool billboard = false,
+                 bool litTexture = false);
 
   // The head and its face, in RendererHead.cpp. Both come out of the executable's
   // own resources; without them the generated rounded block is drawn instead.

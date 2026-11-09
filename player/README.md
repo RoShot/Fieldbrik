@@ -3,11 +3,12 @@
 The standalone desktop client for FieldBrik. Windows, C++, Win32 and Direct3D 11,
 no third-party dependencies.
 
-This is **0.14**: a window, a world of bricks, and a blocky avatar that walks,
+This is **0.15**: a window, a world of bricks, and a blocky avatar that walks,
 jumps and falls with limbs that swing. Gravity pulls it down, bricks stop it, low
 bricks are walked up, shallow slopes are walked up too, and falling off the
 baseplate puts it back at the spawn point. A brick can be a box, a sphere, a
-cylinder or a wedge. Its faces wear the era's surface strip — studs on top, inlets
+cylinder or a wedge, and each collides as its own shape, so a wedge is a ramp and
+a ball is a ball. Faces wear the era's surface strip — studs on top, inlets
 underneath, weld on the sides, one per stud — unless a decal covers a face, and a
 brick's own `TextureID` still paints its top. The sky is the era's own six-faced
 skybox with the sun and the moon in it, and the avatar wears the era's own head
@@ -320,10 +321,9 @@ empty folders.
   an archived 2008 CameraScript. They may move once that reference is found.
 - No scripts. Nothing in a place file runs: no Lua, no buttons, no damage, no
   sound, no tools. A place is geometry plus where you start.
-- Shapes are drawn, not collided. A sphere, cylinder or wedge is still a box to
-  the physics resolver, so you stand on the flat top of its box rather than on the
-  slope of a wedge or the side of a cylinder. There are no surfaces or materials
-  yet either.
+- Shapes collide as themselves, with one approximation: the player's box is taken
+  into the part's own space, so a wedge rotated on two axes can be a fraction of a
+  stud out at a corner. There are no surfaces or materials yet either.
 - `.fbrx` is recognised and refused for now, with a message saying it is not
   supported yet.
 - Unanchored parts stay exactly where the file put them. Physics is the player's,
@@ -338,8 +338,9 @@ empty folders.
   refused at startup with the missing names listed — the classic smile is the only
   picture that ships. The decal path itself is finished and takes any image that
   arrives in that folder.
-- A decal is drawn unlit, exactly as the top face always was, so a picture on a
-  face turned away from the light reads brighter than the brick around it.
+- A decal is shaded by the face it sits on, so it darkens with the brick as that
+  face turns away from the light. The face image on the head is left unlit on
+  purpose: line art should not dim.
 - A decal on a sphere, cylinder or wedge sits on the face of its bounding box, not
   on the curved surface: that is a slab of geometry a curved face has no room for.
 - `SurfacesStrip.png` is not read, and that is now a decision rather than an open

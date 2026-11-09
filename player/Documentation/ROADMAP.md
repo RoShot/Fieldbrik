@@ -277,6 +277,23 @@ a modern description of the behaviour.
 
 Still to come: shape-accurate collision, and the brick art itself.
 
+## 0.15 — Milestone 15: shapes that collide, and decals that are lit — done
+
+- A wedge is a ramp rather than a box. The resolver treats it as its five faces and
+  takes the cheapest way out, so standing on the slope pushes the player along the
+  slope's own normal and 0.14's slope walking carries him up it. A steep wedge is
+  still a wall, by the same forty-five-degree rule.
+- A sphere is an ellipsoid and a cylinder an elliptical barrel. Both are tested
+  against the player's box in the part's own space, so a ball is walked around and
+  stood on at its crown, and a barrel stops the player at its round side instead of
+  at the corners of its box.
+- Decals take the same half-lambert shading as the brick they sit on, using the
+  face's normal. The head's face image stays unlit on purpose, because line art on
+  a head should not dim as the head turns.
+
+Still to come: true edge-against-edge resolution for a box against a rotated wedge,
+and the brick art.
+
 ## The eras
 
 After the first playable build, the look is moved forward era by era:
