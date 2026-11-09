@@ -5,7 +5,7 @@ is finished, what is left, how to build and release, and which traps have alread
 cost time. It exists so a new chat can start with this file instead of re-deriving
 the project.
 
-Last updated: 9 November 2026, after the Player 0.21 release (Join).
+Last updated: 9 November 2026, after the Player 0.22 release (unanchored physics).
 
 ---
 
@@ -21,7 +21,7 @@ Three parts, one repository:
 | Part | Path | Stack | Current version |
 |---|---|---|---|
 | Website | `server/`, `views/`, `public/`, `db/` | Node + Express, EJS, Cloudflare Workers + D1 | live at fieldbrik.com |
-| Client | `player/` | C++20, Direct3D 11, Win32, static CRT | Player **0.21** |
+| Client | `player/` | C++20, Direct3D 11, Win32, static CRT | Player **0.22** |
 | Editor | `studio/` | C++20, Direct3D 11, Win32, static CRT | Studio **0.9.2** |
 
 Hard rules that come from the project itself:
@@ -91,10 +91,11 @@ locally; push and let the workflow run. Migrations run as part of the deploy.
 
 ## 3. Client (Player) — done
 
-Player **0.21**, built from `player/`, exe at `player/build/Release/FieldBrikPlayer.exe`,
-released as `player-v0.21`. The HUD is the 0.15 one, with the health meter and a
+Player **0.22**, built from `player/`, exe at `player/build/Release/FieldBrikPlayer.exe`,
+released as `player-v0.22`. The HUD is the 0.15 one, with the health meter and a
 444x55 backpack strip on it. Join works: the website's Play button opens a place
-with the account's name, colours and face.
+with the account's name, colours and face. Unanchored parts are simulated now, so
+a place like Steer the Spheres plays as a physics map rather than a static model.
 
 - Direct3D 11 renderer, Win32 window, no external libraries.
 - Loads XML places: `.fbrx` (Studio) and `.rbxl`, plus the built-in place. A path on
@@ -105,6 +106,10 @@ with the account's name, colours and face.
 - Physics: era constants — **gravity 196.2**, **walk 16**, **jump 50** studs/s,
   max fall 250. Substepped collision (0.2-stud slices), box player 1.8 × 5, step-up
   of 1.15 studs, walkable slope at 45°, wall sliding, respawn below −60.
+- Unanchored bricks (0.22): gravity, collision against anchored and unanchored
+  bricks, a sphere path for Ball shapes, player shoves, riding a moving part, and
+  a reset below −250. No angular motion: a brick slides or drops, it does not
+  topple. Bricks are simulated one by one; welds are not read yet.
 - Collision against cubes, wedges, spheres/ellipsoids and cylinders as themselves.
 - Avatar: R6-style rigid boxes, 4 wide × 5 tall, feet at y=0, joints as motors that
   chase targets (the old Animate-script model, not keyframes): idle sway, run cycle,

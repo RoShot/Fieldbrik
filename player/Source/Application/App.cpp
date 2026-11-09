@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "Physics/Dynamics.h"
 #include "Physics/Physics.h"
 #include "Version.generated.h"
 
@@ -314,6 +315,14 @@ int App::Run() {
         camera_.Zoom(-static_cast<float>(notches));
       }
     }
+
+    // Unanchored bricks move before the player does: the player shoves them,
+    // gravity and their own collisions settle them, and a part underfoot carries
+    // the player along. Then the player's step resolves against where everything
+    // ended up.
+    PushParts(world_.MutableParts(), player_.Position(), player_.Velocity());
+    StepParts(world_.MutableParts(), delta);
+    player_.Nudge(CarryBy(world_.Parts(), player_.Position(), delta));
 
     player_.Update(input_, world_.Parts(), camera_.Yaw(), delta);
     camera_.SetTarget(FocusPoint());

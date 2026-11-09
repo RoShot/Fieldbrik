@@ -9,7 +9,9 @@
 // the matrix.
 //
 // Collision is a flag rather than a shape, which is enough while every brick is a
-// box: the physics resolver only needs to know whether to consider it.
+// box: the physics resolver only needs to know whether to consider it. Anchored
+// is separate again: collision says whether a brick is solid, anchored says
+// whether the physics step is allowed to move it.
 
 #pragma once
 
@@ -47,6 +49,19 @@ struct Part {
 
   DirectX::XMFLOAT3 colour{0.6f, 0.6f, 0.6f};
   bool collides = true;
+
+  // The place file's Anchored. Unanchored bricks are simulated by
+  // Physics/Dynamics: they fall, are shoved by the player and rest on whatever
+  // is under them. A file with no Anchored property stays anchored, so the
+  // places FieldBrik's own Studio has written do not collapse when they open.
+  bool anchored = true;
+
+  // Only meaningful while unanchored.
+  DirectX::XMFLOAT3 velocity{0.0f, 0.0f, 0.0f};
+
+  // Where the brick began, so one that falls out of the world is put back
+  // instead of being lost for the rest of the visit.
+  DirectX::XMFLOAT3 homePosition{0.0f, 0.0f, 0.0f};
 
   // The part's own TextureID, which the era put on the top face. Kept as its own
   // field so every existing place keeps working; the renderer treats it as a

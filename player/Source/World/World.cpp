@@ -28,6 +28,7 @@ void World::Add(const char* name, DirectX::XMFLOAT3 position,
   part.colour = colour;
   part.rotationDegrees = rotation;
   part.collides = collides;
+  part.homePosition = position;
   parts_.push_back(part);
 }
 

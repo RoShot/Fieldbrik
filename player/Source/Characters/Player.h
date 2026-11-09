@@ -34,6 +34,18 @@ class Player {
 
   DirectX::XMFLOAT3 Position() const { return position_; }
 
+  // The velocity the movement step ended with. A shove transfers it to an
+  // unanchored brick, and a moving part carries the player with its own.
+  DirectX::XMFLOAT3 Velocity() const { return velocity_; }
+
+  // Moves the player without touching their velocity, for a part they are
+  // standing on. The next update resolves any collision the move caused.
+  void Nudge(const DirectX::XMFLOAT3& offset) {
+    position_.x += offset.x;
+    position_.y += offset.y;
+    position_.z += offset.z;
+  }
+
   // Degrees, where 0 faces +Z and 90 faces +X.
   float Facing() const { return facing_; }
 

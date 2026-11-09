@@ -47,6 +47,10 @@ class World {
   void Clear();
 
   const std::vector<Part>& Parts() const { return parts_; }
+
+  // The physics step moves unanchored bricks in place, so it needs a writable
+  // list. Everything else reads Parts().
+  std::vector<Part>& MutableParts() { return parts_; }
   int PartCount() const { return static_cast<int>(parts_.size()); }
 
   DirectX::XMFLOAT3 SpawnPoint() const { return spawn_; }

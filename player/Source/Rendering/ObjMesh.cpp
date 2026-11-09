@@ -152,7 +152,7 @@ bool ParseObj(std::string_view text, MeshData& out, std::wstring& error) {
       int previousNormal = -1;
 
       // Emits one corner as a vertex and returns its index.
-      const auto emit = [&](int position, int texcoord, int normal) {
+      const auto emit = [&](int position, int /*texcoord*/, int normal) {
         Vertex vertex;
         vertex.position = {positions[static_cast<std::size_t>(position) * 3],
                            positions[static_cast<std::size_t>(position) * 3 + 1],

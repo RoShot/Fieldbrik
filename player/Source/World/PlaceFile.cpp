@@ -440,6 +440,16 @@ bool ReadItem(const Element& item, PlaceData& place) {
     part.collides = !EqualsIgnoreCase(Trim(canCollide->text), "false");
   }
 
+  // Anchored decides whether the physics step may move this brick. It is written
+  // by real Roblox places and by anything that has been imported from them; the
+  // places FieldBrik Studio writes have no such property, and stay anchored.
+  if (const Element* anchored = FindProperty(item, "Anchored")) {
+    part.anchored = !EqualsIgnoreCase(Trim(anchored->text), "false");
+  }
+
+  // Where the physics step puts this brick back if it falls out of the world.
+  part.homePosition = part.position;
+
   part.textureId = ReadTextureId(item);
 
   // Decals are children of the brick they cover, each naming a face. A decal on
@@ -635,6 +645,9 @@ bool SavePlaceFile(const std::string& path, const std::vector<Part>& parts,
 
     file << "        <bool name=\"CanCollide\">"
          << (part.collides ? "true" : "false") << "</bool>\n";
+
+    file << "        <bool name=\"Anchored\">"
+         << (part.anchored ? "true" : "false") << "</bool>\n";
 
     if (!part.textureId.empty()) {
       file << "        <Content name=\"TextureID\"><url>"

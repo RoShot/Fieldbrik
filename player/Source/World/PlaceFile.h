@@ -12,9 +12,9 @@
 // the code.
 //
 // Not read yet, and listed as known issues: Script (there is no Lua), Decal and
-// texture drawing (the id is carried on the part but nothing paints it), welded
-// or unanchored assemblies (bricks are static here), and anything with a shape
-// that is not a box.
+// texture drawing (the id is carried on the part but nothing paints it) and welded
+// assemblies (unanchored bricks are simulated one by one, never as a welded
+// group).
 
 #pragma once
 

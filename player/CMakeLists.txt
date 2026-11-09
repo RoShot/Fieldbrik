@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.21)
 # Built by .github/workflows/player-build.yml on every push that touches this
 # folder, and by hand with the commands in README.md.
 
-project(FieldBrikPlayer VERSION 0.21 LANGUAGES CXX)
+project(FieldBrikPlayer VERSION 0.22 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -213,6 +213,7 @@ add_executable(FieldBrikPlayer WIN32
   Source/Characters/Avatar.cpp
   Source/Characters/Player.cpp
   Source/Physics/Physics.cpp
+  Source/Physics/Dynamics.cpp
   "${CMAKE_CURRENT_BINARY_DIR}/assets.rc"
 )
 
