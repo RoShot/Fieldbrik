@@ -54,8 +54,11 @@ const XMFLOAT4 kQuickPanel(0.16f, 0.16f, 0.16f, 0.97f);
 const XMFLOAT4 kQuickBorder(0.62f, 0.62f, 0.62f, 1.0f);
 const XMFLOAT4 kQuickHover(0.20f, 0.32f, 0.55f, 1.0f);
 const XMFLOAT4 kChatPrompt(1.0f, 1.0f, 1.0f, 1.0f);
-const XMFLOAT4 kPlayerName(0.37f, 0.30f, 0.55f, 1.0f);
-const XMFLOAT4 kEditText(0.07f, 0.07f, 0.07f, 0.35f);
+const XMFLOAT4 kPlayerName(0.42f, 0.34f, 0.62f, 1.0f);
+const XMFLOAT4 kEditText(0.55f, 0.55f, 0.55f, 1.0f);
+const XMFLOAT4 kHamburger(0.84f, 0.84f, 0.84f, 1.0f);
+const XMFLOAT4 kHamburgerLine(0.30f, 0.30f, 0.30f, 1.0f);
+const XMFLOAT4 kTopStripBand(0.86f, 0.86f, 0.86f, 1.0f);
 
 // The backpack strip along the bottom, as the era drew it: a flat dark bar with
 // six square slots and a number under each one.
@@ -63,8 +66,8 @@ const XMFLOAT4 kBackpack(0.72f, 0.72f, 0.72f, 0.98f);
 const XMFLOAT4 kBackpackTop(0.83f, 0.83f, 0.83f, 0.98f);
 const XMFLOAT4 kBackpackBottom(0.58f, 0.58f, 0.58f, 0.98f);
 const XMFLOAT4 kSlotLine(0.46f, 0.46f, 0.46f, 1.0f);
-const XMFLOAT4 kBottomStripFill(0.42f, 0.42f, 0.42f, 0.92f);
-const XMFLOAT4 kBottomStripEdge(0.72f, 0.72f, 0.72f, 1.0f);
+const XMFLOAT4 kBottomStripFill(0.55f, 0.55f, 0.55f, 0.94f);
+const XMFLOAT4 kBottomStripEdge(0.78f, 0.78f, 0.78f, 1.0f);
 const XMFLOAT4 kHealthTrack(0.03f, 0.03f, 0.03f, 0.55f);
 const XMFLOAT4 kHealthFill(0.20f, 0.72f, 0.16f, 1.0f);
 const XMFLOAT4 kHealthLabel(0.10f, 0.18f, 0.55f, 1.0f);
@@ -81,7 +84,8 @@ const XMFLOAT4 kHealthLabel(0.10f, 0.18f, 0.55f, 1.0f);
 // recolours the glyph and leaves the edge black, which is what makes it read as
 // the era's outlined text.
 bool RenderLabel(const std::wstring& text, int pointSize, bool bold,
-                 std::vector<unsigned char>& pixels, int& width, int& height) {
+                 TextStyle style, std::vector<unsigned char>& pixels,
+                 int& width, int& height) {
   HDC screen = CreateCompatibleDC(nullptr);
   if (!screen) return false;
 
@@ -132,33 +136,72 @@ bool RenderLabel(const std::wstring& text, int pointSize, bool bold,
     }
 
     pixels.assign(count * 4, 0);
-    for (int y = 0; y < height; ++y) {
-      for (int x = 0; x < width; ++x) {
-        const size_t index = static_cast<size_t>(y) * width + x;
 
-        if (mask[index] > 0) {
-          pixels[index * 4 + 0] = 255;
-          pixels[index * 4 + 1] = 255;
-          pixels[index * 4 + 2] = 255;
-          pixels[index * 4 + 3] = 255;
-          continue;
-        }
+    // The glyph itself is laid down first in every style: a crisp white mask
+    // that the HUD shader tints.
+    for (size_t index = 0; index < count; ++index) {
+      if (mask[index] == 0) continue;
+      pixels[index * 4 + 0] = 255;
+      pixels[index * 4 + 1] = 255;
+      pixels[index * 4 + 2] = 255;
+      pixels[index * 4 + 3] = 255;
+    }
 
-        bool ring = false;
-        for (int oy = -1; oy <= 1 && !ring; ++oy) {
-          for (int ox = -1; ox <= 1; ++ox) {
-            const int nx = x + ox;
-            const int ny = y + oy;
-            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-            if (mask[static_cast<size_t>(ny) * width + nx] > 0) {
-              ring = true;
-              break;
+    if (style == TextStyle::Outline) {
+      // A one-pixel black ring, for text that lies on the world and has to stay
+      // readable over grass, brick and sky.
+      for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+          const size_t index = static_cast<size_t>(y) * width + x;
+          if (mask[index] > 0) continue;
+
+          bool ring = false;
+          for (int oy = -1; oy <= 1 && !ring; ++oy) {
+            for (int ox = -1; ox <= 1; ++ox) {
+              const int nx = x + ox;
+              const int ny = y + oy;
+              if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+              if (mask[static_cast<size_t>(ny) * width + nx] > 0) {
+                ring = true;
+                break;
+              }
             }
           }
-        }
 
-        if (ring) {
-          pixels[index * 4 + 3] = 255;  // black outline, opaque
+          if (ring) {
+            pixels[index * 4 + 3] = 255;  // black outline, opaque
+          }
+        }
+      }
+    } else if (style == TextStyle::Shadow) {
+      // The player list's soft edge: two offset copies behind the glyph, a tight
+      // dark one and a wider faint one, which is what the era's labels read as
+      // rather than a hard outline.
+      struct Offset {
+        int x;
+        int y;
+        unsigned char alpha;
+      };
+      const Offset offsets[] = {{1, 1, 150}, {2, 2, 55}};
+
+      for (const Offset& offset : offsets) {
+        for (int y = 0; y < height; ++y) {
+          for (int x = 0; x < width; ++x) {
+            const size_t source = static_cast<size_t>(y) * width + x;
+            if (mask[source] == 0) continue;
+
+            const int tx = x + offset.x;
+            const int ty = y + offset.y;
+            if (tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
+
+            unsigned char* target =
+                &pixels[(static_cast<size_t>(ty) * width + tx) * 4];
+            if (target[3] != 0) continue;  // never paint over the glyph
+            target[0] = 0;
+            target[1] = 0;
+            target[2] = 0;
+            target[3] = offset.alpha;
+          }
         }
       }
     }
@@ -212,12 +255,14 @@ bool Hud::LoadKeyArt() {
   return true;
 }
 
-bool Hud::MakeLabel(const wchar_t* text, int pointSize, bool bold,
-                    Label& label) {
+bool Hud::MakeLabel(const wchar_t* text, int pointSize, bool bold, Label& label,
+                    TextStyle style) {
   std::vector<unsigned char> pixels;
   int width = 0;
   int height = 0;
-  if (!RenderLabel(text, pointSize, bold, pixels, width, height)) return false;
+  if (!RenderLabel(text, pointSize, bold, style, pixels, width, height)) {
+    return false;
+  }
 
   if (!renderer_->CreateHudTextureFromBgra(width, height, pixels.data(),
                                            label.view.GetAddressOf())) {
@@ -230,21 +275,30 @@ bool Hud::MakeLabel(const wchar_t* text, int pointSize, bool bold,
 }
 
 bool Hud::MakeLabels() {
-  if (!MakeLabel(L"Fullscreen", 12, false, fullscreen_)) return false;
-  if (!MakeLabel(L"Help...", 12, false, helpButton_)) return false;
-  if (!MakeLabel(L"Exit", 12, false, exit_)) return false;
-  if (!MakeLabel(L"Tools", 12, false, tools_)) return false;
-  if (!MakeLabel(L"Edit", 12, false, edit_)) return false;
+  if (!MakeLabel(L"Fullscreen", 14, false, fullscreen_, TextStyle::Plain)) {
+    return false;
+  }
+  if (!MakeLabel(L"Help...", 14, false, helpButton_, TextStyle::Plain)) {
+    return false;
+  }
+  if (!MakeLabel(L"Exit", 14, false, exit_, TextStyle::Plain)) return false;
+  if (!MakeLabel(L"Tools", 14, false, tools_, TextStyle::Plain)) return false;
+  if (!MakeLabel(L"Edit", 14, false, edit_, TextStyle::Plain)) return false;
   if (!MakeLabel(L"Health", 12, true, health_)) return false;
 
   hotbarNumbers_.resize(6);
   for (int slot = 0; slot < 6; ++slot) {
     const wchar_t number[2] = {static_cast<wchar_t>(L'1' + slot), L'\0'};
-    if (!MakeLabel(number, 10, false, hotbarNumbers_[slot])) return false;
+    if (!MakeLabel(number, 11, false, hotbarNumbers_[slot],
+                   TextStyle::Shadow)) {
+      return false;
+    }
   }
 
-  if (!MakeLabel(L"Players", 26, true, players_)) return false;
-  if (!MakeLabel(L"You", 15, false, you_)) return false;
+  if (!MakeLabel(L"Players", 28, false, players_, TextStyle::Shadow)) {
+    return false;
+  }
+  if (!MakeLabel(L"You", 15, false, you_, TextStyle::Shadow)) return false;
   if (!MakeLabel(L"Help", 16, true, helpTitle_)) return false;
   if (!MakeLabel(L"Close", 12, false, helpClose_)) return false;
 
@@ -296,16 +350,20 @@ void Hud::Layout() {
   // 2008 client put there and the Tools and Edit switches after them. Each
   // button is as wide as its text plus a little breathing room, so the strip is
   // only as long as it needs to be rather than a row of equal blocks.
-  const float widths[] = {fullscreen_.width + 18.0f, helpButton_.width + 18.0f,
-                          exit_.width + 18.0f, tools_.width + 18.0f,
-                          edit_.width + 18.0f};
+  // The menu square sits alone in the very corner, then the world shows through
+  // before the strip starts: that gap is what the 2008 client had, and it is why
+  // the strip does not begin at the window edge.
+  hamburger_ = {0.0f, 0.0f, 56.0f, 56.0f};
+
+  constexpr float widths[] = {84.0f, 84.0f, 84.0f, 60.0f, 50.0f};
 
   float stripWidth = 0.0f;
   for (const float w : widths) stripWidth += w;
 
-  topStrip_ = {0.0f, 0.0f, stripWidth, kTopButtonHeight};
+  const float stripX = std::round(width * 0.1429f);
+  topStrip_ = {stripX, 0.0f, stripWidth, kTopButtonHeight};
 
-  float topX = 0.0f;
+  float topX = stripX;
   topFullscreen_ = {topX, 0.0f, widths[0], kTopButtonHeight};
   topX += widths[0];
   topHelp_ = {topX, 0.0f, widths[1], kTopButtonHeight};
@@ -336,7 +394,7 @@ void Hud::Layout() {
   healthFill_ = healthTrack_;
 
   // Top right: the player list, which the camera buttons sit underneath.
-  leaderboard_ = {width - 20.0f - kLeaderboardWidth, 30.0f, kLeaderboardWidth,
+  leaderboard_ = {width - 28.0f - kLeaderboardWidth, 34.0f, kLeaderboardWidth,
                   kLeaderboardHeader + kLeaderboardRow * kLeaderboardRows + 2.0f};
 
   const float cameraTop = leaderboard_.y + leaderboard_.height + 8.0f;
@@ -587,9 +645,7 @@ void Hud::Collect(std::vector<Renderer::HudSprite>& sprites) const {
   Rect header = {headerX, leaderboard_.y, players_.width, kLeaderboardHeader};
   AddLabel(sprites, players_, header, kWhite);
 
-  const float nameX = leaderboard_.x + leaderboard_.width - you_.width;
-  Rect row = {nameX, leaderboard_.y + kLeaderboardHeader, you_.width,
-              kLeaderboardRow};
+  Rect row = {headerX, leaderboard_.y + 30.0f, you_.width, kLeaderboardRow};
   AddLabel(sprites, you_, row, kPlayerName);
 
   // The camera buttons, then the report button under them, each in the art
@@ -619,24 +675,55 @@ void Hud::Collect(std::vector<Renderer::HudSprite>& sprites) const {
 
   // The top left strip. These have no art of their own, so they answer the
   // pointer with the colour of the strip.
+  // The menu square: a light box with three dark rules in it. There is no menu
+  // behind it, so it is drawn but not a hit target.
+  Add(sprites, hamburger_, kHamburger, nullptr);
+  Add(sprites, {hamburger_.x, hamburger_.y + hamburger_.height - 1.0f,
+                hamburger_.width, 1.0f},
+      kTopStripBottom, nullptr);
+  Add(sprites, {hamburger_.x + hamburger_.width - 1.0f, hamburger_.y, 1.0f,
+                hamburger_.height},
+      kTopStripBottom, nullptr);
+  for (int line = 0; line < 3; ++line) {
+    Add(sprites, {hamburger_.x + 12.0f, hamburger_.y + 17.0f + line * 8.0f,
+                  32.0f, 4.0f},
+        kHamburgerLine, nullptr);
+  }
+
   // The strip is drawn once and the buttons only tint the part of it they own
   // while they are hovered or held, so at rest the chrome reads as one band.
   Add(sprites, topStrip_, kTopStrip, nullptr);
   Add(sprites, {topStrip_.x, topStrip_.y, topStrip_.width, 1.0f}, kTopStripTop,
       nullptr);
+  Add(sprites, {topStrip_.x, topStrip_.y + 1.0f, topStrip_.width, 9.0f},
+      kTopStripBand, nullptr);
+  Add(sprites, {topStrip_.x, topStrip_.y + topStrip_.height - 8.0f,
+                topStrip_.width, 7.0f},
+      kTopStripBottom, nullptr);
   Add(sprites, {topStrip_.x, topStrip_.y + topStrip_.height - 1.0f,
                 topStrip_.width, 1.0f},
       kTopStripBottom, nullptr);
 
   Add(sprites, topFullscreen_, TopColour(Hit::Fullscreen), nullptr);
-  AddCentred(sprites, fullscreen_, topFullscreen_, kTopText);
   Add(sprites, topHelp_, TopColour(Hit::Help), nullptr);
-  AddCentred(sprites, helpButton_, topHelp_, kTopText);
   Add(sprites, topExit_, TopColour(Hit::Exit), nullptr);
-  AddCentred(sprites, exit_, topExit_, kTopText);
   Add(sprites, topTools_, TopColour(Hit::Tools), nullptr);
-  AddCentred(sprites, tools_, topTools_, kTopText);
-  AddCentred(sprites, edit_, topEdit_, kEditText);
+
+  // Left-aligned in its button with a small pad, not centred: the era set these
+  // labels against the left edge of the strip.
+  const auto topLabel = [&sprites](const Label& label, const Rect& box,
+                                   const XMFLOAT4& colour) {
+    if (!label.view) return;
+    Rect placed{box.x + 8.0f, box.y + (box.height - label.height) * 0.5f,
+                label.width, label.height};
+    Hud::AddLabel(sprites, label, placed, colour);
+  };
+
+  topLabel(fullscreen_, topFullscreen_, kTopText);
+  topLabel(helpButton_, topHelp_, kTopText);
+  topLabel(exit_, topExit_, kTopText);
+  topLabel(tools_, topTools_, kTopText);
+  topLabel(edit_, topEdit_, kEditText);
 
   CollectChat(sprites);
 
@@ -690,7 +777,7 @@ bool Hud::HandleEscape() {
 bool Hud::MakeChatLabels() {
   if (!MakeLabel(L"Quick chat", 12, true, chatTitle_)) return false;
   if (!MakeLabel(L"To chat click here or press \"/\" key", 12, false,
-                 chatPrompt_)) {
+                 chatPrompt_, TextStyle::Shadow)) {
     return false;
   }
 
@@ -715,7 +802,9 @@ bool Hud::BuildLineLabel(const std::wstring& text, Label& label) {
   std::vector<unsigned char> pixels;
   int width = 0;
   int height = 0;
-  if (!RenderLabel(line, 12, false, pixels, width, height)) return false;
+  if (!RenderLabel(line, 12, false, TextStyle::Outline, pixels, width, height)) {
+    return false;
+  }
   if (!renderer_->CreateHudTextureFromBgra(width, height, pixels.data(),
                                            label.view.GetAddressOf())) {
     return false;

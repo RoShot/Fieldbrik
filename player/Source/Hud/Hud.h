@@ -28,6 +28,11 @@ namespace fieldbrik {
 
 class Input;
 
+// How a label's glyph is edged. 2008 did not outline every piece of text: the
+// player list had a soft shadow, the top strip was plain dark type on grey, and
+// only the small world-facing labels carried a hard black edge.
+enum class TextStyle { Outline, Shadow, Plain };
+
 class Hud {
  public:
   // What a click asked the client to do. The HUD never does any of it itself: the
@@ -114,7 +119,8 @@ class Hud {
   bool MakeLabels();
   bool LoadTexture(int resourceId,
                    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& view);
-  bool MakeLabel(const wchar_t* text, int pointSize, bool bold, Label& label);
+  bool MakeLabel(const wchar_t* text, int pointSize, bool bold, Label& label,
+                 TextStyle style = TextStyle::Outline);
 
   void Layout();
   void LayoutChat();
@@ -218,6 +224,7 @@ class Hud {
   Rect healthFill_;
 
   Rect topStrip_;
+  Rect hamburger_;
   Rect topFullscreen_;
   Rect topHelp_;
   Rect topExit_;
