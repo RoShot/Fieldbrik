@@ -85,6 +85,7 @@ class Hud {
     Tilt,
     Report,
     Chat,
+    Tools,
     HelpPanel,
     HelpClose,
     ChatBar,
@@ -122,6 +123,7 @@ class Hud {
   bool BuildLineLabel(const std::wstring& text, Label& label);
   void RefreshChatLabels();
   void CollectChat(std::vector<Renderer::HudSprite>& sprites) const;
+  void CollectBackpack(std::vector<Renderer::HudSprite>& sprites) const;
 
   Hit HitTest(float x, float y) const;
 
@@ -196,15 +198,30 @@ class Hud {
   Label fullscreen_;
   Label helpButton_;
   Label exit_;
+  Label tools_;
+  Label edit_;
   Label players_;
   Label you_;
+  Label health_;
+  std::vector<Label> hotbarNumbers_;
   Label helpTitle_;
   Label helpClose_;
   std::vector<Label> helpLines_;
 
+  // The backpack strip along the bottom, and whether Tools currently shows it.
+  bool hotbarVisible_ = true;
+  Rect hotbar_;
+  std::vector<Rect> hotbarSlots_;
+
+  // The era's vertical health meter on the right edge.
+  Rect healthTrack_;
+  Rect healthFill_;
+
   Rect topFullscreen_;
   Rect topHelp_;
   Rect topExit_;
+  Rect topTools_;
+  Rect topEdit_;
   Rect leaderboard_;
   Rect chatButton_;
   Rect zoomInButton_;
