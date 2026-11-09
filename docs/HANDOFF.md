@@ -5,7 +5,7 @@ is finished, what is left, how to build and release, and which traps have alread
 cost time. It exists so a new chat can start with this file instead of re-deriving
 the project.
 
-Last updated: 9 November 2026, after the Player 0.17 release (client commit `6eef711`).
+Last updated: 9 November 2026, after the Player 0.18 release.
 
 ---
 
@@ -21,7 +21,7 @@ Three parts, one repository:
 | Part | Path | Stack | Current version |
 |---|---|---|---|
 | Website | `server/`, `views/`, `public/`, `db/` | Node + Express, EJS, Cloudflare Workers + D1 | live at fieldbrik.com |
-| Client | `player/` | C++20, Direct3D 11, Win32, static CRT | Player **0.17** |
+| Client | `player/` | C++20, Direct3D 11, Win32, static CRT | Player **0.18** |
 | Editor | `studio/` | C++20, Direct3D 11, Win32, static CRT | Studio **0.9.2** |
 
 Hard rules that come from the project itself:
@@ -83,8 +83,8 @@ locally; push and let the workflow run. Migrations run as part of the deploy.
 
 ## 3. Client (Player) — done
 
-Player **0.17**, built from `player/`, exe at `player/build/Release/FieldBrikPlayer.exe`,
-released as `player-v0.17`.
+Player **0.18**, built from `player/`, exe at `player/build/Release/FieldBrikPlayer.exe`,
+released as `player-v0.18`.
 
 - Direct3D 11 renderer, Win32 window, no external libraries.
 - Loads XML places: `.fbrx` (Studio) and `.rbxl`, plus the built-in place. A path on
