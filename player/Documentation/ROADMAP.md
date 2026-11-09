@@ -503,6 +503,91 @@ fallback, so a place without one looks exactly as it did before.
 Still open: Studio does not capture a thumbnail from the viewport yet, so the
 picture is chosen on the site rather than taken from the place itself.
 
+## 0.24 — Studio 0.9.1: colour and six-way scaling — done
+
+The pass for building a first map: the two gestures a map needs most are now one
+drag each.
+
+- The selection carries six handles instead of eight corners: a blue ball on each
+  face — above, below, left, right, front and back — in the part's own rotation.
+  Dragging one stretches the part along that face's axis and leaves the opposite
+  face exactly where it was, so a brick can be made taller, wider or longer from
+  either end without shifting the other end.
+- The resize is computed along the part's local axis rather than the world's, so
+  a rotated brick grows along its own face, and the vertical handles size height,
+  which the corner handles could not reach at all.
+- Colour is a picker rather than only a typed hex value: Format > Colour opens a
+  dialog with red, green and blue sliders, a two-row brick palette and a preview.
+  The selected part changes as a slider moves or a swatch is clicked.
+- Undo treats the whole visit as one step: the snapshot is taken when the dialog
+  opens, pushed only when OK keeps the colour, and Cancel restores the part and
+  leaves the history and the modified marker as they were.
+- The typed `#RRGGBB` field in Properties still works; both routes write the same
+  colour.
+
+Still open: there is no colour swatch beside the value in the panel itself.
+
+## 0.25 — Studio 0.10: finishing pass one
+
+- A rotate tool: drag a ring around a part to turn it to any angle rather than
+  only the Format menu's 15-degree steps, with the typed Rotation field showing
+  the result.
+- Parent and Shape become editable in Properties, and the Explorer becomes a real
+  tree: parts reparent into each other, Workspace stays the root, and deleting a
+  part deletes its children.
+- Drag and drop from the Toolbox, and a second row of insertable shapes.
+- The inline Properties editor follows a scrolled list instead of staying at the
+  row's unscrolled position.
+- A grid snap toggle, so a brick lands on studs by default and freely when turned
+  off.
+
+## 0.26 — Studio 0.11: finishing pass two
+
+- Selecting more than one part: a drag box in the viewport, Shift-click in both
+  the viewport and Explorer, and a Properties panel that shows shared values.
+- Group and Ungroup from the Format menu, acting as one part for moving and
+  scaling while keeping the members.
+- Copy and paste between places, and a duplicate that keeps the original exactly
+  above rather than 2 studs off.
+- Welds and snaps from Format, so parts can be joined without scripts.
+- Models: Insert > Model reads a `.fbrx` as a group and the Toolbox gains a
+  Models section.
+- Diagnostics, Task Scheduler and the Output filter: the last panels that are
+  still labels.
+
+## 0.27 — Studio 1.0: the editor, finished for now
+
+Every menu entry that is not deliberately out of era is wired, and the oldest
+known issues close:
+
+- DPI scaling: the chrome sizes itself for the display instead of assuming 100%.
+- Settings and a stored sign-in, so publishing does not ask for the password
+  every time and the site address is remembered.
+- Viewport thumbnail capture on publish, so a place uploaded from Studio carries
+  its own picture instead of the site asking for one.
+- Recent places persisted between sessions, and a Start Page that lists them.
+- The Edit > Script menu and Tools > Execute Script open the editor's script
+  pane and say that scripting is not in this era, rather than staying disabled
+  with no explanation.
+- A measured pass on large places: one draw call per part is fine at a few
+  hundred bricks and is not changed before it is measured.
+
+After 1.0 the editor stops growing for now, the way the client stops at 2011.
+
+## 0.28 — launching a place from the website
+
+The first thing after 1.0, and single player only:
+
+- A Play button on a place page that hands the place to `FieldBrikPlayer.exe` the
+  way the era's `join.aspx` did: the site says which place, and the client
+  downloads the newest `.fbrx` from that place's version history.
+- The player accepts a place URL or slug as well as a local file, so the handoff
+  does not depend on where the browser put a download.
+- A download card for visitors without the client, pointing at the Player
+  release and naming the version the site expects.
+- Publishing from Studio becomes the loop: build, publish, press Play on the
+  page, and the change is in the game.
+
 ## The eras
 
 After the first playable build, the look is moved forward era by era:

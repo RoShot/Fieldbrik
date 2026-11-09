@@ -13,6 +13,7 @@
 namespace fieldbrik {
 
 struct ToolButton;
+struct ColourDialogState;
 
 class Studio {
  public:
@@ -62,6 +63,10 @@ class Studio {
   std::wstring FindPlayerExecutable() const;
   void RotateSelected(int axis);
   void ChooseColour();
+  void ApplyColourPreview(ColourDialogState* state,
+                          const DirectX::XMFLOAT3& colour);
+  static LRESULT CALLBACK ColourDialogProc(HWND window, UINT message,
+                                           WPARAM wparam, LPARAM lparam);
   void InsertPart(PartShape shape);
   void ShowStartPage(bool show);
   void ApplyTemplate(int index);
@@ -119,6 +124,9 @@ class Studio {
   void DeleteSelected();
   void DuplicateSelected();
   bool ProjectToScreen(const DirectX::XMFLOAT3& point, int* x, int* y) const;
+  bool ScreenToPlane(int x, int y, const DirectX::XMFLOAT3& planePoint,
+                     const DirectX::XMFLOAT3& planeNormal,
+                     DirectX::XMFLOAT3* result) const;
   bool ScreenToGround(int x, int y, float planeY,
                       DirectX::XMFLOAT3* result) const;
   int HandleAt(int x, int y) const;
@@ -217,9 +225,7 @@ class Studio {
   // reach the subclass below.
   HWND propertyEdit_ = nullptr;
   int propertyEditRow_ = -1;
-  COLORREF customColours_[16]{};
-
-  // The blue box and white corner handles, rebuilt whenever the selection
+  // The blue box and the six blue face handles, rebuilt whenever the selection
   // changes and drawn after the world.
   std::vector<Part> selectionOutline_;
 

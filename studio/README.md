@@ -9,7 +9,7 @@ toolbars, a tab strip with the text strip beneath it (Tools / Insert / Fullscree
 / Help... / Exit), the Explorer and Properties docked right, Output hidden until
 asked for, a status bar, and the viewport filling the rest.
 
-This is 0.9. The shell, the viewport, the panels, the full menu tree, selection,
+This is 0.9.1. The shell, the viewport, the panels, the full menu tree, selection,
 object insertion, the browser-framed Start Page, the Toolbox and in-place editing are real:
 parts drag across the build plane, duplicate, cut/copy/paste and delete, undo/redo
 covers the last 64 edits, and places save and reopen as `.fbrx`. Format > Rotate,
@@ -71,14 +71,16 @@ dependencies.
   listed by name, then the services this build knows about: Players, Lighting,
   StarterPack and Soundscape. Picking a part in the viewport selects its row;
   choosing a row selects the part.
-- **Selection** — a blue outline along the part's twelve edges and a white
-  handle at each of its eight corners, in the part's own rotation.
+- **Selection** — a blue outline along the part's twelve edges and a blue ball
+  on each of its six faces — above, below, left, right, front and back — in the
+  part's own rotation. Each ball is the direction that face will grow.
 - **Editing** — drag a selected part across the build plane, or hold Shift while
   dragging to move it vertically. Delete removes it, and Ctrl+X / Ctrl+C /
   Ctrl+V / Ctrl+D cut, copy, paste and duplicate. Ctrl+Z and Ctrl+Y undo and
   redo up to 64 whole-world steps; New, a template and Open start a fresh
-  history. Corner handles resize an axis-aligned part on X and Z; the handle you
-  can see is the handle the pointer picks.
+  history. Dragging a face ball stretches the part along that face's own axis and
+  leaves the opposite face where it is, in all six directions and in the part's
+  rotation, so height, width and length are all one gesture.
 - **Properties**, docked right — a bold `Part "Name"` title across the panel,
   then the Property/Value columns, **Appearance** (Colour, Shape) and **Data**
   (Name, Parent, Position, Size, Rotation, CanCollide, TextureID, face decals).
@@ -118,7 +120,9 @@ dependencies.
   This is the same endpoint the website's file picker uses, so the two routes
   cannot disagree about validation or version numbers.
 - **Format** — Rotate, Tilt and Roll turn the selected part 15 degrees at a time,
-  and Colour opens the Windows colour picker. The change is one undo step.
+  and Colour opens Studio's own picker: red, green and blue sliders, a two-row
+  brick palette, and a preview. The part changes as you drag, Cancel puts the
+  colour back without leaving an undo step, and OK makes the change one step.
 - **Play Solo** — writes the current place to a temporary `.fbrx` and launches
   `FieldBrikPlayer.exe` beside Studio. In a development build it also finds the
   player under `player/build/Release`.

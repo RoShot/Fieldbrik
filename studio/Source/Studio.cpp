@@ -883,8 +883,8 @@ int Studio::Run(HINSTANCE instance, int showCommand,
 
   INITCOMMONCONTROLSEX controls{};
   controls.dwSize = sizeof(controls);
-  controls.dwICC =
-      ICC_TREEVIEW_CLASSES | ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES;
+  controls.dwICC = ICC_TREEVIEW_CLASSES | ICC_LISTVIEW_CLASSES |
+                   ICC_STANDARD_CLASSES | ICC_BAR_CLASSES;
   InitCommonControlsEx(&controls);
 
   if (!CreateFrame(instance, showCommand)) return 1;
@@ -1924,8 +1924,11 @@ bool Studio::ProjectToScreen(const DirectX::XMFLOAT3& point, int* x,
   return true;
 }
 
-bool Studio::ScreenToGround(int x, int y, float planeY,
-                            DirectX::XMFLOAT3* result) const {
+// Where the pointer's ray meets a plane, any plane. Dragging a face handle needs
+// a plane through the part facing along the handle's own axis, not the ground.
+bool Studio::ScreenToPlane(int x, int y, const DirectX::XMFLOAT3& planePoint,
+                           const DirectX::XMFLOAT3& planeNormal,
+                           DirectX::XMFLOAT3* result) const {
   if (!viewport_) return false;
 
   RECT client{};
@@ -1947,16 +1950,31 @@ bool Studio::ScreenToGround(int x, int y, float planeY,
   const DirectX::XMVECTOR direction = DirectX::XMVector3Normalize(
       DirectX::XMVectorSubtract(farPoint, nearPoint));
 
-  const float step = DirectX::XMVectorGetY(direction);
-  if (std::fabs(step) < 1.0e-5f) return false;
+  const DirectX::XMVECTOR normal =
+      DirectX::XMVector3Normalize(DirectX::XMLoadFloat3(&planeNormal));
+  const float denominator =
+      DirectX::XMVectorGetX(DirectX::XMVector3Dot(direction, normal));
+  if (std::fabs(denominator) < 1.0e-5f) return false;
 
-  const float t = (planeY - DirectX::XMVectorGetY(nearPoint)) / step;
+  const float t =
+      DirectX::XMVectorGetX(DirectX::XMVector3Dot(
+          DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&planePoint),
+                                    nearPoint),
+          normal)) /
+      denominator;
   if (t < 0.0f) return false;
 
   DirectX::XMStoreFloat3(
-      result, DirectX::XMVectorAdd(
-                  nearPoint, DirectX::XMVectorScale(direction, t)));
+      result,
+      DirectX::XMVectorAdd(nearPoint, DirectX::XMVectorScale(direction, t)));
   return true;
+}
+
+bool Studio::ScreenToGround(int x, int y, float planeY,
+                            DirectX::XMFLOAT3* result) const {
+  const DirectX::XMFLOAT3 point{0.0f, planeY, 0.0f};
+  const DirectX::XMFLOAT3 normal{0.0f, 1.0f, 0.0f};
+  return ScreenToPlane(x, y, point, normal, result);
 }
 
 int Studio::HandleAt(int x, int y) const {
@@ -1973,16 +1991,21 @@ int Studio::HandleAt(int x, int y) const {
   const float hy = part.size.y * 0.5f;
   const float hz = part.size.z * 0.5f;
 
-  // Pick the handle the pointer is actually over. The corners are drawn as
-  // screen-space points, so comparing projected pixels is what makes the
-  // visible handle the thing that gets grabbed.
-  int bestCorner = -1;
-  float bestPixels = 12.0f * 12.0f;
+  // The handles are the six face centres: +X, -X, +Y, -Y, +Z, -Z. They are
+  // drawn as screen-space balls, so comparing projected pixels is what makes
+  // the visible handle the thing that gets grabbed.
+  int bestFace = -1;
+  float bestPixels = 14.0f * 14.0f;
 
-  for (int corner = 0; corner < 8; ++corner) {
-    const DirectX::XMFLOAT3 offset{(corner & 1) ? hx : -hx,
-                                   (corner & 2) ? hy : -hy,
-                                   (corner & 4) ? hz : -hz};
+  for (int face = 0; face < 6; ++face) {
+    DirectX::XMFLOAT3 offset{0.0f, 0.0f, 0.0f};
+    if (face == 0) offset.x = hx;
+    else if (face == 1) offset.x = -hx;
+    else if (face == 2) offset.y = hy;
+    else if (face == 3) offset.y = -hy;
+    else if (face == 4) offset.z = hz;
+    else offset.z = -hz;
+
     const DirectX::XMVECTOR turned = DirectX::XMVector3TransformCoord(
         DirectX::XMLoadFloat3(&offset), rotation);
     DirectX::XMFLOAT3 world{};
@@ -1999,11 +2022,11 @@ int Studio::HandleAt(int x, int y) const {
     const float pixels = dx * dx + dy * dy;
     if (pixels < bestPixels) {
       bestPixels = pixels;
-      bestCorner = corner;
+      bestFace = face;
     }
   }
 
-  return bestCorner;
+  return bestFace;
 }
 
 void Studio::ApplyMove(int mouseX, int mouseY) {
@@ -2030,28 +2053,61 @@ void Studio::ApplyMove(int mouseX, int mouseY) {
   InvalidateRect(viewport_, nullptr, FALSE);
 }
 
+// Stretches the part along the axis of the handle that was grabbed, keeping the
+// opposite face exactly where it was. The axis is taken in the part's own
+// rotation, so a turned brick grows along its own face rather than along world
+// X, and the vertical handles size height, which the old corner handles could
+// not reach at all.
 void Studio::ApplyResize(int mouseX, int mouseY) {
   Part* part = world_.MutablePart(selected_);
   if (!part) return;
 
-  const bool positiveX = (dragHandle_ & 1) != 0;
-  const bool positiveZ = (dragHandle_ & 4) != 0;
+  // dragHandle_ is 0..5: +X, -X, +Y, -Y, +Z, -Z. The pair halves to the axis;
+  // an even index is the positive end.
+  const int axis = dragHandle_ / 2;
+  const float sign = (dragHandle_ % 2) == 0 ? 1.0f : -1.0f;
 
-  const float fixedX =
-      dragStartPosition_.x + (positiveX ? -0.5f : 0.5f) * dragStartSize_.x;
-  const float fixedZ =
-      dragStartPosition_.z + (positiveZ ? -0.5f : 0.5f) * dragStartSize_.z;
+  DirectX::XMFLOAT3 axisLocal{0.0f, 0.0f, 0.0f};
+  if (axis == 0) axisLocal.x = 1.0f;
+  else if (axis == 1) axisLocal.y = 1.0f;
+  else axisLocal.z = 1.0f;
 
-  DirectX::XMFLOAT3 ground{};
-  if (!ScreenToGround(mouseX, mouseY, dragStartPosition_.y, &ground)) return;
+  const DirectX::XMVECTOR direction = DirectX::XMVector3Normalize(
+      DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&axisLocal),
+                                        part->RotationMatrix()));
 
-  const float sizeX = std::max(1.0f, std::fabs(ground.x - fixedX));
-  const float sizeZ = std::max(1.0f, std::fabs(ground.z - fixedZ));
+  const float half =
+      (axis == 0 ? dragStartSize_.x
+                 : axis == 1 ? dragStartSize_.y : dragStartSize_.z) *
+      0.5f;
 
-  part->size.x = sizeX;
-  part->size.z = sizeZ;
-  part->position.x = (ground.x + fixedX) * 0.5f;
-  part->position.z = (ground.z + fixedZ) * 0.5f;
+  const DirectX::XMVECTOR start = DirectX::XMLoadFloat3(&dragStartPosition_);
+  const DirectX::XMVECTOR fixedFace = DirectX::XMVectorAdd(
+      start, DirectX::XMVectorScale(direction, -sign * half));
+
+  DirectX::XMFLOAT3 normal{};
+  DirectX::XMStoreFloat3(&normal, direction);
+
+  DirectX::XMFLOAT3 hit{};
+  if (!ScreenToPlane(mouseX, mouseY, dragStartPosition_, normal, &hit)) return;
+
+  float size = DirectX::XMVectorGetX(DirectX::XMVector3Dot(
+                   DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&hit),
+                                             fixedFace),
+                   direction)) *
+               sign;
+  size = std::clamp(size, 1.0f, 2048.0f);
+
+  if (axis == 0) part->size.x = size;
+  else if (axis == 1) part->size.y = size;
+  else part->size.z = size;
+
+  DirectX::XMFLOAT3 centre{};
+  DirectX::XMStoreFloat3(
+      &centre,
+      DirectX::XMVectorAdd(
+          fixedFace, DirectX::XMVectorScale(direction, sign * size * 0.5f)));
+  part->position = centre;
 
   UpdateSelectionOutline();
   InvalidateRect(viewport_, nullptr, FALSE);
@@ -2816,30 +2872,361 @@ void Studio::RotateSelected(int axis) {
   }
 }
 
-void Studio::ChooseColour() {
+// What the colour dialog remembers while it is open. The snapshot is taken by
+// hand rather than through PushUndo, so Cancel can put the world back without
+// leaving an undo step or a dirty title behind: the history entry is only added
+// once the colour is kept.
+struct ColourDialogState {
+  Studio* studio = nullptr;
+  HWND window = nullptr;
+  std::vector<Part> beforeParts;
+  int beforeSelected = -1;
+  DirectX::XMFLOAT3 original{};
+  bool changed = false;
+  bool accepted = false;
+};
+
+namespace {
+
+constexpr wchar_t kColourClass[] = L"FieldBrikColourDialog";
+
+constexpr int kColourRedId = 2101;
+constexpr int kColourGreenId = 2102;
+constexpr int kColourBlueId = 2103;
+constexpr int kColourRedValueId = 2111;
+constexpr int kColourGreenValueId = 2112;
+constexpr int kColourBlueValueId = 2113;
+
+constexpr int kColourPaletteColumns = 12;
+constexpr int kColourPaletteRows = 2;
+constexpr int kColourSwatch = 22;
+constexpr int kColourPaletteLeft = 16;
+constexpr int kColourPaletteTop = 156;
+constexpr int kColourPreviewLeft = 306;
+constexpr int kColourPreviewTop = 156;
+constexpr int kColourPreviewWidth = 56;
+constexpr int kColourPreviewHeight = 44;
+
+// The era's brick palette: greys and browns, the primaries, and the muted
+// greens and blues places were actually built out of.
+const DirectX::XMFLOAT3 kColourPalette[kColourPaletteColumns *
+                                      kColourPaletteRows] = {
+    {1.00f, 1.00f, 1.00f}, {0.75f, 0.75f, 0.75f}, {0.50f, 0.50f, 0.50f},
+    {0.31f, 0.31f, 0.31f}, {0.10f, 0.10f, 0.10f}, {0.42f, 0.26f, 0.15f},
+    {0.63f, 0.41f, 0.19f}, {0.86f, 0.62f, 0.35f}, {0.98f, 0.86f, 0.55f},
+    {0.95f, 0.78f, 0.20f}, {0.40f, 0.68f, 0.22f}, {0.17f, 0.45f, 0.16f},
+    {0.20f, 0.62f, 0.55f}, {0.22f, 0.72f, 0.80f}, {0.16f, 0.42f, 0.76f},
+    {0.10f, 0.20f, 0.52f}, {0.55f, 0.30f, 0.72f}, {0.78f, 0.36f, 0.68f},
+    {0.88f, 0.30f, 0.30f}, {0.62f, 0.12f, 0.14f}, {0.95f, 0.55f, 0.30f},
+    {0.72f, 0.55f, 0.32f}, {0.60f, 0.62f, 0.24f}, {0.30f, 0.35f, 0.42f},
+};
+
+BYTE ColourChannel(float value) {
+  return static_cast<BYTE>(
+      std::lround(std::clamp(value, 0.0f, 1.0f) * 255.0f));
+}
+
+int SliderValue(HWND dialog, int id) {
+  return static_cast<int>(
+      SendMessageW(GetDlgItem(dialog, id), TBM_GETPOS, 0, 0));
+}
+
+DirectX::XMFLOAT3 ColourFromSliders(HWND dialog) {
+  return {SliderValue(dialog, kColourRedId) / 255.0f,
+          SliderValue(dialog, kColourGreenId) / 255.0f,
+          SliderValue(dialog, kColourBlueId) / 255.0f};
+}
+
+void SetColourSliders(HWND dialog, const DirectX::XMFLOAT3& colour) {
+  SendMessageW(GetDlgItem(dialog, kColourRedId), TBM_SETPOS, TRUE,
+               ColourChannel(colour.x));
+  SendMessageW(GetDlgItem(dialog, kColourGreenId), TBM_SETPOS, TRUE,
+               ColourChannel(colour.y));
+  SendMessageW(GetDlgItem(dialog, kColourBlueId), TBM_SETPOS, TRUE,
+               ColourChannel(colour.z));
+}
+
+void UpdateColourValueLabels(HWND dialog) {
+  const auto label = [&](int id, int value) {
+    SetWindowTextW(GetDlgItem(dialog, id), std::to_wstring(value).c_str());
+  };
+
+  label(kColourRedValueId, SliderValue(dialog, kColourRedId));
+  label(kColourGreenValueId, SliderValue(dialog, kColourGreenId));
+  label(kColourBlueValueId, SliderValue(dialog, kColourBlueId));
+}
+
+}  // namespace
+
+LRESULT CALLBACK Studio::ColourDialogProc(HWND handle, UINT message,
+                                          WPARAM wparam, LPARAM lparam) {
+  if (message == WM_NCCREATE) {
+    auto* create = reinterpret_cast<CREATESTRUCTW*>(lparam);
+    SetWindowLongPtrW(handle, GWLP_USERDATA,
+                      reinterpret_cast<LONG_PTR>(create->lpCreateParams));
+  }
+
+  auto* state = reinterpret_cast<ColourDialogState*>(
+      GetWindowLongPtrW(handle, GWLP_USERDATA));
+
+  switch (message) {
+    case WM_COMMAND:
+      if (HIWORD(wparam) == BN_CLICKED) {
+        const int id = LOWORD(wparam);
+        if (id == IDOK) {
+          if (state) state->accepted = true;
+          DestroyWindow(handle);
+          return 0;
+        }
+        if (id == IDCANCEL) {
+          DestroyWindow(handle);
+          return 0;
+        }
+      }
+      break;
+
+    case WM_HSCROLL:
+      UpdateColourValueLabels(handle);
+      InvalidateRect(handle, nullptr, FALSE);
+      if (state && state->studio) {
+        state->studio->ApplyColourPreview(state, ColourFromSliders(handle));
+      }
+      return 0;
+
+    case WM_LBUTTONDOWN: {
+      const int x = GET_X_LPARAM(lparam);
+      const int y = GET_Y_LPARAM(lparam);
+      const int column = (x - kColourPaletteLeft) / kColourSwatch;
+      const int row = (y - kColourPaletteTop) / kColourSwatch;
+
+      if (x >= kColourPaletteLeft && y >= kColourPaletteTop &&
+          column >= 0 && column < kColourPaletteColumns && row >= 0 &&
+          row < kColourPaletteRows) {
+        const DirectX::XMFLOAT3& colour =
+            kColourPalette[row * kColourPaletteColumns + column];
+
+        SetColourSliders(handle, colour);
+        UpdateColourValueLabels(handle);
+        InvalidateRect(handle, nullptr, FALSE);
+        if (state && state->studio) {
+          state->studio->ApplyColourPreview(state, colour);
+        }
+      }
+      return 0;
+    }
+
+    case WM_PAINT: {
+      PAINTSTRUCT paint{};
+      HDC dc = BeginPaint(handle, &paint);
+
+      for (int i = 0; i < kColourPaletteColumns * kColourPaletteRows; ++i) {
+        const int column = i % kColourPaletteColumns;
+        const int row = i / kColourPaletteColumns;
+        RECT cell{kColourPaletteLeft + column * kColourSwatch,
+                  kColourPaletteTop + row * kColourSwatch,
+                  kColourPaletteLeft + (column + 1) * kColourSwatch,
+                  kColourPaletteTop + (row + 1) * kColourSwatch};
+
+        const DirectX::XMFLOAT3& colour = kColourPalette[i];
+        HBRUSH brush = CreateSolidBrush(RGB(ColourChannel(colour.x),
+                                            ColourChannel(colour.y),
+                                            ColourChannel(colour.z)));
+        FillRect(dc, &cell, brush);
+        DeleteObject(brush);
+        FrameRect(dc, &cell, GetSysColorBrush(COLOR_3DSHADOW));
+      }
+
+      const DirectX::XMFLOAT3 current = ColourFromSliders(handle);
+      RECT preview{kColourPreviewLeft, kColourPreviewTop,
+                   kColourPreviewLeft + kColourPreviewWidth,
+                   kColourPreviewTop + kColourPreviewHeight};
+      HBRUSH previewBrush =
+          CreateSolidBrush(RGB(ColourChannel(current.x),
+                               ColourChannel(current.y),
+                               ColourChannel(current.z)));
+      FillRect(dc, &preview, previewBrush);
+      DeleteObject(previewBrush);
+      FrameRect(dc, &preview, GetSysColorBrush(COLOR_3DSHADOW));
+
+      EndPaint(handle, &paint);
+      return 0;
+    }
+
+    case WM_CLOSE:
+      DestroyWindow(handle);
+      return 0;
+
+    case WM_DESTROY:
+      if (state) state->window = nullptr;
+      break;
+
+    default:
+      break;
+  }
+
+  return DefWindowProcW(handle, message, wparam, lparam);
+}
+
+void Studio::ApplyColourPreview(ColourDialogState* state,
+                                const DirectX::XMFLOAT3& colour) {
+  if (!state) return;
+
   Part* part = world_.MutablePart(selected_);
   if (!part) return;
 
-  const auto channel = [](float value) {
-    return static_cast<BYTE>(
-        std::lround(std::clamp(value, 0.0f, 1.0f) * 255.0f));
+  part->colour = colour;
+  state->changed = true;
+
+  if (viewport_) InvalidateRect(viewport_, nullptr, FALSE);
+}
+
+// The picker: three sliders, the era's palette and a preview, with the part
+// changing as the colour does. The old Windows dialog is gone, because it gave
+// no swatches, no live view and a full colour space for bricks that were always
+// chosen from a small set.
+void Studio::ChooseColour() {
+  Part* part = world_.MutablePart(selected_);
+  if (!part) {
+    statusText_ = L"Select a part before choosing a colour.";
+    UpdateStatus();
+    return;
+  }
+
+  WNDCLASSEXW dialogClass{};
+  dialogClass.cbSize = sizeof(dialogClass);
+  dialogClass.lpfnWndProc = &Studio::ColourDialogProc;
+  dialogClass.hInstance = GetModuleHandleW(nullptr);
+  dialogClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+  dialogClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+  dialogClass.lpszClassName = kColourClass;
+  if (!RegisterClassExW(&dialogClass) &&
+      GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
+    return;
+  }
+
+  ColourDialogState state;
+  state.studio = this;
+  state.beforeParts = world_.Parts();
+  state.beforeSelected = selected_;
+  state.original = part->colour;
+
+  const int initialRed = ColourChannel(part->colour.x);
+  const int initialGreen = ColourChannel(part->colour.y);
+  const int initialBlue = ColourChannel(part->colour.z);
+
+  const DWORD style = WS_POPUP | WS_CAPTION | WS_SYSMENU;
+  const DWORD exStyle = WS_EX_DLGMODALFRAME;
+  RECT size{0, 0, 380, 288};
+  AdjustWindowRectEx(&size, style, FALSE, exStyle);
+
+  RECT ownerRect{};
+  GetWindowRect(frame_, &ownerRect);
+  const int width = size.right - size.left;
+  const int height = size.bottom - size.top;
+  const int x =
+      ownerRect.left + ((ownerRect.right - ownerRect.left) - width) / 2;
+  const int y =
+      ownerRect.top + ((ownerRect.bottom - ownerRect.top) - height) / 2;
+
+  state.window = CreateWindowExW(exStyle, kColourClass, L"Colour", style, x,
+                                 y, width, height, frame_, nullptr,
+                                 GetModuleHandleW(nullptr), &state);
+  if (!state.window) return;
+
+  HFONT font = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+
+  CreatePublishLabel(state.window, L"Red", 16, 22, 36, 18, font);
+  CreatePublishLabel(state.window, L"Green", 16, 58, 36, 18, font);
+  CreatePublishLabel(state.window, L"Blue", 16, 94, 36, 18, font);
+
+  const auto trackbar = [&](int id, int top, int value) {
+    HWND control = CreateWindowExW(
+        0, L"msctls_trackbar32", L"",
+        WS_CHILD | WS_VISIBLE | WS_TABSTOP | TBS_HORZ | TBS_NOTICKS, 58, top,
+        224, 30, state.window,
+        reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),
+        GetModuleHandleW(nullptr), nullptr);
+    SendMessageW(control, TBM_SETRANGE, TRUE, MAKELPARAM(0, 255));
+    SendMessageW(control, TBM_SETPAGESIZE, 0, 16);
+    SendMessageW(control, TBM_SETPOS, TRUE, value);
+    return control;
   };
 
-  CHOOSECOLORW choose{};
-  choose.lStructSize = sizeof(choose);
-  choose.hwndOwner = frame_;
-  choose.rgbResult = RGB(channel(part->colour.x), channel(part->colour.y),
-                         channel(part->colour.z));
-  choose.lpCustColors = customColours_;
-  choose.Flags = CC_FULLOPEN | CC_RGBINIT;
+  trackbar(kColourRedId, 12, initialRed);
+  trackbar(kColourGreenId, 48, initialGreen);
+  trackbar(kColourBlueId, 84, initialBlue);
 
-  if (!ChooseColorW(&choose)) return;
+  const auto valueLabel = [&](int id, int top) {
+    HWND control = CreateWindowExW(
+        0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT, 292, top, 60, 18,
+        state.window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),
+        GetModuleHandleW(nullptr), nullptr);
+    SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+  };
 
-  PushUndo();
-  part->colour = {GetRValue(choose.rgbResult) / 255.0f,
-                  GetGValue(choose.rgbResult) / 255.0f,
-                  GetBValue(choose.rgbResult) / 255.0f};
+  valueLabel(kColourRedValueId, 22);
+  valueLabel(kColourGreenValueId, 58);
+  valueLabel(kColourBlueValueId, 94);
+  UpdateColourValueLabels(state.window);
+
+  CreatePublishLabel(state.window, L"Palette", 16, 134, 100, 18, font);
+  CreatePublishLabel(state.window, L"Preview", kColourPreviewLeft, 134, 100,
+                     18, font);
+  CreatePublishLabel(state.window,
+                     L"Pick a swatch or drag the sliders. The selected part "
+                     L"changes as you go; Cancel puts it back.",
+                     16, 208, 348, 34, font);
+
+  HWND ok = CreateWindowExW(
+      0, L"BUTTON", L"OK",
+      WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON, 186, 248, 84, 28,
+      state.window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDOK)),
+      GetModuleHandleW(nullptr), nullptr);
+  HWND cancel = CreateWindowExW(
+      0, L"BUTTON", L"Cancel",
+      WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, 278, 248, 84, 28,
+      state.window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDCANCEL)),
+      GetModuleHandleW(nullptr), nullptr);
+  SendMessageW(ok, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+  SendMessageW(cancel, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+
+  EnableWindow(frame_, FALSE);
+  ShowWindow(state.window, SW_SHOW);
+  UpdateWindow(state.window);
+  SetFocus(GetDlgItem(state.window, kColourRedId));
+
+  MSG message{};
+  while (state.window && GetMessageW(&message, nullptr, 0, 0) > 0) {
+    if (!IsDialogMessageW(state.window, &message)) {
+      TranslateMessage(&message);
+      DispatchMessageW(&message);
+    }
+  }
+
+  if (state.window) DestroyWindow(state.window);
+  EnableWindow(frame_, TRUE);
+  SetActiveWindow(frame_);
+
+  if (!state.accepted) {
+    if (state.changed) {
+      world_.ReplaceParts(state.beforeParts);
+      selected_ = state.beforeSelected;
+      RefreshAfterEdit();
+      Log(L"Cancelled the colour change.");
+    }
+    return;
+  }
+
+  if (!state.changed) return;
+
+  undoStack_.push_back({state.beforeParts, state.beforeSelected});
+  if (undoStack_.size() > 64) undoStack_.erase(undoStack_.begin());
+  redoStack_.clear();
+
+  MarkDirty();
   RefreshAfterEdit();
+  statusText_ = L"Changed the colour.";
+  UpdateStatus();
   Log(L"Changed the selected part's colour.");
 }
 
@@ -3357,18 +3744,23 @@ void Studio::UpdateSelectionOutline() {
   edge({x, -y, 0.0f}, {thickness, thickness, part.size.z + thickness});
   edge({-x, -y, 0.0f}, {thickness, thickness, part.size.z + thickness});
 
-  // The white handles on the eight corners. The era's selection had them
-  // floating unlit; a small sphere from the same mesh pass reads the same way.
-  for (int corner = 0; corner < 8; ++corner) {
-    const DirectX::XMFLOAT3 offset{
-        (corner & 1) ? x : -x, (corner & 2) ? y : -y,
-        (corner & 4) ? z : -z};
+  // The blue handles on the six faces: above, below, left, right, front and
+  // back. Each one stretches the part along its own axis, so the ball that is
+  // visible is the direction the brick will grow.
+  for (int face = 0; face < 6; ++face) {
+    DirectX::XMFLOAT3 offset{0.0f, 0.0f, 0.0f};
+    if (face == 0) offset.x = x;
+    else if (face == 1) offset.x = -x;
+    else if (face == 2) offset.y = y;
+    else if (face == 3) offset.y = -y;
+    else if (face == 4) offset.z = z;
+    else offset.z = -z;
 
     Part handle;
     handle.name = "Selection handle";
     handle.shape = PartShape::Sphere;
-    handle.size = {0.7f, 0.7f, 0.7f};
-    handle.colour = {1.0f, 1.0f, 1.0f};
+    handle.size = {0.8f, 0.8f, 0.8f};
+    handle.colour = {0.16f, 0.34f, 1.0f};
     handle.collides = false;
 
     const DirectX::XMVECTOR turned = DirectX::XMVector3TransformCoord(
@@ -4098,8 +4490,8 @@ void Studio::OnCommand(int command) {
           std::wstring(L"FieldBrik Studio ") + kClientVersion +
           L"\n\nA 2008-style place editor: Explorer, Properties, a tabbed\n"
           L"viewport and the era's menus. Drag a part to move it, drag a\n"
-          L"corner handle to resize it, and use Format > Rotate, Tilt, Roll\n"
-          L"or Colour for the selected part. Play Solo saves the place to a\n"
+          L"face handle to scale it that way, and use Format > Rotate, Tilt,\n"
+          L"Roll or Colour for the selected part. Play Solo saves the place to a\n"
           L"temporary .fbrx and opens it in FieldBrikPlayer.exe.";
       MessageBoxW(frame_, about.c_str(), L"About FieldBrik",
                   MB_OK | MB_ICONINFORMATION);
@@ -4369,15 +4761,12 @@ LRESULT Studio::HandleViewport(HWND handle, UINT message, WPARAM wparam,
 
       if (selected_ >= 0 && selected_ < world_.PartCount()) {
         const Part& part = world_.Parts()[selected_];
-        const bool axisAligned =
-            !part.hasRotationMatrix && part.rotationDegrees.x == 0.0f &&
-            part.rotationDegrees.y == 0.0f && part.rotationDegrees.z == 0.0f;
-        const int corner = axisAligned ? HandleAt(x, y) : -1;
+        const int face = HandleAt(x, y);
 
-        if (corner >= 0) {
+        if (face >= 0) {
           draggingResize_ = true;
           dragChanged_ = false;
-          dragHandle_ = corner;
+          dragHandle_ = face;
           dragStartPosition_ = part.position;
           dragStartSize_ = part.size;
           dragStartMouse_ = {x, y};
@@ -4447,6 +4836,7 @@ LRESULT Studio::HandleViewport(HWND handle, UINT message, WPARAM wparam,
     case WM_LBUTTONUP:
       if (draggingMove_ || draggingResize_) {
         const bool changed = dragChanged_;
+        const bool resized = draggingResize_;
         draggingMove_ = false;
         draggingResize_ = false;
         dragChanged_ = false;
@@ -4455,7 +4845,8 @@ LRESULT Studio::HandleViewport(HWND handle, UINT message, WPARAM wparam,
 
         if (changed) {
           ShowProperties(selected_);
-          Log(L"Moved or resized the selected part.");
+          Log(resized ? L"Resized the selected part."
+                      : L"Moved the selected part.");
         }
       }
       return 0;

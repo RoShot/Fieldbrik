@@ -12,7 +12,7 @@ cmake_minimum_required(VERSION 3.21)
 # art can be dropped in without a rebuild. The whole content folder is copied next
 # to the exe after every build.
 
-project(FieldBrikStudio VERSION 0.9 LANGUAGES CXX)
+project(FieldBrikStudio VERSION 0.9.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
