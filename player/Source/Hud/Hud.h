@@ -28,11 +28,6 @@ namespace fieldbrik {
 
 class Input;
 
-// How a label's glyph is edged. 2008 did not outline every piece of text: the
-// player list had a soft shadow, the top strip was plain dark type on grey, and
-// only the small world-facing labels carried a hard black edge.
-enum class TextStyle { Outline, Shadow, Plain };
-
 class Hud {
  public:
   // What a click asked the client to do. The HUD never does any of it itself: the
@@ -90,7 +85,6 @@ class Hud {
     Tilt,
     Report,
     Chat,
-    Tools,
     HelpPanel,
     HelpClose,
     ChatBar,
@@ -119,8 +113,7 @@ class Hud {
   bool MakeLabels();
   bool LoadTexture(int resourceId,
                    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& view);
-  bool MakeLabel(const wchar_t* text, int pointSize, bool bold, Label& label,
-                 TextStyle style = TextStyle::Outline);
+  bool MakeLabel(const wchar_t* text, int pointSize, bool bold, Label& label);
 
   void Layout();
   void LayoutChat();
@@ -204,32 +197,21 @@ class Hud {
   Label fullscreen_;
   Label helpButton_;
   Label exit_;
-  Label tools_;
-  Label edit_;
   Label players_;
   Label you_;
-  Label health_;
-  std::vector<Label> hotbarNumbers_;
   Label helpTitle_;
   Label helpClose_;
   std::vector<Label> helpLines_;
+  Label health_;
+  std::vector<Label> hotbarNumbers_;
 
-  // The backpack strip along the bottom, and whether Tools currently shows it.
-  bool hotbarVisible_ = true;
-  Rect hotbar_;
-  std::vector<Rect> hotbarSlots_;
-
-  // The era's vertical health meter on the right edge.
-  Rect healthTrack_;
-  Rect healthFill_;
-
-  Rect topStrip_;
-  Rect hamburger_;
   Rect topFullscreen_;
   Rect topHelp_;
   Rect topExit_;
-  Rect topTools_;
-  Rect topEdit_;
+  Rect hotbar_;
+  std::vector<Rect> hotbarSlots_;
+  Rect healthTrack_;
+  Rect healthFill_;
   Rect leaderboard_;
   Rect chatButton_;
   Rect zoomInButton_;
