@@ -158,8 +158,12 @@ void Avatar::MoveJump() {
   rightShoulder_.rate = 0.75f;
   leftShoulder_.rate = 0.75f;
 
-  rightShoulder_.desired = 3.14f;
-  leftShoulder_.desired = -3.14f;
+  // Both arms go up, and the sweep back down must pass in front of the body.
+  // A target of +pi on the right shoulder eased down through the back, which is
+  // what made a landing look like the arms were being pulled behind the player;
+  // the mirrored target keeps the raised pose and comes down the front.
+  rightShoulder_.desired = -3.14f;
+  leftShoulder_.desired = 3.14f;
 
   rightHip_.desired = 0.0f;
   leftHip_.desired = 0.0f;
@@ -253,6 +257,38 @@ void Avatar::CollectParts(std::vector<Part>& out) const {
     part.rotationDegrees = {XMConvertToDegrees(pitch), facing_, 0.0f};
 
     out.push_back(part);
+
+    // Hands and feet carried a stud on the underside in the era's body. It is a
+    // separate small cylinder parented to the limb: it swings with the joint, so
+    // it stays on the bottom face through the whole walk and jump.
+    const bool limb = body.joint == JointId::LeftArm ||
+                      body.joint == JointId::RightArm ||
+                      body.joint == JointId::LeftLeg ||
+                      body.joint == JointId::RightLeg;
+    if (!limb) continue;
+
+    constexpr float kStudWidth = 0.6f;
+    constexpr float kStudHeight = 0.2f;
+
+    // From the limb's centre to the outer face of the stud, along the limb's own
+    // down axis, swung by the same pitch as the limb above it.
+    const float reach = body.size.y * 0.5f + kStudHeight * 0.5f;
+    const float studOffsetY = -reach * swingCosine;
+    const float studOffsetZ = -reach * swingSine;
+
+    Part stud;
+    stud.name = std::string(body.name) + " stud";
+    stud.size = {kStudWidth, kStudHeight, kStudWidth};
+    stud.colour = body.colour;
+    stud.shape = PartShape::Cylinder;
+    stud.collides = false;
+
+    stud.position.x = feet_.x + local.x * cosine + (local.z + studOffsetZ) * sine;
+    stud.position.y = feet_.y + local.y + studOffsetY;
+    stud.position.z = feet_.z - local.x * sine + (local.z + studOffsetZ) * cosine;
+    stud.rotationDegrees = {XMConvertToDegrees(pitch), facing_, 0.0f};
+
+    out.push_back(stud);
   }
 }
 
