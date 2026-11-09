@@ -22,7 +22,7 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./public"
 binding = "ASSETS"
 
-# Database. The id comes from the Cloudflare dashboard for fieldbrik_v03.
+# Database. Replace the id with the one your dashboard gives you.
 [[d1_databases]]
 binding = "DB"
 database_name = "fieldbrik_v03"

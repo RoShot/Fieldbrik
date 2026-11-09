@@ -70,7 +70,7 @@
           <ul class="fb-games2009__grid">
             <% tiles.forEach(function (place) { %>
               <li>
-                <a class="fb-game2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                <a class="fb-game2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"><%- include('../partials/thumb-img', { thumbUrl: place.thumbnailUrl }) %></a>
                 <a class="fb-game2009__name" href="/games/<%= place.slug %>"><%= place.name %></a>
                 <p class="fb-game2009__meta">Updated: <%= place.updatedLabel %></p>
                 <p class="fb-game2009__meta">Creator:

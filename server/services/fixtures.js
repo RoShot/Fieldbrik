@@ -2,8 +2,8 @@
  * PHASE 1 DISPLAY DATA - NOT THE FINAL DATA SOURCE.
  *
  * The front end is built before the database exists, so pages read their data
- * from the service layer. Every page goes through `server/services/*`
- * rather than importing this file. In phase 2 each service swaps these reads for
+ * from the service layer. Every page goes through `server/services/*` rather
+ * than importing this file. In phase 2 each service swaps these reads for
  * D1 queries; the templates do not change at all.
  *
  * Nothing here is intended to ship as pretend production data.

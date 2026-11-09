@@ -25,6 +25,22 @@ class Studio {
   int Run(HINSTANCE instance, int showCommand, const std::wstring& placePath);
 
  private:
+  // A Properties row that can be typed into. Rows that are only there to be
+  // read — Parent, Shape, a texture id — carry None.
+  enum class PropertyField {
+    None,
+    Colour,
+    Name,
+    Position,
+    Size,
+    Rotation,
+    CanCollide
+  };
+
+  struct PropertyRow {
+    PropertyField field = PropertyField::None;
+  };
+
   bool CreateFrame(HINSTANCE instance, int showCommand);
   bool CreateChildren();
   void CreateMenuBar();
@@ -42,6 +58,7 @@ class Studio {
   bool RequestClose();
   void MarkDirty();
   bool PlaySolo();
+  void PublishPlace();
   std::wstring FindPlayerExecutable() const;
   void RotateSelected(int axis);
   void ChooseColour();
@@ -53,7 +70,17 @@ class Studio {
   void SelectTreeItem(int index);
   void ShowProperties(int index);
   void AddPropertyRow(const wchar_t* name, const std::wstring& value,
-                      bool header = false);
+                      bool header = false,
+                      PropertyField field = PropertyField::None);
+  int PropertyRowForField(PropertyField field) const;
+  void BeginPropertyEdit(int row);
+  void CommitPropertyEdit();
+  void CancelPropertyEdit();
+  bool ApplyPropertyValue(int row, const std::wstring& text,
+                          std::wstring* error);
+  static LRESULT CALLBACK PropertyEditProc(HWND window, UINT message,
+                                           WPARAM wparam, LPARAM lparam,
+                                           UINT_PTR subclass, DWORD_PTR data);
   void Log(const std::wstring& line);
   void ResetCamera();
   void Render();
@@ -67,14 +94,19 @@ class Studio {
   void DrawPanelHeader(HDC dc, const RECT& panel, const wchar_t* title);
   void DrawPropertiesTitle(HDC dc, const RECT& panel);
   void DrawToolbox(HDC dc, const RECT& panel);
+  void DrawStartPageBrowser(HDC dc, const RECT& area);
   void DrawStartPage(HDC dc, const RECT& area);
   void DrawStatusBar(HDC dc, const RECT& area);
+  bool ButtonEnabled(const ToolButton& button) const;
+  int StartPageChromeAt(int x, int y) const;
+  void StartPageAction(int action);
   void ToggleFullscreen();
   void OnCommand(int command);
   void SetPlaceTitle();
   void UpdateStatus();
   void CameraForward(DirectX::XMFLOAT3* forward) const;
   int PickPart(int x, int y) const;
+  float StackTopAt(float x, float z) const;
   void UpdateSelectionOutline();
   void PushUndo();
   void Undo();
@@ -105,6 +137,8 @@ class Studio {
   RECT ViewportRect() const;
   RECT ToolboxRect() const;
   RECT StartPageRect() const;
+  RECT StartPageBrowserRect() const;
+  RECT StartPagePageRect() const;
   RECT StartPageCardRect(int index) const;
   int ToolboxRowAt(int x, int y) const;
   int StartPageCardAt(int x, int y) const;
@@ -139,6 +173,8 @@ class Studio {
 
   std::wstring placePath_;
   std::wstring placeName_ = L"Place1";
+  std::wstring publishSite_ = L"https://fieldbrik.com";
+  std::wstring publishPlace_;
   std::wstring statusText_ = L"Ready";
   std::wstring propertiesTitle_;
   std::vector<std::wstring> recentPlaces_;
@@ -169,10 +205,18 @@ class Studio {
   int hotButton_ = -1;
   int hotToolboxRow_ = -1;
   int hotCard_ = -1;
+  int hotStartPageChrome_ = -1;
   POINT lastMouse_{0, 0};
   RECT windowedRect_{0, 0, 0, 0};
   LONG_PTR windowedStyle_ = 0;
   std::vector<bool> propertyHeaders_;
+  std::vector<PropertyRow> propertyRows_;
+
+  // The inline editor that sits over a Properties value cell while it is typed.
+  // It is a child of the frame rather than of the list, so its Enter and Escape
+  // reach the subclass below.
+  HWND propertyEdit_ = nullptr;
+  int propertyEditRow_ = -1;
   COLORREF customColours_[16]{};
 
   // The blue box and white corner handles, rebuilt whenever the selection

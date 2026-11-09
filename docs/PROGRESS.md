@@ -1,6 +1,6 @@
 # FieldBrik 0.3 — Progress
 
-Last updated: 2026-11-04
+Last updated: 2026-11-09
 
 `ARCHITECTURE.md` says **how** the site is built. This file says **where we are**.
 `DECISIONS.md` says **why** each choice was made. Read all three before starting work
@@ -11,9 +11,9 @@ in a new session — they are the only record that survives.
 - The website is live on Cloudflare Workers with a D1 database. Every public page
   reads the database; the phase 1 fixture file is only reachable through handlers in
   `routes/pages.js` that earlier passes deliberately shadowed.
-- The client and the Studio are **not** part of this repository. A replicated
-  2010–2011 client and Studio exist outside the project; the join bridge that would
-  let them talk to this site is not built yet.
+- The client and Studio live in `player/` and `studio/`. Place files can be
+  published from either Studio or the website and downloaded back, but the
+  client still has no join/session bridge to this site.
 
 ## The phase plan
 
@@ -27,7 +27,7 @@ in a new session — they are the only record that survives.
 | 6 | Admin and moderation | User/role/ban/warning management, audit log, abuse reports | **complete** |
 | 7 | Tests and hardening | Integration tests, permission matrix, ban expiry, economy atomicity, backups | **partial** |
 | 8 | Polish pass | Header art, custom Bucks/Tickets icons, page-by-page reference pass | deferred by request |
-| 9 | Place editor | Publishing, versioning, asset manifests | **external** — the replicated Studio |
+| 9 | Place editor | Publishing, versioning, asset manifests | **partial** — D1 storage, versioning, download and Studio/site publishing; asset manifests and client playback next |
 | 10 | Public API and client auth | Frozen `/api/v1`, game discovery, revocable desktop login | not started |
 | 11 | The client | 3D renderer, movement, multiplayer, chat | **external** — the replicated client |
 | 12 | Beta and release | Closed beta, load test, monitoring, legal review, launch | not started |
@@ -55,6 +55,12 @@ belongs with phase 10 and is deliberately last, so the website is finished first
    "View Public Profile" link is the signed-in member's profile, not a fixture
    account.
 
+8. **Place files.** Places now own real XML files, not just listings. Every
+   publish is a `place_versions` row, so earlier versions survive; the highest
+   version is what `/games/:slug/file` serves. Studio can sign in and publish
+   through the same endpoint as the website's file picker. The 1.5 MB limit
+   stays below D1's 2 MB row cap.
+
 ### News, specifically
 
 `news` was in the baseline schema but nothing read or wrote it. It is now the real
@@ -75,8 +81,8 @@ source for `/news`, `/news/:slug`, the home page panel and the admin screens.
 These cannot be built honestly in this repository yet:
 
 - **Playing a place** — needs the client, which lives outside this repo.
-- **Place files (.rbxl)** — the Studio that produces them is external; the site has no
-  storage or delivery for them yet.
+- **Playing a published place** — storing and downloading `.fbrx`/XML `.rbxl` files
+  works; playing one still needs the client to join a real session.
 - **Visits and the 10-visit Ticket milestone** — the rate is configurable and the
   service exists, but nothing can count a visit until a real join happens. The Games
   and place pages say so in words instead of showing a zero.

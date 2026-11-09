@@ -23,6 +23,8 @@ const { Router } = require('../lib/router');
 const site = require('../config/site');
 const pageContext = require('../services/pageContext');
 const places = require('../services/places');
+const placeFiles = require('../services/placeFiles');
+const placeThumbnails = require('../services/placeThumbnails');
 const people = require('../services/people');
 const notices = require('../services/notices');
 const permissions = require('../services/permissions');
@@ -50,6 +52,8 @@ function profileLinksFor(viewer) {
 const DONE = {
   created: 'Place created. Publish it when you are ready for other members to see it.',
   saved: 'Place saved.',
+  file: 'Place file published. The newest version is now available to download.',
+  thumbnail: 'Thumbnail saved. It is on the place page and on its tiles now.',
   published: 'Place published. It is in the Games list now.',
   unpublished: 'Place unpublished. It is out of the Games list; the page still exists for you.',
 };
@@ -60,6 +64,27 @@ const FAILED = {
   no_place: 'That place does not exist.',
   not_yours: 'That place belongs to another member.',
   refused: 'The place was not saved.',
+};
+
+const FILE_FAILED = {
+  no_place: 'That place does not exist.',
+  not_yours: 'That place belongs to another member.',
+  filename: 'The file needs a name ending in .fbrx, .rbxl, .rbxlx or .xml.',
+  format: 'Only XML place files are accepted. Save the place as XML first.',
+  empty: 'That file is empty.',
+  size: `A place file can be up to ${placeFiles.MAX_BYTES / (1024 * 1024)} MB.`,
+  content:
+    'That is not a FieldBrik or Roblox XML place. A .fbrx or .rbxlx file has a <roblox> root; a binary .rbxl has to be saved as XML first.',
+  refused: 'The place file was not saved. Try publishing it again.',
+};
+
+const THUMBNAIL_FAILED = {
+  no_place: 'That place does not exist.',
+  not_yours: 'That place belongs to another member.',
+  empty: 'That picture is empty.',
+  size: `A thumbnail can be up to ${Math.round(placeThumbnails.MAX_BYTES / 1024)} KB.`,
+  format: 'A thumbnail has to be a PNG or JPEG image.',
+  refused: 'The thumbnail was not saved. Try another picture.',
 };
 
 function noticeFor(query) {
@@ -272,7 +297,10 @@ router.get('/games/:slug', (req, res, next) => {
       );
     }
 
-    const creator = await people.findOne(req.db, place.creator);
+    const [creator, placeFile] = await Promise.all([
+      people.findOne(req.db, place.creator),
+      placeFiles.latest(req.db, place.id),
+    ]);
 
     return res.render(
       'pages/game',
@@ -280,6 +308,7 @@ router.get('/games/:slug', (req, res, next) => {
         pageTitle: `${place.name} - ${site.name}`,
         place,
         creator,
+        placeFile,
         isOwner,
         notice: noticeFor(req.query),
       })
@@ -287,16 +316,80 @@ router.get('/games/:slug', (req, res, next) => {
   })().catch(next);
 });
 
+/**
+ * The newest place file.
+ *
+ * A published place's file is public; a draft's file is only for its owner,
+ * exactly like the place page. It is always an attachment: XML is served as
+ * XML, never as a page a browser might render.
+ */
+router.get('/games/:slug/file', (req, res, next) => {
+  return (async () => {
+    if (!req.db) return res.status(404).send('No place file has been published.');
+
+    const place = await places.findOne(req.db, req.params.slug);
+    const isOwner = Boolean(req.viewer && place && place.creatorId === req.viewer.id);
+
+    if (!place || (!place.published && !isOwner)) {
+      return res.status(404).send('No place file has been published.');
+    }
+
+    const file = await placeFiles.latestContent(req.db, place.id);
+    if (!file) return res.status(404).send('No place file has been published.');
+
+    res.setHeader('Content-Type', file.mime);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return res.send(file.content);
+  })().catch(next);
+});
+
+/**
+ * A place's thumbnail.
+ *
+ * The picture is public with the place and private with a draft, exactly like
+ * the place page and the place file. `Cache-Control` lets a browser and a shared
+ * cache keep it, so a tile does not ask again for every visit; the `v` in the
+ * tile's address changes whenever a new picture is saved.
+ */
+router.get('/games/:slug/thumbnail', (req, res, next) => {
+  return (async () => {
+    if (!req.db) return res.status(404).send('No thumbnail.');
+
+    const place = await places.findOne(req.db, req.params.slug);
+    const isOwner = Boolean(req.viewer && place && place.creatorId === req.viewer.id);
+
+    if (!place || (!place.published && !isOwner)) return res.status(404).send('No thumbnail.');
+
+    const image = await placeThumbnails.latest(req.db, place.id);
+    if (!image) return res.status(404).send('No thumbnail.');
+
+    res.setHeader('Content-Type', image.type);
+    res.setHeader('Content-Length', String(image.bytes.length));
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', place.published ? 'public, max-age=300' : 'private, no-store');
+    res.setHeader('ETag', image.etag);
+
+    if (String(req.headers['if-none-match'] || '') === image.etag) return res.status(304).end();
+
+    // Express takes a Buffer from send(); the Worker needs sendBytes, because its
+    // send() turns anything into text.
+    return typeof res.sendBytes === 'function' ? res.sendBytes(image.bytes) : res.send(image.bytes);
+  })().catch(next);
+});
+
 // ---------- Creating and editing ----------
 
 /** A place form, for a new place and for editing an existing one. */
-function renderForm(req, res, status, place, failure) {
+function renderForm(req, res, status, place, failure, files) {
   return res.status(status).render(
     'pages/place-edit',
     pageContext(req, {
       pageTitle: place ? `Edit ${place.name} - ${site.name}` : `New Place - ${site.name}`,
       authState: 'member',
       place,
+      latestFile: files ? files.latest : null,
+      fileHistory: files ? files.history : [],
       failure: failure || null,
       notice: failure ? null : noticeFor(req.query),
     })
@@ -394,7 +487,105 @@ router.get('/places/:id/edit', (req, res, next) => {
       );
     }
 
-    return renderForm(req, res, 200, place, null);
+    const [latestFile, fileHistory] = await Promise.all([
+      placeFiles.latest(req.db, place.id),
+      placeFiles.history(req.db, place.id, 5),
+    ]);
+
+    return renderForm(req, res, 200, place, null, {
+      latest: latestFile,
+      history: fileHistory,
+    });
+  })().catch(next);
+});
+
+/**
+ * Publish a place file.
+ *
+ * The site sends JSON because the browser has read the file; Studio sends the
+ * XML itself with its filename in X-FieldBrik-Filename. Both arrive here as
+ * body.content plus body.filename, and the same service validates both.
+ */
+router.post('/places/:id/file', (req, res, next) => {
+  return (async () => {
+    if (!req.viewer) return res.status(401).json({ ok: false, error: 'Sign in first.' });
+    if (!req.db) {
+      return res.status(503).json({ ok: false, error: 'Publishing a place needs the database.' });
+    }
+
+    const raw = req.body || {};
+    const body = typeof raw === 'string' ? { content: raw } : raw;
+    const headers = req.headers || {};
+
+    // Studio may be given the readable place address rather than the numeric
+    // edit id. Resolve a slug to the row it names; the service still checks
+    // ownership, so a guess cannot publish to somebody else's place.
+    const requested = String(req.params.id || '');
+    let placeId = requested;
+    if (!/^\d+$/.test(requested)) {
+      const resolved = await places.findOne(req.db, requested);
+      if (resolved) placeId = resolved.id;
+    }
+
+    const result = await placeFiles.addVersion(req.db, {
+      placeId,
+      actorId: req.viewer.id,
+      filename: body.filename || headers['x-fieldbrik-filename'] || req.query.filename,
+      content: body.content,
+      note: body.note || req.query.note,
+    });
+
+    if (!result.ok) {
+      const status = result.code === 'no_place' ? 404 : result.code === 'not_yours' ? 403 : 400;
+      return res.status(status).json({
+        ok: false,
+        code: result.code,
+        error: FILE_FAILED[result.code] || FILE_FAILED.refused,
+      });
+    }
+
+    return res.status(201).json({
+      ok: true,
+      code: result.code,
+      file: result.file,
+      edit: `/places/${Number(placeId) || 0}/edit`,
+    });
+  })().catch(next);
+});
+
+/**
+ * Save a place thumbnail.
+ *
+ * The browser has already cropped and shrunk the picture, so it arrives as one
+ * base64 string in JSON. Nothing trusts the declared type: the service reads the
+ * first bytes and refuses anything that is not a PNG or JPEG.
+ */
+router.post('/places/:id/thumbnail', (req, res, next) => {
+  return (async () => {
+    if (!req.viewer) return res.status(401).json({ ok: false, error: 'Sign in first.' });
+    if (!req.db) {
+      return res.status(503).json({ ok: false, error: 'Saving a thumbnail needs the database.' });
+    }
+
+    const raw = req.body || {};
+    const body = typeof raw === 'string' ? { content: raw } : raw;
+
+    const result = await placeThumbnails.set(req.db, {
+      placeId: req.params.id,
+      actorId: req.viewer.id,
+      content: body.content,
+    });
+
+    if (!result.ok) {
+      const status = result.code === 'no_place' ? 404 : result.code === 'not_yours' ? 403 : 400;
+      return res.status(status).json({
+        ok: false,
+        code: result.code,
+        error: THUMBNAIL_FAILED[result.code] || THUMBNAIL_FAILED.refused,
+      });
+    }
+
+    return res.status(201).json({ ok: true, code: result.code, thumbnail: result.thumbnail });
   })().catch(next);
 });
 

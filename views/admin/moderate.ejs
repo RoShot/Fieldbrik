@@ -45,8 +45,8 @@
                 <legend class="fb-admin__subheading">Action</legend>
                 <% actions.forEach(function (action, index) { %>
                   <label class="fb-mod__choice">
-                    <input type="radio" name="action" value="<%= action.key %>"<%= index === 0 ? ' checked' : '' %>
-                    ><%= action.label %>
+                    <input type="radio" name="action" value="<%= action.key %>"<%= index === 0 ? ' checked' : '' %>>
+                    <%= action.label %>
                   </label>
                 <% }); %>
               </fieldset>

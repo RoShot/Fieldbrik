@@ -102,7 +102,7 @@
           <ul class="fb-places2009">
             <% recommended.slice(0, 4).forEach(function (place) { %>
               <li>
-                <a class="fb-places2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                <a class="fb-places2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"><%- include('../partials/thumb-img', { thumbUrl: place.thumbnailUrl }) %></a>
                 <a class="fb-places2009__name" href="/games/<%= place.slug %>"><%= place.name %></a>
                 <p class="fb-places2009__meta">By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
               </li>
@@ -123,7 +123,7 @@
           <ul class="fb-places2009 fb-places2009--rows">
             <% recommended.slice().sort(function (a, b) { return b.visits - a.visits; }).slice(0, 4).forEach(function (place) { %>
               <li>
-                <a class="fb-places2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                <a class="fb-places2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"><%- include('../partials/thumb-img', { thumbUrl: place.thumbnailUrl }) %></a>
                 <span class="fb-places2009__text">
                   <a class="fb-places2009__name" href="/games/<%= place.slug %>"><%= place.name %></a>
                   <span class="fb-places2009__meta"><%= place.published ? 'Published' : 'Draft' %> &middot; <%= place.creator %></span>
@@ -196,7 +196,7 @@
         <h2 class="fb-box__title fb-box__title--centre">Featured Place: <%= featured.name %></h2>
         <div class="fb-box__body">
           <div class="fb-feature">
-            <a class="fb-feature__thumb" href="/games/<%= featured.slug %>" style="--thumb: <%= featured.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+            <a class="fb-feature__thumb" href="/games/<%= featured.slug %>" style="--thumb: <%= featured.thumb %>;" aria-hidden="true" tabindex="-1"><%- include('../partials/thumb-img', { thumbUrl: featured.thumbnailUrl }) %></a>
             <div class="fb-feature__side">
               <a class="fb-feature__play" href="/games/<%= featured.slug %>">Play This</a>
               <p class="fb-feature__meta">Updated: <%= featured.updated %></p>
@@ -244,7 +244,7 @@
           <ul class="fb-places2009">
             <% recommended.slice(4, 8).forEach(function (place) { %>
               <li>
-                <a class="fb-places2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                <a class="fb-places2009__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"><%- include('../partials/thumb-img', { thumbUrl: place.thumbnailUrl }) %></a>
                 <a class="fb-places2009__name" href="/games/<%= place.slug %>"><%= place.name %></a>
                 <p class="fb-places2009__meta">By <a href="/people/<%= encodeURIComponent(place.creator) %>"><%= place.creator %></a></p>
               </li>

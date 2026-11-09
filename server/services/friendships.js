@@ -1,5 +1,5 @@
 /**
- * Friendships: requests, answers, and removing or blocking.
+ * Friend requests and the write side of the friend list.
  *
  * A pair is stored once, with user_a always the lower id, because the table has
  * a CHECK for it and a primary key on the pair. That means a friendship cannot

@@ -42,7 +42,14 @@ app.use(
 
 // Form bodies. No multipart uploads yet; those arrive with the avatar/catalog work.
 app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
+// Studio publishes raw XML rather than a form. Both runtimes turn that body
+// into the same { content } shape the place-file route reads.
+app.use(express.text({ type: ['application/xml', 'text/xml'], limit: '5mb' }));
+app.use((req, res, next) => {
+  if (typeof req.body === 'string') req.body = { content: req.body };
+  next();
+});
 
 // Account routes first: they answer POST /login, /register and /logout. On
 // this server there is no database, so they reply 503 rather than half-working.

@@ -407,6 +407,102 @@ and launches the player, and dirty places prompt before they are closed or
 replaced. Still to come: editable Properties fields, Models, Services and Tools,
 DPI-aware chrome, a real Explorer hierarchy, and the brick art itself.
 
+## 0.20 — Studio 0.7: the 2008 interface pass — done
+
+The editor now reads as the 2008 reference rather than merely sharing its parts.
+
+- The home tab is `Start Page`, not a project brand tab. It opens a local start
+  page inside browser chrome: Back, Forward, Stop, Refresh, Home, a sunken
+  address field and Go. Back, Forward, Stop and Go are visibly disabled because
+  the page has no web history; Refresh and Home work.
+- The page below the browser has the reference's dark FieldBrik header, the three
+  local templates and the footer note. The templates still start a new place and
+  still ask before discarding unsaved work.
+- Explorer rows select their whole line, and Properties shows the Property/Value
+  column headers with grid lines instead of hiding them.
+- The standard toolbar now enables New from startup and enables Undo and Redo
+  only when their stacks have something in them.
+- The window keeps the 2008 metrics: two 30-pixel toolbars, a 26-pixel tab strip,
+  a 24-pixel text strip, a 270-pixel right dock and a 22-pixel status line.
+- **Publish to FieldBrik** saves one XML snapshot, signs in with the account that
+  owns the place, and posts it to the site. Every publish is a new version, and
+  the newest is what the place page downloads. The website file picker uses the
+  same endpoint, so validation and version numbers cannot drift apart.
+
+Still to come: editable Properties fields, Models, Services and Tools, DPI-aware
+chrome, a real Explorer hierarchy, and the brick art itself.
+
+## 0.21 — Studio 0.8: bricks that stack — done
+
+Inserting a brick now stacks it instead of merging it into the one already
+there.
+
+- The insert point is snapped to the stud grid and clamped to the baseplate, so
+  brick edges meet brick edges rather than landing on fractions of a stud.
+- A new brick stands on the top of the highest brick whose footprint covers that
+  point, and on the build plane when nothing does. Before, every insert used the
+  same height over the same point, so a second brick vanished inside the first
+  and a row of them read as one block; the same button pressed again now raises
+  the tower by one brick.
+- The height comes from the footprint under the point rather than from the face
+  the camera's ray struck. Picking the struck face climbed one stud sideways per
+  insert, because each new top face met the ray a little further along it, which
+  turned a tower into a staircase.
+- A brick with CanCollide off is built through, as the era allowed, and a rotated
+  brick is measured by its size box.
+
+Still to come: editable Properties fields, Models, Services and Tools, DPI-aware
+chrome, a real Explorer hierarchy, and the brick art itself.
+
+## 0.22 — Studio 0.9: properties that are typed — done
+
+A place can be measured into shape now, not only dragged into it.
+
+- Double-click a value in Properties, or highlight its row and press Enter, and
+  the cell becomes an edit box over the value. Enter applies, Esc cancels,
+  clicking away applies, and the change is one undo step like every other edit.
+  F2 goes straight to Name, the way Explorer renames a file.
+- Name takes up to 64 characters and refuses a name another part already holds,
+  because new parts are named by finding the first free suffix. Colour is six
+  hex digits with or without the `#`. Position, Size and Rotation take three
+  numbers separated by commas or spaces, so `5, 2.5, -3.5` and `5 2.5 -3.5` both
+  read. CanCollide takes `true`, `false`, `1`, `0`, `yes` or `no`.
+- Nothing is applied until the whole value parses: a typo refuses the edit, says
+  why in the status line, and leaves the part where it was. Sides below 0.1
+  studs are refused rather than collapsing a brick to nothing.
+- Rotation typed in the panel clears a matrix that came from a place file, so
+  the angles that are shown are the angles that are stored.
+- Parent, Shape and the texture rows are shown for reference and stay read-only.
+
+Still open: there is no swatch or slider in the panel, Shape and Parent cannot be
+changed there, and the editor does not follow a scrolled list.
+
+### 0.23 Place thumbnails
+
+A place tile has always drawn a colour swatch, because no place art existed. A
+place can now carry a real picture, and the swatch stays underneath as the
+fallback, so a place without one looks exactly as it did before.
+
+- The picture is stored beside the place row as base64 in `games.thumbnail`,
+  with its media type and the time it was saved. There is no image bucket: a
+  320x200 JPEG is a few tens of KB, and the Worker and Express then share one
+  storage plan and one code path.
+- The browser crops and shrinks the chosen picture in a canvas before sending
+  it, so a phone photo never reaches the server and the stored image is small.
+- The server reads the first bytes and accepts only PNG or JPEG. A file with the
+  right extension and the wrong bytes is refused, and the cap is 256 KB.
+- `GET /games/:slug/thumbnail` serves the image with a five-minute cache; its
+  address gains the upload time, so a replacement is seen immediately. A draft's
+  thumbnail is visible to its owner and 404 to everybody else, like the draft.
+- `POST /places/:id/thumbnail` takes JSON `{ content: <base64 or data URL> }`
+  and checks ownership in the service, not only in the route.
+- The place page, the Games listing, the home page rows and the featured place,
+  My Page and a profile all draw the image; the place page links its owner to
+  the edit page to change it.
+
+Still open: Studio does not capture a thumbnail from the viewport yet, so the
+picture is chosen on the site rather than taken from the place itself.
+
 ## The eras
 
 After the first playable build, the look is moved forward era by era:

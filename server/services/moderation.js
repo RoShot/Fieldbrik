@@ -2,13 +2,13 @@
  * Moderation actions.
  *
  * One place applies every action the panel offers, because each of them has to
- * do more than one thing: a ban writes a restriction, keeps the member's session
- * (so the notice can identify them), and logs. A poison ban is four writes plus
- * content removal. Spreading that across routes is how an action ends up
- * half-applied.
+ * do more than one thing: a ban writes a restriction, ends nothing (the member
+ * keeps their session so the ban page can identify them), and logs. A poison
+ * ban is four writes plus content removal. Spreading that across routes is how
+ * an action ends up half-applied.
  *
- * Every function takes the database as its first argument, so the same code runs
- * on Express and in the Worker.
+ * Every function takes the database as its first argument and nothing reads a
+ * global, so the same code runs on Express and in the Worker.
  */
 
 const permissions = require('./permissions');
@@ -36,9 +36,9 @@ const PRESETS = [
 /**
  * The actions, in the order the panel draws them.
  *
- * The ban lengths are separate buttons rather than a duration picker, as
- * specified. Each names the rank it needs, so a page cannot offer an action the
- * account is not allowed to perform.
+ * The four ban lengths are separate buttons rather than a duration picker, as
+ * specified. A missing `cap` would make the action unreachable, so each one
+ * names the rank it needs.
  */
 const ACTIONS = [
   { key: 'remind', label: 'Remind', cap: 'users.notice', hint: 'A private message, recorded on the account.' },
@@ -238,12 +238,7 @@ async function apply(db, options) {
   }
 
   const isBan = action.key === 'poison' || Boolean(action.days) || action.key === 'ban_permanent';
-  const expiresAt =
-    action.key === 'poison' || action.key === 'ban_permanent'
-      ? null
-      : action.days
-        ? addDays(action.days)
-        : null;
+  const expiresAt = action.key === 'poison' || action.key === 'ban_permanent' ? null : action.days ? addDays(action.days) : null;
   const kind = isBan ? 'ban' : action.key === 'warn' ? 'warning' : 'restriction';
 
   const inserted = await db
@@ -349,21 +344,11 @@ async function evidenceTokenFor(db, restrictionId) {
   return row ? row.access_token : '';
 }
 
-/** The name an account had before it was scrubbed, or an empty string. */
-async function originalUsernameFor(db, userId) {
-  const row = await db
-    .prepare('SELECT original_username FROM username_scrubs WHERE user_id = ?')
-    .bind(userId)
-    .first();
-
-  return row ? row.original_username : '';
-}
-
 /**
  * What the banned page shows.
  *
- * The member is still signed in on this device - a ban keeps their session,
- * because the page needs to know who they are in order to tell them why.
+ * The member is still signed in on this device - a ban does not delete their
+ * session, because the ban page needs to know who they are to tell them why.
  */
 async function bannerFor(db, user, restriction) {
   const token = await evidenceTokenFor(db, restriction.id);
@@ -382,6 +367,16 @@ async function bannerFor(db, user, restriction) {
     evidenceToken: token,
     scrubbedFrom: scrub ? scrub.original_username : '',
   };
+}
+
+/** The name an account had before it was scrubbed, or an empty string. */
+async function originalUsernameFor(db, userId) {
+  const row = await db
+    .prepare('SELECT original_username FROM username_scrubs WHERE user_id = ?')
+    .bind(userId)
+    .first();
+
+  return row ? row.original_username : '';
 }
 
 module.exports = {

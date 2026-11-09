@@ -4,9 +4,6 @@ name: Player
 #
 # Filtered to player/** on purpose: committing a site page should not rebuild
 # the client, and committing the client should not touch the site deploy.
-#
-# With a release_tag input (Run workflow, or `gh workflow run`), the built exe is
-# also attached to that release as a downloadable asset.
 
 on:
   push:
@@ -19,13 +16,6 @@ on:
       - 'player/**'
       - '.github/workflows/player-build.yml'
   workflow_dispatch:
-    inputs:
-      release_tag:
-        description: 'Release tag to attach the exe to, e.g. player-v0.1 (empty: do not attach)'
-        required: false
-
-permissions:
-  contents: write
 
 jobs:
   build:
@@ -48,20 +38,6 @@ jobs:
           $exe = "player/build/Release/FieldBrikPlayer.exe"
           if (-not (Test-Path $exe)) { throw "FieldBrikPlayer.exe was not produced." }
           Get-Item $exe | Format-List Name, Length, LastWriteTime
-
-      # The release asset is the exe itself, not a zip: the point is that the
-      # person downloading it can double-click it.
-      - name: Attach the exe to the release
-        if: inputs.release_tag != ''
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $tag = "${{ inputs.release_tag }}"
-          gh release view $tag --json tagName | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw "No release is tagged $tag." }
-          gh release upload $tag "player/build/Release/FieldBrikPlayer.exe" --clobber
-          gh release view $tag --json assets --jq '.assets[] | "\(.name) \(.size) bytes"'
 
       - uses: actions/upload-artifact@v4
         with:

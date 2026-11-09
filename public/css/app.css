@@ -653,3 +653,22 @@ body.fb-app .fb-footer__links {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Place thumbnails, for the 2009 pages that do not load fieldbrik.css. */
+.fb-thumb-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.fb-hero,
+.fb-places2009__thumb,
+.fb-feature__thumb,
+.fb-game2009__thumb,
+.fb-card-game__thumb {
+  position: relative;
+}

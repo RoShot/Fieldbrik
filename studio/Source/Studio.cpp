@@ -2,12 +2,17 @@
 
 #include <commctrl.h>
 #include <commdlg.h>
+#include <winhttp.h>
 #include <windowsx.h>
 
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#include <cwctype>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -45,9 +50,19 @@ constexpr int kToolboxWidth = 172;
 constexpr int kButtonSize = 26;
 constexpr int kButtonGap = 2;
 
+// The Start Page is a small, local web page inside the editor. These are the
+// browser bar and page metrics, kept together so drawing and hit testing use
+// exactly the same rectangles.
+constexpr int kStartPageBrowserHeight = 34;
+constexpr int kBrowserButtonSize = 22;
+constexpr int kBrowserButtonGap = 1;
+constexpr int kBrowserButtonTop = 5;
+constexpr int kStartPageBannerHeight = 48;
+
 constexpr int kExplorerId = 2001;
 constexpr int kPropertiesId = 2002;
 constexpr int kOutputId = 2003;
+constexpr int kPropertyEditId = 2004;
 
 enum : int {
   kFileNew = 1000,
@@ -70,6 +85,7 @@ enum : int {
   kEditClear,
   kEditSelectAll,
   kEditDuplicate,
+  kEditRename,
   kEditFind,
   kEditFindNext,
   kEditReplace,
@@ -142,11 +158,11 @@ enum : int {
 };
 
 const ToolButton kStandardButtons[] = {
-    {L"new", kFileNew, false, false},
+    {L"new", kFileNew, false, true},
     {L"open", kFileOpen, false, true},
     {L"save", kFileSave, true, true},
-    {L"undo", kEditUndo, false, false},
-    {L"redo", kEditRedo, true, false},
+    {L"undo", kEditUndo, false, true},
+    {L"redo", kEditRedo, true, true},
     {L"play", kToolsPlaySolo, false, true},
 };
 
@@ -247,6 +263,605 @@ std::wstring ColourHex(const DirectX::XMFLOAT3& colour) {
   swprintf_s(buffer, L"#%02X%02X%02X", channel(colour.x), channel(colour.y),
              channel(colour.z));
   return buffer;
+}
+
+// ---------- Publishing ----------
+
+constexpr wchar_t kPublishClass[] = L"FieldBrikPublishDialog";
+constexpr int kPublishSiteId = 3001;
+constexpr int kPublishPlaceId = 3002;
+constexpr int kPublishUserFormatId = 3003;
+constexpr int kPublishPasswordId = 3004;
+constexpr int kPublishNoteId = 3005;
+constexpr int kPublishStatusId = 3006;
+
+struct PublishForm {
+  std::wstring site = L"https://fieldbrik.com";
+  std::wstring place;
+  std::wstring username;
+  std::wstring password;
+  std::wstring note;
+};
+
+struct PublishDialogState {
+  HWND window = nullptr;
+  HWND site = nullptr;
+  HWND place = nullptr;
+  HWND username = nullptr;
+  HWND password = nullptr;
+  HWND note = nullptr;
+  HWND status = nullptr;
+  PublishForm* form = nullptr;
+  bool accepted = false;
+};
+
+std::wstring Trim(const std::wstring& value) {
+  const size_t first = value.find_first_not_of(L" \t\r\n");
+  if (first == std::wstring::npos) return std::wstring();
+  const size_t last = value.find_last_not_of(L" \t\r\n");
+  return value.substr(first, last - first + 1);
+}
+
+std::string ToUtf8(const std::wstring& text) {
+  if (text.empty()) return std::string();
+  const int length = WideCharToMultiByte(CP_UTF8, 0, text.c_str(),
+                                         static_cast<int>(text.size()),
+                                         nullptr, 0, nullptr, nullptr);
+  if (length <= 0) return std::string();
+  std::string result(static_cast<size_t>(length), '\0');
+  WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()),
+                      result.data(), length, nullptr, nullptr);
+  return result;
+}
+
+std::wstring FromUtf8(const std::string& text) {
+  if (text.empty()) return std::wstring();
+  const int length = MultiByteToWideChar(CP_UTF8, 0, text.c_str(),
+                                         static_cast<int>(text.size()),
+                                         nullptr, 0);
+  if (length <= 0) return std::wstring();
+  std::wstring result(static_cast<size_t>(length), L'\0');
+  MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()),
+                      result.data(), length);
+  return result;
+}
+
+std::wstring Win32Text(DWORD code) {
+  wchar_t* buffer = nullptr;
+  const DWORD length = FormatMessageW(
+      FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+          FORMAT_MESSAGE_IGNORE_INSERTS,
+      nullptr, code, 0, reinterpret_cast<wchar_t*>(&buffer), 0, nullptr);
+  if (length == 0 || !buffer) return L"Windows error " + std::to_wstring(code);
+  std::wstring message(buffer, length);
+  LocalFree(buffer);
+  return Trim(message);
+}
+
+std::wstring UrlEncode(const std::wstring& value) {
+  const std::string bytes = ToUtf8(value);
+  std::wstring out;
+  const wchar_t* hex = L"0123456789ABCDEF";
+  for (unsigned char byte : bytes) {
+    if ((byte >= 'a' && byte <= 'z') || (byte >= 'A' && byte <= 'Z') ||
+        (byte >= '0' && byte <= '9') || byte == '-' || byte == '_' ||
+        byte == '.' || byte == '~') {
+      out.push_back(static_cast<wchar_t>(byte));
+    } else {
+      out.push_back(L'%');
+      out.push_back(hex[(byte >> 4) & 0x0F]);
+      out.push_back(hex[byte & 0x0F]);
+    }
+  }
+  return out;
+}
+
+std::wstring JsonString(const std::string& body, const char* key) {
+  const std::string needle = std::string("\"") + key + "\":\"";
+  size_t start = body.find(needle);
+  if (start == std::string::npos) return std::wstring();
+  start += needle.size();
+
+  std::string out;
+  for (size_t i = start; i < body.size(); ++i) {
+    const char ch = body[i];
+    if (ch == '"') break;
+    if (ch != '\\') {
+      out.push_back(ch);
+      continue;
+    }
+    if (i + 1 >= body.size()) break;
+    const char escaped = body[++i];
+    switch (escaped) {
+      case 'n': out.push_back('\n'); break;
+      case 'r': out.push_back('\r'); break;
+      case 't': out.push_back('\t'); break;
+      case 'b': out.push_back('\b'); break;
+      case 'f': out.push_back('\f'); break;
+      case 'u': {
+        if (i + 4 < body.size()) {
+          const std::string digits = body.substr(i + 1, 4);
+          const unsigned long point = std::stoul(digits, nullptr, 16);
+          wchar_t wide[2] = {static_cast<wchar_t>(point), 0};
+          out += ToUtf8(wide);
+          i += 4;
+        }
+        break;
+      }
+      default: out.push_back(escaped); break;
+    }
+  }
+  return FromUtf8(out);
+}
+
+long JsonVersion(const std::string& body) {
+  const std::string needle = "\"version\":";
+  const size_t start = body.find(needle);
+  if (start == std::string::npos) return 0;
+  return std::strtol(body.c_str() + start + needle.size(), nullptr, 10);
+}
+
+bool IsPlaceCharacter(wchar_t ch) {
+  return (ch >= L'a' && ch <= L'z') || (ch >= L'A' && ch <= L'Z') ||
+         (ch >= L'0' && ch <= L'9') || ch == L'-' || ch == L'_';
+}
+
+/** A slug, an id, a /games path or a whole place URL, reduced to one segment. */
+std::wstring NormalisePlace(const std::wstring& input) {
+  std::wstring value = Trim(input);
+  if (value.empty()) return std::wstring();
+
+  const std::wstring games = L"/games/";
+  const std::wstring places = L"/places/";
+  size_t marker = value.find(games);
+  if (marker != std::wstring::npos) {
+    value = value.substr(marker + games.size());
+  } else {
+    marker = value.find(places);
+    if (marker != std::wstring::npos) value = value.substr(marker + places.size());
+  }
+
+  const size_t stop = value.find_first_of(L"/?#");
+  if (stop != std::wstring::npos) value = value.substr(0, stop);
+  value = Trim(value);
+
+  for (wchar_t ch : value) {
+    if (!IsPlaceCharacter(ch)) return std::wstring();
+  }
+  return value;
+}
+
+std::wstring PublishFilename(const std::wstring& placeName) {
+  std::wstring name = FileNameOf(placeName);
+  if (name.empty()) name = L"Place1";
+
+  std::wstring extension = L".fbrx";
+  const size_t dot = name.find_last_of(L'.');
+  if (dot != std::wstring::npos && dot > 0) {
+    const std::wstring candidate = name.substr(dot);
+    if (_wcsicmp(candidate.c_str(), L".fbrx") == 0 ||
+        _wcsicmp(candidate.c_str(), L".rbxl") == 0 ||
+        _wcsicmp(candidate.c_str(), L".rbxlx") == 0 ||
+        _wcsicmp(candidate.c_str(), L".xml") == 0) {
+      extension = candidate;
+    }
+    name = name.substr(0, dot);
+  }
+  if (name.empty()) name = L"Place1";
+
+  std::wstring safe;
+  for (wchar_t ch : name) {
+    if (IsPlaceCharacter(ch) || ch == L' ' || ch == L'.') {
+      safe.push_back(ch);
+    } else if (ch > 127) {
+      safe.push_back(L'_');
+    }
+  }
+  if (safe.empty()) safe = L"Place1";
+  if (safe.size() > 90) safe.resize(90);
+  return safe + extension;
+}
+
+struct SiteAddress {
+  bool secure = true;
+  std::wstring host;
+  INTERNET_PORT port = INTERNET_DEFAULT_HTTPS_PORT;
+  std::wstring prefix;
+};
+
+bool ParseSiteAddress(const std::wstring& input, SiteAddress* out,
+                      std::wstring* error) {
+  std::wstring value = Trim(input);
+  if (value.empty()) {
+    *error = L"Enter the FieldBrik site address.";
+    return false;
+  }
+  if (value.find(L"://") == std::wstring::npos) value = L"https://" + value;
+
+  URL_COMPONENTS parts{};
+  parts.dwStructSize = sizeof(parts);
+  parts.dwSchemeLength = static_cast<DWORD>(-1);
+  parts.dwHostNameLength = static_cast<DWORD>(-1);
+  parts.dwUrlPathLength = static_cast<DWORD>(-1);
+  parts.dwExtraInfoLength = static_cast<DWORD>(-1);
+
+  if (!WinHttpCrackUrl(value.c_str(), 0, 0, &parts)) {
+    *error = L"That site address cannot be read. Use https://fieldbrik.com.";
+    return false;
+  }
+  if (parts.nScheme != INTERNET_SCHEME_HTTP &&
+      parts.nScheme != INTERNET_SCHEME_HTTPS) {
+    *error = L"The site address has to start with http:// or https://.";
+    return false;
+  }
+
+  out->secure = parts.nScheme == INTERNET_SCHEME_HTTPS;
+  out->host.assign(parts.lpszHostName, parts.dwHostNameLength);
+  out->port = parts.nPort;
+  out->prefix.clear();
+
+  if (parts.lpszUrlPath && parts.dwUrlPathLength > 0) {
+    std::wstring path(parts.lpszUrlPath, parts.dwUrlPathLength);
+    if (path != L"/") {
+      while (!path.empty() && path.back() == L'/') path.pop_back();
+      out->prefix = path;
+    }
+  }
+  if (out->host.empty()) {
+    *error = L"That site address has no host name.";
+    return false;
+  }
+  return true;
+}
+
+std::wstring SessionCookie(const std::wstring& headers) {
+  std::wstring lower = headers;
+  std::transform(lower.begin(), lower.end(), lower.begin(), towlower);
+
+  size_t position = 0;
+  while ((position = lower.find(L"set-cookie:", position)) != std::wstring::npos) {
+    position += 11;
+    const size_t end = lower.find(L"\r\n", position);
+    const std::wstring line = headers.substr(
+        position, end == std::wstring::npos ? std::wstring::npos : end - position);
+    const size_t semicolon = line.find(L';');
+    const std::wstring pair = Trim(line.substr(0, semicolon));
+    if (pair.rfind(L"fb_session=", 0) == 0) return pair.substr(11);
+    if (end == std::wstring::npos) break;
+    position = end + 2;
+  }
+  return std::wstring();
+}
+
+struct HttpResult {
+  bool transport = false;
+  DWORD status = 0;
+  std::string body;
+  std::wstring headers;
+  std::wstring error;
+};
+
+HttpResult HttpPost(const SiteAddress& site, const std::wstring& path,
+                    const std::string& body, const std::wstring& contentType,
+                    const std::wstring& extraHeaders,
+                    const std::wstring& cookie) {
+  HttpResult result;
+  HINTERNET session = WinHttpOpen(
+      L"FieldBrikStudio/0.7", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+      WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+  if (!session) {
+    result.error = L"Could not start an HTTP session: " + Win32Text(GetLastError());
+    return result;
+  }
+  WinHttpSetTimeouts(session, 15000, 15000, 30000, 30000);
+
+  HINTERNET connection =
+      WinHttpConnect(session, site.host.c_str(), site.port, 0);
+  if (!connection) {
+    result.error = L"Could not reach " + site.host + L": " + Win32Text(GetLastError());
+    WinHttpCloseHandle(session);
+    return result;
+  }
+
+  HINTERNET request = WinHttpOpenRequest(
+      connection, L"POST", path.c_str(), nullptr, WINHTTP_NO_REFERER,
+      WINHTTP_DEFAULT_ACCEPT_TYPES, site.secure ? WINHTTP_FLAG_SECURE : 0);
+  if (!request) {
+    result.error = L"Could not open the request: " + Win32Text(GetLastError());
+    WinHttpCloseHandle(connection);
+    WinHttpCloseHandle(session);
+    return result;
+  }
+
+  DWORD disable = WINHTTP_DISABLE_REDIRECTS;
+  WinHttpSetOption(request, WINHTTP_OPTION_DISABLE_FEATURE, &disable,
+                   sizeof(disable));
+
+  std::wstring headers = L"Content-Type: " + contentType + L"\r\n";
+  headers += L"Accept: application/json\r\n";
+  if (!cookie.empty()) headers += L"Cookie: fb_session=" + cookie + L"\r\n";
+  if (!extraHeaders.empty()) headers += extraHeaders;
+
+  if (!WinHttpAddRequestHeaders(
+          request, headers.c_str(), static_cast<DWORD>(-1),
+          WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
+    result.error = L"Could not attach the request headers: " +
+                   Win32Text(GetLastError());
+    WinHttpCloseHandle(request);
+    WinHttpCloseHandle(connection);
+    WinHttpCloseHandle(session);
+    return result;
+  }
+
+  if (!WinHttpSendRequest(
+          request, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+          body.empty() ? WINHTTP_NO_REQUEST_DATA : const_cast<char*>(body.data()),
+          static_cast<DWORD>(body.size()), static_cast<DWORD>(body.size()), 0)) {
+    result.error = L"The request could not be sent: " + Win32Text(GetLastError());
+    WinHttpCloseHandle(request);
+    WinHttpCloseHandle(connection);
+    WinHttpCloseHandle(session);
+    return result;
+  }
+
+  if (!WinHttpReceiveResponse(request, nullptr)) {
+    result.error = L"No answer came back: " + Win32Text(GetLastError());
+    WinHttpCloseHandle(request);
+    WinHttpCloseHandle(connection);
+    WinHttpCloseHandle(session);
+    return result;
+  }
+
+  DWORD status = 0;
+  DWORD statusSize = sizeof(status);
+  WinHttpQueryHeaders(request,
+                      WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                      WINHTTP_HEADER_NAME_BY_INDEX, &status, &statusSize,
+                      WINHTTP_NO_HEADER_INDEX);
+  result.status = status;
+
+  DWORD headerSize = 0;
+  WinHttpQueryHeaders(request, WINHTTP_QUERY_RAW_HEADERS_CRLF,
+                      WINHTTP_HEADER_NAME_BY_INDEX, nullptr, &headerSize,
+                      WINHTTP_NO_HEADER_INDEX);
+  if (headerSize > 0) {
+    std::wstring raw(headerSize / sizeof(wchar_t), L'\0');
+    if (WinHttpQueryHeaders(request, WINHTTP_QUERY_RAW_HEADERS_CRLF,
+                            WINHTTP_HEADER_NAME_BY_INDEX, raw.data(),
+                            &headerSize, WINHTTP_NO_HEADER_INDEX)) {
+      raw.resize(headerSize / sizeof(wchar_t));
+      result.headers = raw;
+    }
+  }
+
+  for (;;) {
+    DWORD available = 0;
+    if (!WinHttpQueryDataAvailable(request, &available) || available == 0) break;
+    std::vector<char> buffer(available);
+    DWORD read = 0;
+    if (!WinHttpReadData(request, buffer.data(), available, &read) || read == 0) break;
+    result.body.append(buffer.data(), read);
+  }
+
+  result.transport = true;
+  WinHttpCloseHandle(request);
+  WinHttpCloseHandle(connection);
+  WinHttpCloseHandle(session);
+  return result;
+}
+
+std::wstring ControlText(HWND control) {
+  const int length = GetWindowTextLengthW(control);
+  std::wstring text(static_cast<size_t>(std::max(0, length)) + 1, L'\0');
+  if (length > 0) GetWindowTextW(control, text.data(), length + 1);
+  text.resize(static_cast<size_t>(std::max(0, length)));
+  return text;
+}
+
+void SetStatus(HWND control, const std::wstring& text) {
+  if (control) SetWindowTextW(control, text.c_str());
+}
+
+LRESULT CALLBACK PublishDialogProc(HWND handle, UINT message, WPARAM wparam,
+                                   LPARAM lparam) {
+  if (message == WM_NCCREATE) {
+    auto* create = reinterpret_cast<CREATESTRUCTW*>(lparam);
+    SetWindowLongPtrW(handle, GWLP_USERDATA,
+                      reinterpret_cast<LONG_PTR>(create->lpCreateParams));
+  }
+
+  auto* state = reinterpret_cast<PublishDialogState*>(
+      GetWindowLongPtrW(handle, GWLP_USERDATA));
+
+  if (state && message == WM_COMMAND && HIWORD(wparam) == BN_CLICKED) {
+    const int id = LOWORD(wparam);
+    if (id == IDOK) {
+      // Read the controls from the window at the moment Publish is pressed.
+      // Caching them in the state struct is not needed, and this also keeps
+      // the reads correct if a control is recreated by the dialog manager.
+      const HWND siteControl = GetDlgItem(handle, kPublishSiteId);
+      const HWND placeControl = GetDlgItem(handle, kPublishPlaceId);
+      const HWND userControl = GetDlgItem(handle, kPublishUserFormatId);
+      const HWND passwordControl = GetDlgItem(handle, kPublishPasswordId);
+      const HWND noteControl = GetDlgItem(handle, kPublishNoteId);
+      const HWND statusControl = GetDlgItem(handle, kPublishStatusId);
+
+      const std::wstring site = Trim(ControlText(siteControl));
+      const std::wstring place = Trim(ControlText(placeControl));
+      const std::wstring username = Trim(ControlText(userControl));
+      const std::wstring password = ControlText(passwordControl);
+
+      if (site.empty()) {
+        SetStatus(statusControl, L"Enter the site address.");
+        SetFocus(siteControl);
+        return 0;
+      }
+      if (place.empty()) {
+        SetStatus(statusControl, L"Enter the place address or ID.");
+        SetFocus(placeControl);
+        return 0;
+      }
+      if (NormalisePlace(place).empty()) {
+        SetStatus(statusControl,
+                  L"That place address is not a slug, ID or FieldBrik link.");
+        SetFocus(placeControl);
+        return 0;
+      }
+      if (username.empty() || password.empty()) {
+        SetStatus(statusControl, L"Enter your FieldBrik username and password.");
+        SetFocus(username.empty() ? userControl : passwordControl);
+        return 0;
+      }
+
+      state->form->site = site;
+      state->form->place = place;
+      state->form->username = username;
+      state->form->password = password;
+      state->form->note = Trim(ControlText(noteControl));
+      state->accepted = true;
+      DestroyWindow(handle);
+      return 0;
+    }
+    if (id == IDCANCEL) {
+      DestroyWindow(handle);
+      return 0;
+    }
+  }
+
+  if (message == WM_CLOSE) {
+    DestroyWindow(handle);
+    return 0;
+  }
+  if (message == WM_DESTROY && state) state->window = nullptr;
+  return DefWindowProcW(handle, message, wparam, lparam);
+}
+
+HWND CreatePublishLabel(HWND parent, const wchar_t* text, int x, int y,
+                        int width, int height, HFONT font) {
+  HWND control = CreateWindowExW(
+      0, L"STATIC", text, WS_CHILD | WS_VISIBLE | SS_LEFT, x, y, width, height,
+      parent, nullptr, GetModuleHandleW(nullptr), nullptr);
+  SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+  return control;
+}
+
+HWND CreatePublishEdit(HWND parent, const std::wstring& value, int id, int x,
+                       int y, int width, bool password, int limit, HFONT font) {
+  HWND control = CreateWindowExW(
+      WS_EX_CLIENTEDGE, L"EDIT", value.c_str(),
+      WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL |
+          (password ? ES_PASSWORD : 0),
+      x, y, width, 22, parent,
+      reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),
+      GetModuleHandleW(nullptr), nullptr);
+  SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+  SendMessageW(control, EM_SETLIMITTEXT, static_cast<WPARAM>(limit), 0);
+  return control;
+}
+
+bool ShowPublishDialog(HWND owner, PublishForm* form) {
+  WNDCLASSEXW dialogClass{};
+  dialogClass.cbSize = sizeof(dialogClass);
+  dialogClass.lpfnWndProc = &PublishDialogProc;
+  dialogClass.hInstance = GetModuleHandleW(nullptr);
+  dialogClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+  dialogClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+  dialogClass.lpszClassName = kPublishClass;
+  if (!RegisterClassExW(&dialogClass) &&
+      GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
+    return false;
+  }
+
+  PublishDialogState state;
+  state.form = form;
+
+  const DWORD style = WS_POPUP | WS_CAPTION | WS_SYSMENU;
+  const DWORD exStyle = WS_EX_DLGMODALFRAME;
+  RECT size{0, 0, 520, 356};
+  AdjustWindowRectEx(&size, style, FALSE, exStyle);
+
+  RECT ownerRect{};
+  GetWindowRect(owner, &ownerRect);
+  const int width = size.right - size.left;
+  const int height = size.bottom - size.top;
+  const int x = ownerRect.left + ((ownerRect.right - ownerRect.left) - width) / 2;
+  const int y = ownerRect.top + ((ownerRect.bottom - ownerRect.top) - height) / 2;
+
+  state.window = CreateWindowExW(
+      exStyle, kPublishClass, L"Publish to FieldBrik", style, x, y, width,
+      height, owner, nullptr, GetModuleHandleW(nullptr), &state);
+  if (!state.window) return false;
+
+  HFONT font = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+  CreatePublishLabel(state.window,
+                     L"Save this place to your FieldBrik account. Sign in with "
+                     L"the account that owns the place.",
+                     16, 12, 488, 32, font);
+  CreatePublishLabel(state.window, L"Site", 16, 55, 80, 18, font);
+  CreatePublishLabel(state.window, L"Place", 16, 85, 80, 18, font);
+  CreatePublishLabel(state.window, L"Username", 16, 115, 80, 18, font);
+  CreatePublishLabel(state.window, L"Password", 16, 145, 80, 18, font);
+  CreatePublishLabel(state.window, L"Version note", 16, 175, 100, 18, font);
+
+  state.site = CreatePublishEdit(state.window, form->site, kPublishSiteId, 120, 52,
+                                 380, false, 200, font);
+  state.place = CreatePublishEdit(state.window, form->place, kPublishPlaceId, 120,
+                                  82, 380, false, 120, font);
+  state.username = CreatePublishEdit(state.window, form->username,
+                                     kPublishUserFormatId, 120, 112, 220, false,
+                                     30, font);
+  state.password = CreatePublishEdit(state.window, L"", kPublishPasswordId, 120,
+                                     142, 220, true, 200, font);
+  state.note = CreatePublishEdit(state.window, form->note, kPublishNoteId, 120,
+                                 172, 380, false, 160, font);
+
+  CreatePublishLabel(
+      state.window,
+      L"Place accepts a slug, a numeric ID, /games/... or a full FieldBrik link. "
+      L"Create the place on the website first; publishing replaces its newest "
+      L"file and keeps the earlier versions.",
+      16, 204, 488, 52, font);
+
+  state.status = CreateWindowExW(
+      0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT, 16, 260, 470, 22,
+      state.window,
+      reinterpret_cast<HMENU>(static_cast<INT_PTR>(kPublishStatusId)),
+      GetModuleHandleW(nullptr), nullptr);
+  SendMessageW(state.status, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+
+  HWND publish = CreateWindowExW(
+      0, L"BUTTON", L"Publish", WS_CHILD | WS_VISIBLE | WS_TABSTOP |
+                                      BS_DEFPUSHBUTTON,
+      300, 288, 96, 28, state.window,
+      reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDOK)),
+      GetModuleHandleW(nullptr), nullptr);
+  HWND cancel = CreateWindowExW(
+      0, L"BUTTON", L"Cancel", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+      406, 288, 96, 28, state.window,
+      reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDCANCEL)),
+      GetModuleHandleW(nullptr), nullptr);
+  SendMessageW(publish, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+  SendMessageW(cancel, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+
+  EnableWindow(owner, FALSE);
+  ShowWindow(state.window, SW_SHOW);
+  UpdateWindow(state.window);
+  const HWND placeField = GetDlgItem(state.window, kPublishPlaceId);
+  SetFocus(placeField);
+  SendMessageW(placeField, EM_SETSEL, 0, -1);
+
+  MSG message{};
+  while (state.window && GetMessageW(&message, nullptr, 0, 0) > 0) {
+    if (!IsDialogMessageW(state.window, &message)) {
+      TranslateMessage(&message);
+      DispatchMessageW(&message);
+    }
+  }
+
+  if (state.window) DestroyWindow(state.window);
+  EnableWindow(owner, TRUE);
+  SetActiveWindow(owner);
+  return state.accepted;
 }
 
 }  // namespace
@@ -410,7 +1025,7 @@ void Studio::CreateMenuBar() {
   AppendMenuW(file, MF_SEPARATOR, 0, nullptr);
   item(file, kFileSave, L"&Save\tCtrl+S", true);
   item(file, kFileSaveAs, L"Save &As...", true);
-  item(file, kFilePublish, L"&Publish to FieldBrik...");
+  item(file, kFilePublish, L"&Publish to FieldBrik...", true);
   item(file, kFileSaveSelection, L"Save Selection as &Model...");
   item(file, kFilePublishSelection, L"Publish Selection to FieldBrik...");
   AppendMenuW(file, MF_SEPARATOR, 0, nullptr);
@@ -444,6 +1059,7 @@ void Studio::CreateMenuBar() {
   item(edit, kEditClear, L"Clea&r\tDelete", true);
   item(edit, kEditSelectAll, L"Select &All\tCtrl+A");
   item(edit, kEditDuplicate, L"&Duplicate\tCtrl+D", true);
+  item(edit, kEditRename, L"R&ename\tF2", true);
   AppendMenuW(edit, MF_SEPARATOR, 0, nullptr);
 
   HMENU find = CreatePopupMenu();
@@ -569,7 +1185,7 @@ void Studio::CreateMenuBar() {
   item(help, kHelpObjectBrowser, L"&Object Browser");
   AppendMenuW(menu_, MF_POPUP, reinterpret_cast<UINT_PTR>(help), L"&Help");
 
-  ACCEL keys[12] = {};
+  ACCEL keys[13] = {};
   const auto control = [&](int index, int key, int command) {
     keys[index].fVirt = static_cast<BYTE>(FCONTROL | FVIRTKEY);
     keys[index].key = static_cast<WORD>(key);
@@ -593,8 +1209,9 @@ void Studio::CreateMenuBar() {
   plain(9, VK_HOME, kViewGameLayout);
   plain(10, VK_F11, kViewFullscreen);
   control(11, 'S', kFileSave);
+  plain(12, VK_F2, kEditRename);
 
-  if (!accelerators_) accelerators_ = CreateAcceleratorTableW(keys, 12);
+  if (!accelerators_) accelerators_ = CreateAcceleratorTableW(keys, 13);
   UpdateEditMenu();
 }
 
@@ -650,7 +1267,7 @@ bool Studio::CreateChildren() {
   explorer_ = CreateWindowExW(
       WS_EX_CLIENTEDGE, WC_TREEVIEWW, L"",
       WS_CHILD | WS_VISIBLE | WS_TABSTOP | TVS_HASBUTTONS | TVS_HASLINES |
-          TVS_LINESATROOT | TVS_SHOWSELALWAYS,
+          TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_FULLROWSELECT,
       0, 0, 16, 16, frame_,
       reinterpret_cast<HMENU>(static_cast<INT_PTR>(kExplorerId)), instance_,
       nullptr);
@@ -658,7 +1275,7 @@ bool Studio::CreateChildren() {
   properties_ = CreateWindowExW(
       WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
       WS_CHILD | WS_VISIBLE | WS_TABSTOP | LVS_REPORT | LVS_SINGLESEL |
-          LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER,
+          LVS_SHOWSELALWAYS,
       0, 0, 16, 16, frame_,
       reinterpret_cast<HMENU>(static_cast<INT_PTR>(kPropertiesId)), instance_,
       nullptr);
@@ -676,6 +1293,18 @@ bool Studio::CreateChildren() {
     SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
   }
 
+  // The Properties value editor. It stays hidden until a value is double-clicked
+  // and is sized over that one cell when it opens.
+  propertyEdit_ = CreateWindowExW(
+      WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | ES_AUTOHSCROLL, 0, 0, 10, 10,
+      frame_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kPropertyEditId)),
+      instance_, nullptr);
+  if (propertyEdit_) {
+    SendMessageW(propertyEdit_, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
+    SetWindowSubclass(propertyEdit_, &Studio::PropertyEditProc, 1,
+                      reinterpret_cast<DWORD_PTR>(this));
+  }
+
   LVCOLUMNW column{};
   column.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
   column.pszText = const_cast<wchar_t*>(L"Property");
@@ -686,7 +1315,8 @@ bool Studio::CreateChildren() {
   column.cx = 135;
   column.iSubItem = 1;
   ListView_InsertColumn(properties_, 1, &column);
-  ListView_SetExtendedListViewStyle(properties_, LVS_EX_FULLROWSELECT);
+  ListView_SetExtendedListViewStyle(properties_,
+                                    LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 
   if (!renderer_.Initialise(viewport_, 16, 16)) return false;
   rendererReady_ = true;
@@ -697,6 +1327,10 @@ bool Studio::CreateChildren() {
 
 void Studio::Layout() {
   if (!frame_) return;
+
+  // Moving the panels would leave the inline editor over the wrong cell; drop it
+  // rather than apply an edit nobody asked to finish.
+  CancelPropertyEdit();
 
   const RECT viewportRect = ViewportRect();
   if (viewport_) {
@@ -877,19 +1511,30 @@ RECT Studio::StartPageRect() const {
   return RECT{left, ContentTop(), client.right - kDockWidth, bottom};
 }
 
+RECT Studio::StartPageBrowserRect() const {
+  RECT area = StartPageRect();
+  area.bottom = std::min(area.bottom, area.top + kStartPageBrowserHeight);
+  return area;
+}
+
+RECT Studio::StartPagePageRect() const {
+  RECT area = StartPageRect();
+  area.top = std::min(area.bottom, area.top + kStartPageBrowserHeight);
+  return area;
+}
+
 RECT Studio::StartPageCardRect(int index) const {
-  const RECT area = StartPageRect();
+  const RECT area = StartPagePageRect();
   const int margin = 24;
   const int gap = 16;
   const int cardWidth = std::max(
       120, static_cast<int>(area.right - area.left - margin * 2 - gap * 2) /
                3);
-  const int available =
-      static_cast<int>(area.bottom - (area.top + 150) - 12);
+  const int top = area.top + 116;
+  const int available = static_cast<int>(area.bottom - top - 12);
   const int cardHeight = std::clamp(available, 150, 220);
   const int left = area.left + margin + index * (cardWidth + gap);
-  return RECT{left, area.top + 150, left + cardWidth,
-              area.top + 150 + cardHeight};
+  return RECT{left, top, left + cardWidth, top + cardHeight};
 }
 
 int Studio::ToolboxRowAt(int x, int y) const {
@@ -917,6 +1562,62 @@ int Studio::StartPageCardAt(int x, int y) const {
     if (PtInRect(&card, point)) return i;
   }
   return -1;
+}
+
+int Studio::StartPageChromeAt(int x, int y) const {
+  if (!startPage_) return -1;
+
+  const RECT bar = StartPageBrowserRect();
+  const POINT point{x, y};
+  if (!PtInRect(&bar, point)) return -1;
+
+  // Back, Forward and Stop are deliberately disabled: this is a single local
+  // start page, not a web browser. Refresh and Home do real work.
+  int left = bar.left + 6;
+  for (int i = 0; i < 5; ++i) {
+    const RECT button{left, bar.top + kBrowserButtonTop,
+                      left + kBrowserButtonSize,
+                      bar.top + kBrowserButtonTop + kBrowserButtonSize};
+    if (PtInRect(&button, point)) return i >= 3 ? i : -1;
+    left = button.right + kBrowserButtonGap;
+  }
+
+  return -1;
+}
+
+void Studio::StartPageAction(int action) {
+  if (action == 3) {
+    Log(L"Start Page refreshed.");
+    statusText_ = L"Start Page";
+    hotCard_ = -1;
+    hotStartPageChrome_ = -1;
+    InvalidateRect(frame_, nullptr, FALSE);
+    UpdateStatus();
+  } else if (action == 4) {
+    Log(L"Start Page returned to the top.");
+    statusText_ = L"Start Page";
+    hotCard_ = -1;
+    hotStartPageChrome_ = -1;
+    InvalidateRect(frame_, nullptr, FALSE);
+    UpdateStatus();
+  }
+}
+
+// The top of the highest brick whose footprint covers this point. A new brick
+// stands there instead of sinking into the one below it; rotated bricks are
+// measured by the box their size describes, the same box the selection outline
+// draws around them.
+float Studio::StackTopAt(float x, float z) const {
+  float top = 0.0f;
+
+  for (const Part& part : world_.Parts()) {
+    if (!part.collides) continue;
+    if (std::fabs(x - part.position.x) > part.size.x * 0.5f) continue;
+    if (std::fabs(z - part.position.z) > part.size.z * 0.5f) continue;
+    top = std::max(top, part.position.y + part.size.y * 0.5f);
+  }
+
+  return top;
 }
 
 void Studio::InsertPart(PartShape shape) {
@@ -949,7 +1650,8 @@ void Studio::InsertPart(PartShape shape) {
   part.colour = {0.64f, 0.64f, 0.64f};
 
   // Where the camera is looking, dropped onto the build plane. The clamp keeps
-  // the new brick over the baseplate rather than out in the sky.
+  // the new brick over the baseplate rather than out in the sky, and one-stud
+  // snapping keeps brick edges meeting brick edges.
   DirectX::XMFLOAT3 forward{};
   CameraForward(&forward);
 
@@ -958,10 +1660,15 @@ void Studio::InsertPart(PartShape shape) {
   if (distance < 2.0f || distance > 120.0f) distance = 24.0f;
 
   part.position.x =
-      std::clamp(eye_.x + forward.x * distance, -18.0f, 18.0f);
+      std::round(std::clamp(eye_.x + forward.x * distance, -18.0f, 18.0f));
   part.position.z =
-      std::clamp(eye_.z + forward.z * distance, -18.0f, 18.0f);
-  part.position.y = part.size.y * 0.5f;
+      std::round(std::clamp(eye_.z + forward.z * distance, -18.0f, 18.0f));
+
+  // Stand on whatever is already under that point. Inserting used to put every
+  // brick at the same height over the same point, so a second one disappeared
+  // inside the first; now repeated inserts build a tower instead of merging.
+  const float floorY = StackTopAt(part.position.x, part.position.z);
+  part.position.y = floorY + part.size.y * 0.5f;
   part.name = UniquePartName(label);
 
   PushUndo();
@@ -969,7 +1676,8 @@ void Studio::InsertPart(PartShape shape) {
   selected_ = world_.PartCount() - 1;
   RefreshAfterEdit();
 
-  Log(L"Inserted " + label + L" at " + FormatVector(part.position) + L".");
+  Log(L"Inserted " + label + L" at " + FormatVector(part.position) +
+      (floorY > 0.0f ? L", stacked." : L"."));
 }
 
 std::string Studio::UniquePartName(const std::wstring& base) const {
@@ -996,6 +1704,7 @@ void Studio::ShowStartPage(bool show) {
 
   startPage_ = show;
   hotCard_ = -1;
+  hotStartPageChrome_ = -1;
 
   if (menu_) {
     CheckMenuItem(menu_, kViewStartPage,
@@ -1038,6 +1747,7 @@ void Studio::ApplyTemplate(int index) {
   selected_ = -1;
   startPage_ = false;
   hotCard_ = -1;
+  hotStartPageChrome_ = -1;
 
   PopulateExplorer();
   ShowProperties(-1);
@@ -1120,6 +1830,7 @@ void Studio::UpdateEditMenu() {
   set(kEditPaste, hasClipboard_);
   set(kEditClear, hasSelection);
   set(kEditDuplicate, hasSelection);
+  set(kEditRename, hasSelection);
   set(kFormatRotate, hasSelection);
   set(kFormatTilt, hasSelection);
   set(kFormatRoll, hasSelection);
@@ -1396,30 +2107,129 @@ void Studio::DrawToolbox(HDC dc, const RECT& panel) {
   SelectObject(dc, previousFont);
 }
 
+void Studio::DrawStartPageBrowser(HDC dc, const RECT& area) {
+  FillRect(dc, &area, GetSysColorBrush(COLOR_3DFACE));
+
+  RECT bottom{area.left, area.bottom - 1, area.right, area.bottom};
+  FillRect(dc, &bottom, GetSysColorBrush(COLOR_3DSHADOW));
+
+  SetBkMode(dc, TRANSPARENT);
+  HGDIOBJ previousFont = SelectObject(dc, font_);
+
+  int left = area.left + 6;
+  for (int i = 0; i < 5; ++i) {
+    RECT button{left, area.top + kBrowserButtonTop,
+                left + kBrowserButtonSize,
+                area.top + kBrowserButtonTop + kBrowserButtonSize};
+    const bool enabled = i >= 3;
+    const bool hot = enabled && hotStartPageChrome_ == i;
+
+    if (hot) {
+      DrawEdge(dc, &button, BDR_SUNKENOUTER, BF_RECT);
+    } else if (enabled) {
+      DrawEdge(dc, &button, BDR_RAISEDINNER, BF_RECT);
+    }
+
+    const COLORREF ink = enabled ? RGB(20, 20, 20) : GetSysColor(COLOR_GRAYTEXT);
+    HPEN pen = CreatePen(PS_SOLID, 2, ink);
+    HBRUSH brush = CreateSolidBrush(ink);
+    HGDIOBJ oldPen = SelectObject(dc, pen);
+    HGDIOBJ oldBrush = SelectObject(dc, brush);
+
+    const int cx = (button.left + button.right) / 2;
+    const int cy = (button.top + button.bottom) / 2;
+
+    switch (i) {
+      case 0: {
+        POINT arrow[3] = {{cx - 6, cy}, {cx + 4, cy - 5}, {cx + 4, cy + 5}};
+        Polygon(dc, arrow, 3);
+        break;
+      }
+      case 1: {
+        POINT arrow[3] = {{cx + 6, cy}, {cx - 4, cy - 5}, {cx - 4, cy + 5}};
+        Polygon(dc, arrow, 3);
+        break;
+      }
+      case 2:
+        MoveToEx(dc, cx - 5, cy - 5, nullptr);
+        LineTo(dc, cx + 5, cy + 5);
+        MoveToEx(dc, cx + 5, cy - 5, nullptr);
+        LineTo(dc, cx - 5, cy + 5);
+        break;
+      case 3: {
+        HGDIOBJ old = SelectObject(dc, GetStockObject(NULL_BRUSH));
+        Arc(dc, cx - 6, cy - 6, cx + 6, cy + 6, cx + 5, cy - 6, cx - 5,
+            cy + 4);
+        SelectObject(dc, old);
+        POINT arrow[3] = {{cx + 5, cy - 7}, {cx + 9, cy - 2}, {cx + 2, cy - 2}};
+        Polygon(dc, arrow, 3);
+        break;
+      }
+      case 4: {
+        POINT roof[3] = {{cx - 7, cy - 1}, {cx, cy - 8}, {cx + 7, cy - 1}};
+        Polygon(dc, roof, 3);
+        Rectangle(dc, cx - 5, cy - 1, cx + 6, cy + 7);
+        break;
+      }
+      default:
+        break;
+    }
+
+    SelectObject(dc, oldBrush);
+    SelectObject(dc, oldPen);
+    DeleteObject(brush);
+    DeleteObject(pen);
+
+    left = button.right + kBrowserButtonGap;
+  }
+
+  RECT address{left + 5, area.top + 6, area.right - 58, area.top + 28};
+  if (address.right > address.left + 80) {
+    FillRect(dc, &address, GetSysColorBrush(COLOR_WINDOW));
+    DrawEdge(dc, &address, EDGE_SUNKEN, BF_RECT);
+    SetTextColor(dc, GetSysColor(COLOR_GRAYTEXT));
+    RECT addressText = address;
+    addressText.left += 5;
+    addressText.right -= 4;
+    DrawTextW(dc, L"http://www.fieldbrik.com/studio/start", -1, &addressText,
+              DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS);
+  }
+
+  RECT go{area.right - 52, area.top + 5, area.right - 8, area.top + 27};
+  DrawTextW(dc, L"Go", -1, &go,
+            DT_SINGLELINE | DT_VCENTER | DT_CENTER);
+
+  SelectObject(dc, previousFont);
+}
+
 void Studio::DrawStartPage(HDC dc, const RECT& area) {
   FillRect(dc, &area, GetSysColorBrush(COLOR_WINDOW));
 
-  RECT banner{area.left, area.top, area.right, area.top + 48};
-  FillRect(dc, &banner, GetSysColorBrush(COLOR_3DFACE));
+  RECT banner{area.left, area.top, area.right, area.top + kStartPageBannerHeight};
+  HBRUSH bannerBrush = CreateSolidBrush(RGB(31, 61, 106));
+  FillRect(dc, &banner, bannerBrush);
+  DeleteObject(bannerBrush);
   RECT bannerLine{area.left, banner.bottom - 1, area.right, banner.bottom};
   FillRect(dc, &bannerLine, GetSysColorBrush(COLOR_3DSHADOW));
 
   SetBkMode(dc, TRANSPARENT);
-  SetTextColor(dc, GetSysColor(COLOR_BTNTEXT));
+  SetTextColor(dc, RGB(255, 255, 255));
 
   HGDIOBJ previous = SelectObject(dc, boldFont_);
-  RECT bannerTitle{area.left + 18, banner.top, area.left + 220, banner.bottom};
-  DrawTextW(dc, L"Start Page", -1, &bannerTitle,
+  RECT bannerTitle{area.left + 18, banner.top, area.left + 260, banner.bottom};
+  DrawTextW(dc, L"FieldBrik Studio", -1, &bannerTitle,
             DT_SINGLELINE | DT_VCENTER | DT_LEFT);
   SelectObject(dc, font_);
 
   const std::wstring version =
-      std::wstring(L"FieldBrik Studio ") + kClientVersion;
+      std::wstring(L"Start Page  |  ") + kClientVersion;
+  SetTextColor(dc, RGB(205, 220, 240));
   RECT bannerVersion{area.right - 230, banner.top, area.right - 18,
                      banner.bottom};
   DrawTextW(dc, version.c_str(), -1, &bannerVersion,
             DT_SINGLELINE | DT_VCENTER | DT_RIGHT);
 
+  SetTextColor(dc, GetSysColor(COLOR_BTNTEXT));
   SelectObject(dc, boldFont_);
   RECT title{area.left + 24, area.top + 64, area.right - 24, area.top + 92};
   DrawTextW(dc, L"Welcome to FieldBrik Studio", -1, &title,
@@ -1511,13 +2321,20 @@ void Studio::DrawStartPage(HDC dc, const RECT& area) {
 }
 
 
+bool Studio::ButtonEnabled(const ToolButton& button) const {
+  if (!button.enabled || button.command == 0) return false;
+  if (button.command == kEditUndo) return !undoStack_.empty();
+  if (button.command == kEditRedo) return !redoStack_.empty();
+  return true;
+}
+
 int Studio::ToolbarButtonAt(int x, int y, int* row) const {
   const auto hit = [&](int top, const ToolButton* buttons, int count) {
     int left = 4;
     for (int i = 0; i < count; ++i) {
       const RECT button{left, top + 2, left + kButtonSize, top + 2 + kButtonSize};
       const POINT point{x, y};
-      if (buttons[i].enabled && PtInRect(&button, point)) return i;
+      if (ButtonEnabled(buttons[i]) && PtInRect(&button, point)) return i;
       left = button.right + kButtonGap;
       if (buttons[i].separatorAfter) left += 8;
     }
@@ -1546,8 +2363,8 @@ int Studio::ToolbarButtonAt(int x, int y, int* row) const {
 int Studio::TabAt(int x, int y) const {
   const RECT strip = TabStripRect();
   if (y < strip.top + 3 || y >= strip.bottom) return -1;
-  if (x >= 6 && x < 100) return 0;
-  if (x >= 102 && x < 242) return 1;
+  if (x >= 6 && x < 106) return 0;
+  if (x >= 108 && x < 248) return 1;
   return -1;
 }
 
@@ -1772,6 +2589,200 @@ bool Studio::PlaySolo() {
   return true;
 }
 
+/**
+ * Publish the open place to the website.
+ *
+ * The dialog takes the site, the place (slug, ID or link) and the account.
+ * Studio saves one XML snapshot to a temporary file, signs in over HTTPS with
+ * a session cookie, and posts that snapshot to the same endpoint the website's
+ * file picker uses. The password lives only in the dialog's PublishForm and is
+ * wiped before this function returns; it is never written to disk or logged.
+ */
+void Studio::PublishPlace() {
+  if (startPage_) {
+    MessageBoxW(frame_, L"Open a place before publishing.", L"FieldBrik Studio",
+                MB_OK | MB_ICONINFORMATION);
+    Log(L"Publish needs an open place.");
+    return;
+  }
+
+  PublishForm form;
+  form.site = publishSite_;
+  form.place = publishPlace_;
+  if (!ShowPublishDialog(frame_, &form)) return;
+
+  // The password is only needed for the sign-in request. Clear the storage on
+  // every return path, including a network failure.
+  struct PasswordWipe {
+    std::wstring* value;
+    ~PasswordWipe() {
+      if (value && !value->empty()) {
+        SecureZeroMemory(value->data(), value->size() * sizeof(wchar_t));
+      }
+    }
+  } wipe{&form.password};
+
+  const std::wstring place = NormalisePlace(form.place);
+  if (place.empty()) {
+    MessageBoxW(frame_,
+                L"That place address is not a slug, ID or FieldBrik link.",
+                L"Publish to FieldBrik", MB_OK | MB_ICONWARNING);
+    return;
+  }
+
+  SiteAddress site;
+  std::wstring parseError;
+  if (!ParseSiteAddress(form.site, &site, &parseError)) {
+    MessageBoxW(frame_, parseError.c_str(), L"Publish to FieldBrik",
+                MB_OK | MB_ICONWARNING);
+    return;
+  }
+
+  wchar_t tempDirectory[MAX_PATH] = L"";
+  if (GetTempPathW(MAX_PATH, tempDirectory) == 0) {
+    MessageBoxW(frame_, L"Windows did not provide a temporary folder.",
+                L"Publish to FieldBrik", MB_OK | MB_ICONWARNING);
+    return;
+  }
+
+  const std::wstring tempPath =
+      std::wstring(tempDirectory) + L"FieldBrikStudioPublish-" +
+      std::to_wstring(GetCurrentProcessId()) + L".fbrx";
+
+  std::string saveError;
+  if (!SavePlaceFile(Narrow(tempPath), world_.Parts(), saveError)) {
+    MessageBoxW(frame_,
+                (L"The place could not be prepared for publishing:\n\n" +
+                 Widen(saveError))
+                    .c_str(),
+                L"Publish to FieldBrik", MB_OK | MB_ICONWARNING);
+    Log(L"Publish could not save its temporary place: " + Widen(saveError));
+    return;
+  }
+
+  std::ifstream input(tempPath.c_str(), std::ios::binary);
+  std::string xml((std::istreambuf_iterator<char>(input)),
+                  std::istreambuf_iterator<char>());
+  input.close();
+  DeleteFileW(tempPath.c_str());
+
+  if (xml.empty()) {
+    MessageBoxW(frame_, L"The saved place file was empty.",
+                L"Publish to FieldBrik", MB_OK | MB_ICONWARNING);
+    return;
+  }
+
+  const std::wstring filename = PublishFilename(placeName_);
+  const std::wstring loginBody = L"username=" + UrlEncode(form.username) +
+                                 L"&password=" + UrlEncode(form.password);
+  const HttpResult login = HttpPost(
+      site, site.prefix + L"/login", ToUtf8(loginBody),
+      L"application/x-www-form-urlencoded", L"", L"");
+
+  if (!login.transport) {
+    MessageBoxW(frame_,
+                (L"The site could not be reached.\n\n" + login.error).c_str(),
+                L"Publish to FieldBrik", MB_OK | MB_ICONWARNING);
+    Log(L"Publish could not reach " + site.host + L": " + login.error);
+    return;
+  }
+
+  const std::wstring cookie = SessionCookie(login.headers);
+  if (cookie.empty()) {
+    std::wstring message =
+        L"FieldBrik did not sign this account in. Check the username and "
+        L"password, then try again.";
+    if (login.status == 429) {
+      message = L"Too many failed sign-in attempts. Wait a few minutes, then "
+                L"try again.";
+    } else if (login.status != 400 && login.status != 200) {
+      message += L"\n\nThe site answered HTTP " +
+                 std::to_wstring(login.status) + L".";
+    }
+    MessageBoxW(frame_, message.c_str(), L"Publish to FieldBrik",
+                MB_OK | MB_ICONWARNING);
+    Log(L"Publish sign-in was refused (HTTP " +
+        std::to_wstring(login.status) + L").");
+    return;
+  }
+
+  std::wstring uploadPath = site.prefix + L"/places/" + place + L"/file";
+  const std::wstring note = Trim(form.note);
+  if (!note.empty()) uploadPath += L"?note=" + UrlEncode(note);
+
+  const std::wstring headers =
+      L"X-FieldBrik-Filename: " + filename + L"\r\n";
+  const HttpResult upload =
+      HttpPost(site, uploadPath, xml, L"application/xml; charset=utf-8",
+               headers, cookie);
+
+  if (!upload.transport) {
+    MessageBoxW(frame_,
+                (L"The place was signed in but not uploaded.\n\n" + upload.error)
+                    .c_str(),
+                L"Publish to FieldBrik", MB_OK | MB_ICONWARNING);
+    Log(L"Publish upload failed: " + upload.error);
+    return;
+  }
+
+  if (upload.status == 201) {
+    const long version = JsonVersion(upload.body);
+    publishSite_ = form.site;
+    publishPlace_ = place;
+    const std::wstring versionText =
+        version > 0 ? L" version " + std::to_wstring(version) : L"";
+    MessageBoxW(
+        frame_,
+        (L"Published " + filename + versionText + L" to FieldBrik as " +
+         place + L".\n\nThe newest version is now what the place's download "
+                  L"link serves.")
+            .c_str(),
+        L"Publish to FieldBrik", MB_OK | MB_ICONINFORMATION);
+    Log(L"Published " + filename + L" to FieldBrik as " + place +
+        L" (version " + std::to_wstring(version) + L").");
+    return;
+  }
+
+  const std::wstring detail = JsonString(upload.body, "error");
+  std::wstring message;
+  switch (upload.status) {
+    case 400:
+      message = detail.empty()
+                    ? L"The site refused the place file. It must be XML with a "
+                      L"<roblox> root and no more than 1.5 MB."
+                    : detail;
+      break;
+    case 401:
+      message = L"The sign-in session was not accepted. Try publishing again.";
+      break;
+    case 403:
+      message = detail.empty()
+                    ? L"That place belongs to a different FieldBrik account."
+                    : detail;
+      break;
+    case 404:
+      message = L"No place matches that address on FieldBrik. Create the place "
+                L"on the website first, then publish to its address or ID.";
+      break;
+    case 413:
+      message = L"The place file is larger than the site accepts.";
+      break;
+    case 429:
+      message = L"The site is rate-limiting this account. Try again shortly.";
+      break;
+    default:
+      message = detail.empty()
+                    ? L"The place was not published. The site answered HTTP " +
+                          std::to_wstring(upload.status) + L"."
+                    : detail;
+      break;
+  }
+
+  MessageBoxW(frame_, message.c_str(), L"Publish to FieldBrik",
+              MB_OK | MB_ICONWARNING);
+  Log(L"Publish failed (HTTP " + std::to_wstring(upload.status) + L").");
+}
+
 void Studio::RotateSelected(int axis) {
   Part* part = world_.MutablePart(selected_);
   if (!part) return;
@@ -1940,9 +2951,11 @@ void Studio::SelectTreeItem(int index) {
 }
 
 void Studio::ShowProperties(int index) {
+  CancelPropertyEdit();
   selected_ = index;
   if (properties_) ListView_DeleteAllItems(properties_);
   propertyHeaders_.clear();
+  propertyRows_.clear();
 
   const std::vector<Part>& parts = world_.Parts();
   if (index < 0 || index >= static_cast<int>(parts.size())) {
@@ -1962,18 +2975,23 @@ void Studio::ShowProperties(int index) {
   propertiesTitle_ = L"Part \"" + name + L"\"";
 
   AddPropertyRow(L"Appearance", L"", true);
-  AddPropertyRow(L"Colour", ColourHex(part.colour));
+  AddPropertyRow(L"Colour", ColourHex(part.colour), false,
+                 PropertyField::Colour);
   AddPropertyRow(L"Shape", ShapeName(part.shape));
 
   AddPropertyRow(L"Data", L"", true);
-  AddPropertyRow(L"Name", name);
+  AddPropertyRow(L"Name", name, false, PropertyField::Name);
   AddPropertyRow(L"Parent", L"Workspace");
-  AddPropertyRow(L"Position", FormatVector(part.position));
-  AddPropertyRow(L"Size", FormatVector(part.size));
-  AddPropertyRow(L"Rotation", part.hasRotationMatrix
-                                  ? L"set by the place file"
-                                  : FormatVector(part.rotationDegrees));
-  AddPropertyRow(L"CanCollide", part.collides ? L"true" : L"false");
+  AddPropertyRow(L"Position", FormatVector(part.position), false,
+                 PropertyField::Position);
+  AddPropertyRow(L"Size", FormatVector(part.size), false,
+                 PropertyField::Size);
+  AddPropertyRow(L"Rotation",
+                 part.hasRotationMatrix ? L"set by the place file"
+                                        : FormatVector(part.rotationDegrees),
+                 false, PropertyField::Rotation);
+  AddPropertyRow(L"CanCollide", part.collides ? L"true" : L"false", false,
+                 PropertyField::CanCollide);
 
   if (!part.textureId.empty()) {
     AddPropertyRow(L"TextureID", Widen(part.textureId));
@@ -1993,7 +3011,7 @@ void Studio::ShowProperties(int index) {
 }
 
 void Studio::AddPropertyRow(const wchar_t* name, const std::wstring& value,
-                            bool header) {
+                            bool header, PropertyField field) {
   if (!properties_) return;
 
   LVITEMW item{};
@@ -2008,6 +3026,276 @@ void Studio::AddPropertyRow(const wchar_t* name, const std::wstring& value,
                          const_cast<wchar_t*>(value.c_str()));
   }
   propertyHeaders_.push_back(header);
+  propertyRows_.push_back(PropertyRow{field});
+}
+
+// Opens the inline editor over one Properties value. The row has to be one the
+// editor knows how to write back; Parent, Shape and the texture rows are shown
+// for reference and stay read-only.
+void Studio::BeginPropertyEdit(int row) {
+  if (!properties_ || !propertyEdit_) return;
+
+  if (propertyEditRow_ >= 0) CommitPropertyEdit();
+  if (row < 0 || row >= static_cast<int>(propertyRows_.size())) return;
+  if (propertyRows_[row].field == PropertyField::None) return;
+  if (selected_ < 0 || selected_ >= world_.PartCount()) return;
+
+  RECT cell{0, row, 0, 0};
+  if (!ListView_GetSubItemRect(properties_, row, 1, LVIR_BOUNDS, &cell)) return;
+  MapWindowPoints(properties_, frame_, reinterpret_cast<POINT*>(&cell), 2);
+
+  wchar_t text[256] = L"";
+  ListView_GetItemText(properties_, row, 1, text, 256);
+
+  wchar_t label[128] = L"";
+  ListView_GetItemText(properties_, row, 0, label, 128);
+
+  SetWindowTextW(propertyEdit_, text);
+  SetWindowPos(propertyEdit_, HWND_TOP, cell.left, cell.top,
+               std::max(40, static_cast<int>(cell.right - cell.left)),
+               std::max(18, static_cast<int>(cell.bottom - cell.top)),
+               SWP_SHOWWINDOW);
+  propertyEditRow_ = row;
+
+  statusText_ = std::wstring(L"Editing ") + label + L"; Enter applies, Esc cancels.";
+  UpdateStatus();
+
+  SetFocus(propertyEdit_);
+  SendMessageW(propertyEdit_, EM_SETSEL, 0, -1);
+}
+
+void Studio::CommitPropertyEdit() {
+  if (!propertyEdit_ || propertyEditRow_ < 0) return;
+
+  // Clear the row before anything can move focus again: hiding the control and
+  // rebuilding the list both come back through here.
+  const int row = propertyEditRow_;
+  propertyEditRow_ = -1;
+
+  wchar_t buffer[512] = L"";
+  GetWindowTextW(propertyEdit_, buffer, 512);
+  ShowWindow(propertyEdit_, SW_HIDE);
+
+  if (row < 0 || row >= static_cast<int>(propertyRows_.size())) return;
+  if (propertyRows_[row].field == PropertyField::None) return;
+
+  std::wstring error;
+  if (!ApplyPropertyValue(row, buffer, &error)) {
+    statusText_ = error;
+    Log(error);
+    UpdateStatus();
+  }
+}
+
+void Studio::CancelPropertyEdit() {
+  if (!propertyEdit_) return;
+  propertyEditRow_ = -1;
+  ShowWindow(propertyEdit_, SW_HIDE);
+}
+
+// Turns what was typed into the selected part's property. Nothing is changed
+// until the whole value is valid, so a bad entry leaves the place as it was and
+// says why in the status line and Output.
+bool Studio::ApplyPropertyValue(int row, const std::wstring& text,
+                                std::wstring* error) {
+  if (selected_ < 0 || selected_ >= world_.PartCount()) return false;
+  if (row < 0 || row >= static_cast<int>(propertyRows_.size())) return false;
+
+  Part* part = world_.MutablePart(selected_);
+  if (!part) return false;
+
+  const std::wstring value = Trim(text);
+  const PropertyField field = propertyRows_[row].field;
+
+  // "1.5, 2, -3" and "1.5 2 -3" are both accepted: the display uses commas and
+  // people type either.
+  const auto numbers = [&value](DirectX::XMFLOAT3* out) {
+    std::wstring cleaned = value;
+    for (wchar_t& ch : cleaned) {
+      if (ch == L',' || ch == L';') ch = L' ';
+    }
+
+    wchar_t* cursor = cleaned.data();
+    float axis[3] = {0.0f, 0.0f, 0.0f};
+
+    for (int i = 0; i < 3; ++i) {
+      while (*cursor == L' ' || *cursor == L'\t') ++cursor;
+      if (!*cursor) return false;
+
+      wchar_t* stop = nullptr;
+      const double parsed = wcstod(cursor, &stop);
+      if (stop == cursor) return false;
+      if (!(parsed == parsed) || parsed > 1.0e6 || parsed < -1.0e6) return false;
+
+      axis[i] = static_cast<float>(parsed);
+      cursor = stop;
+    }
+
+    while (*cursor == L' ' || *cursor == L'\t') ++cursor;
+    if (*cursor) return false;
+
+    *out = DirectX::XMFLOAT3{axis[0], axis[1], axis[2]};
+    return true;
+  };
+
+  Part updated = *part;
+
+  switch (field) {
+    case PropertyField::Name: {
+      if (value.empty()) {
+        *error = L"A part needs a name.";
+        return false;
+      }
+      if (value.size() > 64) {
+        *error = L"That name is too long; 64 characters is the limit.";
+        return false;
+      }
+
+      const std::string candidate = Narrow(value);
+      for (int i = 0; i < world_.PartCount(); ++i) {
+        if (i == selected_) continue;
+        if (world_.Parts()[i].name == candidate) {
+          *error = L"\"" + value + L"\" is already another part's name.";
+          return false;
+        }
+      }
+      updated.name = candidate;
+      break;
+    }
+
+    case PropertyField::Position: {
+      DirectX::XMFLOAT3 position{};
+      if (!numbers(&position)) {
+        *error = L"Position takes three numbers: x, y, z.";
+        return false;
+      }
+      updated.position = position;
+      break;
+    }
+
+    case PropertyField::Size: {
+      DirectX::XMFLOAT3 size{};
+      if (!numbers(&size)) {
+        *error = L"Size takes three numbers: x, y, z.";
+        return false;
+      }
+      if (size.x < 0.1f || size.y < 0.1f || size.z < 0.1f) {
+        *error = L"Every side of a part has to be at least 0.1 studs.";
+        return false;
+      }
+      updated.size = size;
+      break;
+    }
+
+    case PropertyField::Rotation: {
+      DirectX::XMFLOAT3 rotation{};
+      if (!numbers(&rotation)) {
+        *error = L"Rotation takes three angles in degrees: x, y, z.";
+        return false;
+      }
+      updated.rotationDegrees = rotation;
+      updated.hasRotationMatrix = false;
+      break;
+    }
+
+    case PropertyField::Colour: {
+      std::wstring hex = value;
+      if (!hex.empty() && hex[0] == L'#') hex = hex.substr(1);
+      if (hex.size() != 6) {
+        *error = L"Colour is six hex digits, like #A0A0A0.";
+        return false;
+      }
+      for (wchar_t ch : hex) {
+        if (!iswxdigit(ch)) {
+          *error = L"Colour is six hex digits, like #A0A0A0.";
+          return false;
+        }
+      }
+
+      const unsigned long packed = wcstoul(hex.c_str(), nullptr, 16);
+      updated.colour = {
+          static_cast<float>((packed >> 16) & 0xFF) / 255.0f,
+          static_cast<float>((packed >> 8) & 0xFF) / 255.0f,
+          static_cast<float>(packed & 0xFF) / 255.0f};
+      break;
+    }
+
+    case PropertyField::CanCollide: {
+      std::wstring lower = value;
+      std::transform(lower.begin(), lower.end(), lower.begin(), towlower);
+
+      if (lower == L"true" || lower == L"1" || lower == L"yes") {
+        updated.collides = true;
+      } else if (lower == L"false" || lower == L"0" || lower == L"no") {
+        updated.collides = false;
+      } else {
+        *error = L"CanCollide is true or false.";
+        return false;
+      }
+      break;
+    }
+
+    case PropertyField::None:
+    default:
+      return false;
+  }
+
+  wchar_t label[128] = L"";
+  ListView_GetItemText(properties_, row, 0, label, 128);
+
+  PushUndo();
+  *part = updated;
+  RefreshAfterEdit();
+
+  Log(L"Set " + std::wstring(label) + L" to " + value + L".");
+  return true;
+}
+
+int Studio::PropertyRowForField(PropertyField field) const {
+  for (int i = 0; i < static_cast<int>(propertyRows_.size()); ++i) {
+    if (propertyRows_[i].field == field) return i;
+  }
+  return -1;
+}
+
+LRESULT CALLBACK Studio::PropertyEditProc(HWND window, UINT message,
+                                          WPARAM wparam, LPARAM lparam,
+                                          UINT_PTR subclass, DWORD_PTR data) {
+  auto* studio = reinterpret_cast<Studio*>(data);
+  if (!studio) return DefSubclassProc(window, message, wparam, lparam);
+
+  switch (message) {
+    case WM_GETDLGCODE:
+      // Enter has to reach this control rather than the frame's default button
+      // handling, which is what a plain edit inside a window would get.
+      return DLGC_WANTALLKEYS;
+
+    case WM_KEYDOWN:
+      if (wparam == VK_RETURN) {
+        studio->CommitPropertyEdit();
+        if (studio->viewport_) SetFocus(studio->viewport_);
+        return 0;
+      }
+      if (wparam == VK_ESCAPE) {
+        studio->CancelPropertyEdit();
+        if (studio->viewport_) SetFocus(studio->viewport_);
+        return 0;
+      }
+      break;
+
+    case WM_KILLFOCUS:
+      studio->CommitPropertyEdit();
+      return 0;
+
+    case WM_NCDESTROY:
+      RemoveWindowSubclass(window, &Studio::PropertyEditProc, subclass);
+      break;
+
+    default:
+      break;
+  }
+
+  return DefSubclassProc(window, message, wparam, lparam);
 }
 
 void Studio::Log(const std::wstring& line) {
@@ -2308,7 +3596,10 @@ void Studio::DrawChrome(HDC dc, const RECT& client) {
   DrawQuickBar(dc, QuickBarRect());
 
   if (showToolbox_ && !startPage_) DrawToolbox(dc, ToolboxRect());
-  if (startPage_) DrawStartPage(dc, StartPageRect());
+  if (startPage_) {
+    DrawStartPageBrowser(dc, StartPageBrowserRect());
+    DrawStartPage(dc, StartPagePageRect());
+  }
 
   if (showExplorer_) DrawPanelHeader(dc, ExplorerRect(), L"Explorer");
   if (showProperties_) {
@@ -2328,15 +3619,15 @@ void Studio::DrawTabs(HDC dc, const RECT& area) {
   SetTextColor(dc, GetSysColor(COLOR_BTNTEXT));
   HGDIOBJ previous = SelectObject(dc, font_);
 
-  RECT home{6, area.top + 3, 100, area.bottom};
+  RECT home{6, area.top + 3, 106, area.bottom};
   FillRect(dc, &home,
            GetSysColorBrush(startPage_ ? COLOR_WINDOW : COLOR_3DFACE));
   DrawEdge(dc, &home, startPage_ ? BDR_SUNKENOUTER : BDR_RAISEDINNER, BF_RECT);
   RECT homeText = home;
-  DrawTextW(dc, L"FieldBrik", -1, &homeText,
+  DrawTextW(dc, L"Start Page", -1, &homeText,
             DT_SINGLELINE | DT_VCENTER | DT_CENTER);
 
-  RECT place{102, area.top + 3, 242, area.bottom};
+  RECT place{108, area.top + 3, 248, area.bottom};
   FillRect(dc, &place,
            GetSysColorBrush(startPage_ ? COLOR_3DFACE : COLOR_WINDOW));
   HBRUSH border = CreateSolidBrush(GetSysColor(COLOR_3DSHADOW));
@@ -2416,8 +3707,9 @@ void Studio::DrawToolbarRow(HDC dc, int top, const ToolButton* buttons,
 
   for (int i = 0; i < count; ++i) {
     RECT button{left, top + 2, left + kButtonSize, top + 2 + kButtonSize};
+    const bool enabled = ButtonEnabled(buttons[i]);
 
-    if (i == hot && buttons[i].enabled) {
+    if (i == hot && enabled) {
       DrawEdge(dc, &button, BDR_RAISEDINNER, BF_RECT);
     }
 
@@ -2427,7 +3719,7 @@ void Studio::DrawToolbarRow(HDC dc, int top, const ToolButton* buttons,
 
       BLENDFUNCTION blend{};
       blend.BlendOp = AC_SRC_OVER;
-      blend.SourceConstantAlpha = buttons[i].enabled ? 255 : 90;
+      blend.SourceConstantAlpha = enabled ? 255 : 90;
       blend.AlphaFormat = AC_SRC_ALPHA;
 
       AlphaBlend(dc, button.left + (kButtonSize - icon->width) / 2,
@@ -2614,8 +3906,17 @@ void Studio::OnCommand(int command) {
       SavePlaceAs();
       break;
 
+    case kFilePublish:
+      PublishPlace();
+      break;
+
     case kFileExit:
       RequestClose();
+      break;
+
+    case kEditRename:
+      // F2 and Edit > Rename open the same Name cell the Properties panel does.
+      BeginPropertyEdit(PropertyRowForField(PropertyField::Name));
       break;
 
     case kToolsPlaySolo:
@@ -2890,6 +4191,23 @@ LRESULT Studio::HandleMessage(HWND handle, UINT message, WPARAM wparam,
       const int mouseY = GET_Y_LPARAM(lparam);
 
       if (startPage_) {
+        const int chrome = StartPageChromeAt(mouseX, mouseY);
+        if (chrome != hotStartPageChrome_) {
+          hotStartPageChrome_ = chrome;
+          const RECT browser = StartPageBrowserRect();
+          if (browser.right > browser.left) {
+            InvalidateRect(handle, &browser, FALSE);
+          }
+        }
+
+        if (chrome >= 0) {
+          if (hotCard_ != -1) {
+            hotCard_ = -1;
+            InvalidateRect(handle, nullptr, FALSE);
+          }
+          return 0;
+        }
+
         const int card = StartPageCardAt(mouseX, mouseY);
         if (card != hotCard_) {
           hotCard_ = card;
@@ -2923,6 +4241,12 @@ LRESULT Studio::HandleMessage(HWND handle, UINT message, WPARAM wparam,
       const int y = GET_Y_LPARAM(lparam);
 
       if (startPage_) {
+        const int chrome = StartPageChromeAt(x, y);
+        if (chrome >= 0) {
+          StartPageAction(chrome);
+          return 0;
+        }
+
         const int card = StartPageCardAt(x, y);
         if (card >= 0) ApplyTemplate(card);
         return 0;
@@ -2974,6 +4298,22 @@ LRESULT Studio::HandleMessage(HWND handle, UINT message, WPARAM wparam,
         auto* change = reinterpret_cast<NMTREEVIEWW*>(lparam);
         ShowProperties(static_cast<int>(change->itemNew.lParam) - 1);
         return 0;
+      }
+
+      if (header->idFrom == kPropertiesId && header->code == NM_DBLCLK) {
+        auto* activate = reinterpret_cast<NMITEMACTIVATE*>(lparam);
+        BeginPropertyEdit(activate->iItem);
+        return 0;
+      }
+
+      // Enter on the highlighted row is the keyboard way into the same editor.
+      // F2 is an accelerator on the frame, because a list view consumes it.
+      if (header->idFrom == kPropertiesId && header->code == LVN_KEYDOWN) {
+        auto* key = reinterpret_cast<NMLVKEYDOWN*>(lparam);
+        if (key->wVKey == VK_RETURN) {
+          BeginPropertyEdit(ListView_GetNextItem(properties_, -1, LVNI_SELECTED));
+          return 0;
+        }
       }
 
       if (header->idFrom == kPropertiesId && header->code == NM_CUSTOMDRAW) {

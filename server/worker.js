@@ -134,6 +134,22 @@ function createResponse() {
       return res;
     },
 
+    // An image or any other binary answer. String(text) would turn a picture
+    // into a list of byte numbers, which is not what a tile should receive.
+    sendBytes(bytes) {
+      state.answered = true;
+      state.body = bytes;
+      return res;
+    },
+
+    // An answer with no body at all, such as a 304. Response() refuses a body
+    // on those statuses, so this is not the same as send('').
+    end(body) {
+      state.answered = true;
+      state.body = body === undefined ? null : body;
+      return res;
+    },
+
     redirect(url) {
       state.status = 303;
       state.headers.set('location', String(url));
@@ -180,6 +196,19 @@ async function readBody(request) {
       const body = {};
       for (const [key, value] of form) body[key] = value;
       return body;
+    }
+    if (
+      type.includes('application/xml') ||
+      type.includes('text/xml') ||
+      type.includes('text/plain')
+    ) {
+      // Studio publishes the place file itself, not a form around it. The
+      // filename travels in a header (or the query string) because a raw body
+      // has nowhere else to put it.
+      return {
+        content: await request.text(),
+        filename: request.headers.get('x-fieldbrik-filename') || '',
+      };
     }
     if (type.includes('multipart/form-data')) {
       // Evidence uploads. A file arrives as an object with the same three
@@ -405,8 +434,11 @@ async function handlePage(request, url, env) {
     );
   }
 
-  // Pages are per-request HTML; never let an edge or browser cache them.
-  state.headers.set('cache-control', 'no-store');
+  // Pages are per-request HTML; never let an edge or browser cache them. A
+  // route that has already said how long its answer may be cached keeps its
+  // word - the thumbnail sets its own, and it is the one thing here that is
+  // the same for everybody.
+  if (!state.headers.has('cache-control')) state.headers.set('cache-control', 'no-store');
   state.headers.set('x-fieldbrik', site.version);
 
   for (const cookie of state.cookies) {

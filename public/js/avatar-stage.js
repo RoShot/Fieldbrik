@@ -7,8 +7,8 @@
  * the CSS figure and nothing breaks.
  *
  * The renderer itself lives at /avatar/avatar.js (staged client code, served by
- * the site's assets). It imports three.js from a CDN, so the first paint of a
- * page with avatars depends on that fetch succeeding; a failure leaves the flat
+ * server/app.js). It imports three.js from a CDN, so the first paint of a page
+ * with avatars depends on that fetch succeeding; a failure leaves the flat
  * figure in place rather than an empty box.
  */
 

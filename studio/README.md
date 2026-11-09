@@ -9,8 +9,8 @@ toolbars, a tab strip with the text strip beneath it (Tools / Insert / Fullscree
 / Help... / Exit), the Explorer and Properties docked right, Output hidden until
 asked for, a status bar, and the viewport filling the rest.
 
-This is 0.6. The shell, the viewport, the panels, the full menu tree, selection,
-object insertion, the Start Page, the Toolbox and in-place editing are real:
+This is 0.9. The shell, the viewport, the panels, the full menu tree, selection,
+object insertion, the browser-framed Start Page, the Toolbox and in-place editing are real:
 parts drag across the build plane, duplicate, cut/copy/paste and delete, undo/redo
 covers the last 64 edits, and places save and reopen as `.fbrx`. Format > Rotate,
 Tilt, Roll and Colour change the selected part, Play Solo opens the current place
@@ -46,20 +46,27 @@ dependencies.
 - **New place** — startup and File > New both build a small grey studded
   baseplate (40 × 1 × 40, its top at y = 0) and name it `Place1`, `Place2`, and
   so on. The player's built-in demo place is untouched.
-- **Tabs** — `FieldBrik` is the home tab and opens the Start Page; the open
-  place is the second tab and returns to it. The text strip under the tabs opens
-  the Tools, Insert and Help menus, toggles fullscreen and exits.
-- **Start Page** — the home tab, or View > Start Page, shows three templates
-  built on this machine: Baseplate (grey), Grass Baseplate (green) and Empty
-  Place (no parts). Clicking one starts a new `PlaceN`, replacing the open
-  place, ready to save.
+- **Tabs** — `Start Page` is the home tab and opens the 2008-style Start Page;
+  the open place is the second tab and returns to it. The text strip under the
+  tabs opens the Tools, Insert and Help menus, toggles fullscreen and exits.
+- **Start Page** — the home tab, or View > Start Page, is a local page inside a
+  browser frame: navigation buttons, a readable address bar, a FieldBrik header
+  and three templates built on this machine: Baseplate (grey), Grass Baseplate
+  (green) and Empty Place (no parts). Refresh and Home work; Back, Forward, Stop
+  and Go are visibly disabled because there is no web history to navigate. Clicking
+  a template starts a new `PlaceN`, replacing the open place, ready to save.
 - **Toolbox** — View > Toolbox docks a panel on the left with Block, Sphere,
   Cylinder and Wedge. Clicking a row inserts it; the viewport and Output shift
   to make room, and Game Layout closes it again.
+- **Toolbars** — the standard row has New, Open, Save, Undo, Redo and Play;
+  the tools row has the four insertion shapes. New is available from startup,
+  while Undo and Redo light up only when their history exists.
 - **Insert** — the four shape buttons on the second toolbar, or Insert > Object,
-  add a brick where the camera is looking. New parts rest on the build plane,
-  stay over the baseplate, are named `Part`, `Part 2`, `Sphere` and so on, appear
-  in Explorer and are selected ready for the next pass.
+  add a brick where the camera is looking, snapped to the stud grid and kept over
+  the baseplate. A new brick stands on the top of whatever is already under that
+  point, so repeated inserts stack into a tower instead of piling into one
+  merged block. Parts are named `Part`, `Part 2`, `Sphere` and so on, appear in
+  Explorer and are selected ready for the next pass.
 - **Explorer**, docked right — the place under a `Workspace` root, every part
   listed by name, then the services this build knows about: Players, Lighting,
   StarterPack and Soundscape. Picking a part in the viewport selects its row;
@@ -73,9 +80,16 @@ dependencies.
   history. Corner handles resize an axis-aligned part on X and Z; the handle you
   can see is the handle the pointer picks.
 - **Properties**, docked right — a bold `Part "Name"` title across the panel,
-  then **Appearance** (Colour, Shape) and **Data** (Name, Parent, Position,
-  Size, Rotation, CanCollide, TextureID, face decals). The fields are read-only,
-  but they refresh after every edit so a move can be checked numerically.
+  then the Property/Value columns, **Appearance** (Colour, Shape) and **Data**
+  (Name, Parent, Position, Size, Rotation, CanCollide, TextureID, face decals).
+  Double-click a value, or highlight its row and press Enter, to type it: Colour
+  takes `#RRGGBB`, Position, Size and Rotation take `x, y, z` (commas or spaces),
+  and CanCollide takes `true` or `false`. Enter applies, Esc cancels, clicking
+  away applies, and one Ctrl+Z puts it back. Edit > Rename, or F2 from any panel,
+  opens Name directly. A value that cannot be read is
+  refused with the reason in the status line, and the part is left alone. Parent,
+  Shape and the texture rows stay read-only. Every row refreshes after an edit so
+  a change can be checked numerically.
 - **Output** — hidden by default, the way the reference starts. View > Output,
   Window > Output brings it up; it records startup,
   opened places, load errors and dropped texture notes.
@@ -94,6 +108,15 @@ dependencies.
   textures and per-face decals round-trip. The save commands are no longer
   placeholders. Closing or replacing a changed place offers Save, Discard and
   Cancel instead of throwing the work away.
+- **File > Publish to FieldBrik** — saves one XML snapshot, signs in to the site
+  with the account that owns the place, and uploads it to the place's real
+  version history. The dialog takes the site address (default
+  `https://fieldbrik.com`), the place slug, ID or full link, the username and
+  the password. The password is used for that sign-in only and is wiped before
+  the command returns; it is never stored or logged. The newest upload is what
+  the place's download link serves, and earlier versions stay on its record.
+  This is the same endpoint the website's file picker uses, so the two routes
+  cannot disagree about validation or version numbers.
 - **Format** — Rotate, Tilt and Roll turn the selected part 15 degrees at a time,
   and Colour opens the Windows colour picker. The change is one undo step.
 - **Play Solo** — writes the current place to a temporary `.fbrx` and launches
@@ -178,11 +201,16 @@ compiled into Studio directly. `Camera` gained a free mode, `Renderer` gained
 - The Toolbox is click-to-insert; there is no drag-and-drop from it.
 - The Explorer's services are labels, not runtime objects, and the place is a
   flat list under `Workspace` rather than a real hierarchy.
-- Properties fields are read-only; edits are made in the viewport or through
-  the Format menu.
+- Properties edits cover Name, Colour, Position, Size, Rotation and CanCollide.
+  There is no colour swatch or slider in the panel; colour is typed as hex or
+  picked from Format > Colour, and Shape and Parent cannot be changed there yet.
+- The inline editor does not follow the panel while the list is scrolled.
 - The status line shows parts, frame rate and the place name; the era's
   Sleep/Wait/Scheduler readout is not reproduced.
 - No DPI scaling: the chrome is sized in pixels for a 100% display.
 - The sky art itself is 512 pixels a face, so looking straight up shows soft
   clouds; that is the picture, not a seam.
 - Most menu entries are disabled placeholders for the next passes.
+- Publishing needs a place that already exists on the website. Studio can
+  replace a place's file, not create the listing, and it asks for the account
+  password each time because the editor has no stored sign-in yet.

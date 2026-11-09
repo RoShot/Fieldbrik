@@ -124,7 +124,7 @@
             <ul class="fb-grid--games">
               <% created.forEach(function (place) { %>
                 <li>
-                  <a class="fb-card-game__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"></a>
+                  <a class="fb-card-game__thumb" href="/games/<%= place.slug %>" style="--thumb: <%= place.thumb %>;" aria-hidden="true" tabindex="-1"><%- include('../partials/thumb-img', { thumbUrl: place.thumbnailUrl }) %></a>
                   <a class="fb-card-game__title" href="/games/<%= place.slug %>"><%= place.name %></a>
                   <p class="fb-card-game__meta">
                     <% if (place.created) { %>Built <%= place.created %><% } else { %>By <%= person.username %><% } %>

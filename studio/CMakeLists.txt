@@ -12,7 +12,7 @@ cmake_minimum_required(VERSION 3.21)
 # art can be dropped in without a rebuild. The whole content folder is copied next
 # to the exe after every build.
 
-project(FieldBrikStudio VERSION 0.6 LANGUAGES CXX)
+project(FieldBrikStudio VERSION 0.9 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -160,9 +160,10 @@ target_compile_definitions(FieldBrikStudio PRIVATE
 # d3d11/dxgi/d3dcompiler are the shared renderer, windowscodecs is WIC decoding
 # the icons and dropped brick PNGs, ole32 is the COM apartment both run in,
 # comctl32 is the Explorer and Properties panels, comdlg32 is Open, msimg32 is
-# AlphaBlend drawing the toolbar icons.
+# AlphaBlend drawing the toolbar icons, and winhttp publishes a place without a
+# third-party HTTP library or a browser window.
 target_link_libraries(FieldBrikStudio PRIVATE
-  d3d11 dxgi d3dcompiler windowscodecs ole32 comctl32 comdlg32 msimg32)
+  d3d11 dxgi d3dcompiler windowscodecs ole32 comctl32 comdlg32 msimg32 winhttp)
 
 if(MSVC)
   target_compile_options(FieldBrikStudio PRIVATE /W4 /permissive-)

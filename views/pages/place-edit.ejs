@@ -47,6 +47,104 @@
   </section>
 
   <% if (place) { %>
+    <section class="fb-panel" id="fb-place-file-panel">
+      <h2 class="fb-panel__title">Place file</h2>
+      <div class="fb-panel__body">
+        <% if (latestFile) { %>
+          <p><strong>Version <%= latestFile.version %> is published.</strong>
+             <span class="fb-muted"><%= latestFile.filename %></span></p>
+          <table class="fb-table fb-table--kv">
+            <tbody>
+              <tr><th scope="row">Format</th><td><%= latestFile.formatLabel %></td></tr>
+              <tr><th scope="row">Size</th><td><%= (latestFile.size / 1024).toFixed(1) %> KB</td></tr>
+              <tr><th scope="row">Published</th><td><%= latestFile.created %></td></tr>
+              <% if (latestFile.note) { %><tr><th scope="row">Note</th><td><%= latestFile.note %></td></tr><% } %>
+            </tbody>
+          </table>
+          <p class="fb-panel__more">
+            <a class="fb-btn fb-btn--primary" href="/games/<%= place.slug %>/file">Download version <%= latestFile.version %></a>
+          </p>
+        <% } else { %>
+          <p class="fb-muted">No file has been published for this place. Version 1 starts with the
+             first upload below.</p>
+        <% } %>
+
+        <form id="fb-place-file" class="fb-form" method="post"
+              action="/places/<%= place.id %>/file"
+              data-redirect="/places/<%= place.id %>/edit?done=file"
+              data-max-bytes="1572864">
+          <label for="fb-place-file-input">Choose a place file</label>
+          <input id="fb-place-file-input" name="file" type="file" required
+                 accept=".fbrx,.rbxl,.rbxlx,.xml,application/xml,text/xml">
+          <p class="fb-muted">A .fbrx from Studio, a .rbxlx, an XML-saved .rbxl, or a .xml place.
+             The file must be XML with a &lt;roblox&gt; root and can be up to 1.5 MB. A binary .rbxl
+             has to be saved as XML first.</p>
+
+          <label for="fb-place-file-note">What changed? (optional)</label>
+          <input id="fb-place-file-note" name="note" type="text" maxlength="160"
+                 placeholder="e.g. Fixed the bridge and added a spawn">
+
+          <button class="fb-btn fb-btn--primary" type="submit">Publish file</button>
+          <p id="fb-place-file-status" class="fb-filebox__status" role="status" aria-live="polite"></p>
+          <noscript><p class="fb-muted">Publishing a file here needs JavaScript to read it in the
+            browser. The same file can be posted to <code>/places/<%= place.id %>/file</code> with
+            the filename in <code>X-FieldBrik-Filename</code>.</p></noscript>
+        </form>
+
+        <% if (fileHistory && fileHistory.length > 1) { %>
+          <table class="fb-table">
+            <thead><tr><th scope="col">Version</th><th scope="col">File</th><th scope="col">Published</th></tr></thead>
+            <tbody>
+              <% fileHistory.forEach(function (file) { %>
+                <tr>
+                  <td>v<%= file.version %></td>
+                  <td><%= file.filename %><% if (file.note) { %> <span class="fb-muted">&mdash; <%= file.note %></span><% } %></td>
+                  <td><%= file.created %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        <% } %>
+      </div>
+      <p class="fb-panel__strip">Publishing keeps every earlier version. The newest version is what
+        the place's download link serves; a published draft's file is only visible to you until you
+        publish the place itself.</p>
+    </section>
+
+    <section class="fb-panel" id="fb-place-thumbnail-panel">
+      <h2 class="fb-panel__title">Thumbnail</h2>
+      <div class="fb-panel__body">
+        <p class="fb-muted">The picture on this place's page and on every tile that links to it.
+           It is cropped to 320&times;200, so the middle of the picture is what shows.</p>
+
+        <div id="fb-place-thumb-preview" class="fb-thumbpreview">
+          <% if (place.thumbnailUrl) { %>
+            <img class="fb-thumbpreview__img" src="<%= place.thumbnailUrl %>" alt="Current thumbnail">
+          <% } else { %>
+            <p class="fb-muted">No thumbnail yet. Until there is one, the tiles keep their colour swatch.</p>
+          <% } %>
+        </div>
+
+        <form id="fb-place-thumbnail" class="fb-form" method="post"
+              action="/places/<%= place.id %>/thumbnail"
+              data-redirect="/places/<%= place.id %>/edit?done=thumbnail"
+              data-max-bytes="262144">
+          <label for="fb-place-thumbnail-input">Choose a PNG or JPEG</label>
+          <input id="fb-place-thumbnail-input" name="thumbnail" type="file"
+                 accept="image/png,image/jpeg">
+          <button class="fb-btn fb-btn--primary" type="submit">Save thumbnail</button>
+          <p id="fb-place-thumbnail-status" class="fb-filebox__status" role="status" aria-live="polite"></p>
+          <noscript><p class="fb-muted">Saving a thumbnail here needs JavaScript, so the picture can be
+            cropped in the browser. A PNG or JPEG can also be posted to
+            <code>/places/<%= place.id %>/thumbnail</code> as JSON
+            <code>{ "content": "&lt;base64&gt;" }</code>.</p></noscript>
+        </form>
+      </div>
+      <p class="fb-panel__strip">The picture is cropped and shrunk in the browser before it is sent, so
+        the stored image is a few tens of KB and the place page stays quick to open. Replacing it changes
+        the address on every tile, so nobody keeps seeing an old one.</p>
+    </section>
+
     <section class="fb-panel">
       <h2 class="fb-panel__title">Visibility</h2>
       <div class="fb-panel__body">
@@ -69,15 +167,17 @@
   <% } %>
 
   <div class="fb-notice">
-    <p><strong>A place is a listing, not a world yet.</strong></p>
-    <p>There is no brick editor and no Play button: building and playing happen in the FieldBrik
-       client, which is the next project. What you can do here is give a place its name and
-       description, keep it as a draft, and publish it to the Home page.</p>
+    <p><strong>A place is a listing plus its published file.</strong></p>
+    <p>Studio writes a .fbrx place, and this page stores it as an exact version. The site can
+       store and serve the file today; playing it still needs the FieldBrik client, so there is no
+       Play button yet. The download link always serves the newest version.</p>
   </div>
 
   <p class="fb-panel__more"><a href="/places/mine">My places</a> &middot; <a href="/home">All places</a></p>
 </main>
 
+<script src="/js/place-file.js" defer></script>
+<script src="/js/place-thumbnail.js" defer></script>
 <%- include('../partials/footer') %>
 </body>
 </html>

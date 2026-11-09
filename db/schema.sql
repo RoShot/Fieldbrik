@@ -217,6 +217,38 @@ CREATE TABLE IF NOT EXISTS games (
 CREATE INDEX IF NOT EXISTS idx_games_creator ON games (creator_id);
 CREATE INDEX IF NOT EXISTS idx_games_visits  ON games (visits DESC);
 
+-- The tile picture, base64 so the Worker and Express store it the same way.
+--
+-- A table rather than three columns on games, because this deploy re-applies
+-- every statement and ALTER TABLE has no IF NOT EXISTS: the second run would
+-- fail with "duplicate column name", exactly as 003, 010 and 011 explain. A
+-- missing row means no thumbnail, which keeps the place's colour swatch.
+CREATE TABLE IF NOT EXISTS place_thumbnails (
+  game_id      INTEGER PRIMARY KEY REFERENCES games (id) ON DELETE CASCADE,
+  content      TEXT    NOT NULL,
+  content_type TEXT    NOT NULL CHECK (content_type IN ('image/png', 'image/jpeg')),
+  updated_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+-- Every publish is a new row. The highest version is what the download endpoint
+-- serves, so replacing a place never destroys the last file that worked.
+CREATE TABLE IF NOT EXISTS place_versions (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  game_id     INTEGER NOT NULL REFERENCES games (id) ON DELETE CASCADE,
+  version     INTEGER NOT NULL CHECK (version > 0),
+  filename    TEXT    NOT NULL,
+  format      TEXT    NOT NULL CHECK (format IN ('fbrx', 'rbxl', 'rbxlx', 'xml')),
+  size_bytes  INTEGER NOT NULL CHECK (size_bytes > 0),
+  content     TEXT    NOT NULL,
+  note        TEXT    NOT NULL DEFAULT '',
+  created_by  INTEGER REFERENCES users (id),
+  created_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  UNIQUE (game_id, version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_place_versions_game
+  ON place_versions (game_id, version DESC);
+
 -- Prices are nullable: a creator sets Tickets, Bucks, or both. When both are
 -- set the rate is 1 Buck = 10 Tickets (D11), enforced by the app, not by the
 -- table, because the table only stores what was asked for.

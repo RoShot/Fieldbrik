@@ -2,8 +2,9 @@
 // FIELDBRIK - AVATAR RENDERER
 // =========================================================
 //
-// Staged client code. The website draws its flat 2D avatar from the stored
-// colours; this module is the real 3D figure, mounted by /js/avatar-stage.js.
+// Staged client code. NOT wired into the website: the site keeps drawing its
+// flat 2D avatar from the stored colours. This module is what the client will
+// use once places, login and networking exist.
 //
 // Loaded straight from esm.sh for now so it can be opened and poked at.
 // Before shipping it must be bundled locally: a downloadable client cannot
@@ -54,9 +55,8 @@ import { OBJLoader } from "https://esm.sh/three@0.181.2/examples/jsm/loaders/OBJ
 // PATHS
 // =========================================================
 //
-// Served from the site's single assets directory, so the same URLs work on
-// Express and on the Worker. If the client is ever hosted elsewhere, change
-// ASSET_BASE only.
+// Served by the client bundle, not by the website. If the client is ever
+// hosted somewhere other than the site root, change ASSET_BASE only.
 //
 
 const ASSET_BASE = "/avatar/assets";

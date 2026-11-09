@@ -112,7 +112,10 @@ async function grant(db, options) {
     .bind(REWARD_BUCKS, opts.referrerId)
     .run();
 
-  const balance = await db.prepare('SELECT bucks FROM users WHERE id = ?').bind(opts.referrerId).first();
+  const balance = await db
+    .prepare('SELECT bucks FROM users WHERE id = ?')
+    .bind(opts.referrerId)
+    .first();
 
   await db
     .prepare(
@@ -151,12 +154,7 @@ async function grant(db, options) {
     .bind(opts.actor.id, opts.referrerId, `referred account ${referred.id}`, now)
     .run();
 
-  return {
-    ok: true,
-    code: 'referral_granted',
-    used: used + 1,
-    balance: balance ? Number(balance.bucks) || 0 : 0,
-  };
+  return { ok: true, code: 'referral_granted', used: used + 1, balance: balance ? Number(balance.bucks) || 0 : 0 };
 }
 
 module.exports = { CAP, REWARD_BUCKS, count, grant, list, resolveAccount };

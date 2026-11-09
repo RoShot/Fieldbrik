@@ -3,6 +3,8 @@
    Loaded only by the moderation page and the ban notice.
    ========================================================================== */
 
+/* ---------- Moderate User ---------- */
+
 .fb-mod__actions {
   margin: 0 0 10px;
   padding: 6px 8px;

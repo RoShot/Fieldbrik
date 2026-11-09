@@ -23,7 +23,26 @@
 
   <div class="fb-cols">
     <div class="fb-col-main">
-      <span class="fb-hero" style="--thumb: <%= place.thumb %>;" aria-hidden="true"></span>
+      <span class="fb-hero" style="--thumb: <%= place.thumb %>;" aria-hidden="true"><%- include('../partials/thumb-img', { thumbUrl: place.thumbnailUrl }) %></span>
+      <% if (isOwner) { %>
+        <p class="fb-panel__more"><a class="fb-btn" href="/places/<%= place.id %>/edit#fb-place-thumbnail-panel">Change thumbnail</a></p>
+      <% } %>
+
+      <% if (placeFile) { %>
+        <div class="fb-filebox">
+          <p><strong>Place file ready.</strong> Version <%= placeFile.version %>, marked
+             <span class="fb-muted"><%= placeFile.filename %></span>.</p>
+          <p>
+            <a class="fb-btn fb-btn--primary" href="/games/<%= place.slug %>/file">Download place file</a>
+            <span class="fb-muted"><%= placeFile.formatLabel %>, <%= (placeFile.size / 1024).toFixed(1) %> KB</span>
+          </p>
+        </div>
+      <% } else { %>
+        <div class="fb-notice">
+          <p><strong>No place file has been published yet.</strong></p>
+          <p><% if (isOwner) { %>Open <a href="/places/<%= place.id %>/edit">Edit place</a> to publish the .fbrx file from Studio.<% } else { %>The creator has not published a file for this place yet.<% } %></p>
+        </div>
+      <% } %>
 
       <section class="fb-panel">
         <h2 class="fb-panel__title">About this place</h2>
@@ -63,11 +82,11 @@
       </section>
 
       <div class="fb-notice">
-        <p><strong>There is no Play button on this page.</strong></p>
-        <p>Playing a place needs the FieldBrik client, which is not built: there is no renderer and
-           no session to join. Because nothing can be visited, no visit is recorded and the
-           every-10-visits Ticket milestone stays unpaid. The listing above is real data about this
-           place on its owner's account.</p>
+        <p><strong><%= placeFile ? 'The place file is real. The Play button is not here yet.' : 'This listing is ready for a file.' %></strong></p>
+        <p><% if (placeFile) { %>Downloading gives you the exact XML Studio published. Playing it needs the FieldBrik
+           client, which is still being built; that is why there is no Play button and no visit count yet.<% } else { %>Publishing a .fbrx from Studio, or uploading one here, stores it as version 1 and makes
+           it downloadable. Publishing again keeps the older version on the place's record rather
+           than overwriting it.<% } %></p>
       </div>
     </div>
 
@@ -88,6 +107,7 @@
           <h2 class="fb-panel__title">This is your place</h2>
           <div class="fb-panel__body">
             <p><a class="fb-btn" href="/places/<%= place.id %>/edit">Edit place</a></p>
+            <p><a class="fb-btn" href="/places/<%= place.id %>/edit#fb-place-file-panel">Publish a place file</a></p>
             <form method="post" action="/places/<%= place.id %>/status">
               <input type="hidden" name="published" value="<%= place.published ? '0' : '1' %>">
               <button class="fb-btn<%= place.published ? '' : ' fb-btn--primary' %>" type="submit">

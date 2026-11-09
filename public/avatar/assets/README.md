@@ -1,13 +1,11 @@
-# public/avatar/assets/
+# client/avatar/assets/
 
-Assets for the avatar renderer, served at `/avatar/assets/`. They live under
-`public/` because a Worker publishes exactly one assets directory, so both
-Express and the Worker serve these files at the same URLs.
+Client-only assets. Served at `/avatar/assets/` on the **client's** origin,
+never from the website. `public/` is untouched by everything here.
 
-All nine files were supplied by the operator from
-`github.com/RoShot/heads-faces`. If the folder is empty, the renderer falls back
-to the flat CSS figure: pages still work, avatars are just 2D until the files
-are added.
+## Present
+
+All nine files, supplied by the user from `github.com/RoShot/heads-faces`.
 
 ```
 head.obj        178 KB   972 vertices, 324 triangles, UVs and normals

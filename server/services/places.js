@@ -2,10 +2,11 @@
  * Places: the rows in `games`, read and written.
  *
  * A place is a name, a description, an owner and one flag: published or not.
- * There is no world data here yet - `place_data` stays empty until the client
- * exists - and nothing increments `visits`, because a visit would have to be a
- * real session in a real place. The place page says so rather than printing a
- * zero that looks like "nobody came".
+ * The world itself lives in `place_versions`, one row per publish. This service
+ * keeps the listing and its visibility; `placeFiles` owns the file history.
+ * Nothing increments `visits`, because a visit would have to be a real session
+ * in a real place. The place page says so rather than printing a zero that looks
+ * like "nobody came".
  *
  * The slug is made once, from the name, and then left alone. Renaming a place
  * must not break a link somebody pasted into the forum, so the URL is stable
@@ -30,9 +31,11 @@ function slugify(value) {
 const COLUMNS = `
   g.id, g.slug, g.name, g.description, g.visits, g.published,
   g.created_at, g.updated_at, g.creator_id,
+  (t.game_id IS NOT NULL) AS has_thumbnail, t.updated_at AS thumbnail_at,
   u.username AS creator
     FROM games g
     JOIN users u ON u.id = g.creator_id
+    LEFT JOIN place_thumbnails t ON t.game_id = g.id
 `;
 
 function shape(row) {
@@ -48,6 +51,13 @@ function shape(row) {
     created: String(row.created_at || '').slice(0, 10),
     updated: String(row.updated_at || '').slice(0, 10),
     thumb: THUMBS[Number(row.id) % THUMBS.length],
+    // The swatch stays as the fallback a tile draws before the image loads, and
+    // as the whole picture for a place nobody has given one yet.
+    thumbnail: Number(row.has_thumbnail) === 1,
+    thumbnailUrl:
+      Number(row.has_thumbnail) === 1 && row.thumbnail_at
+        ? `/games/${row.slug}/thumbnail?v=${encodeURIComponent(String(row.thumbnail_at))}`
+        : null,
   };
 }
 
