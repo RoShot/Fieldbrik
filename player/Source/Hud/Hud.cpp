@@ -187,8 +187,8 @@ bool RenderLabel(const std::wstring& text, int pointSize, bool bold,
       for (const Offset& offset : offsets) {
         for (int y = 0; y < height; ++y) {
           for (int x = 0; x < width; ++x) {
-            const size_t source = static_cast<size_t>(y) * width + x;
-            if (mask[source] == 0) continue;
+            const size_t maskIndex = static_cast<size_t>(y) * width + x;
+            if (mask[maskIndex] == 0) continue;
 
             const int tx = x + offset.x;
             const int ty = y + offset.y;
