@@ -64,6 +64,9 @@ class Hud {
   // Characters typed this frame, from the window's message queue.
   void TypeText(const std::wstring& characters) { chatModel_.Type(characters); }
 
+  // The joined account's name, shown in the player list instead of "You".
+  void SetPlayerName(const std::wstring& name);
+
   bool ChatTyping() const { return chatModel_.Typing(); }
   bool QuickChatOpen() const { return chatModel_.Open(); }
   void BeginChat() { chatModel_.BeginTyping(); }
@@ -163,6 +166,7 @@ class Hud {
   std::vector<std::wstring> chatLogKeys_;
   Label chatTyped_;
   std::wstring chatTypedSource_;
+  std::wstring playerName_ = L"You";
   float chatBlink_ = 0.0f;
   float cursorX_ = 0.0f;
   float cursorY_ = 0.0f;

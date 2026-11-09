@@ -22,6 +22,16 @@ constexpr int kHeadMeshResource = 101;
 // face.png: the classic smile, 128x128 RGBA with a transparent background.
 constexpr int kFaceTextureResource = 102;
 
+// The other seven faces the site stores, in its own order after the smile. They
+// are compiled in for Join, so the account's chosen face arrives with the place.
+constexpr int kFaceChuckleResource = 103;
+constexpr int kFaceSillyResource = 104;
+constexpr int kFaceDurrResource = 105;
+constexpr int kFaceOoResource = 106;
+constexpr int kFaceGleeResource = 107;
+constexpr int kFaceNotAmusedResource = 108;
+constexpr int kFaceMehResource = 109;
+
 // The sky: 151 to 156 for its six cube faces, in Direct3D's order (+X, -X, +Y,
 // -Y, +Z, -Z). Whether the exe carries them is in the generated table, because
 // the folder decides. Brick textures are numbered from 201 upwards for the same

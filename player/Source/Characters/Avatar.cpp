@@ -214,6 +214,17 @@ void Avatar::SetPose(const XMFLOAT3& feetPosition, float facingDegrees) {
   facing_ = facingDegrees;
 }
 
+void Avatar::SetAppearance(const XMFLOAT3& head, const XMFLOAT3& torso,
+                           const XMFLOAT3& leftArm, const XMFLOAT3& rightArm,
+                           const XMFLOAT3& leftLeg, const XMFLOAT3& rightLeg) {
+  headColour_ = head;
+  torsoColour_ = torso;
+  leftArmColour_ = leftArm;
+  rightArmColour_ = rightArm;
+  leftLegColour_ = leftLeg;
+  rightLegColour_ = rightLeg;
+}
+
 void Avatar::Settle() {
   pose_ = Pose::Standing;
   rightShoulder_ = Joint{};
@@ -249,8 +260,29 @@ void Avatar::CollectParts(std::vector<Part>& out) const {
     Part part;
     part.name = body.name;
     part.size = body.size;
-    part.colour = body.colour;
     part.shape = body.shape;
+
+    // The palette Join may have replaced, otherwise the 2005 colours above.
+    switch (body.joint) {
+      case JointId::Head:
+        part.colour = headColour_;
+        break;
+      case JointId::Torso:
+        part.colour = torsoColour_;
+        break;
+      case JointId::LeftArm:
+        part.colour = leftArmColour_;
+        break;
+      case JointId::RightArm:
+        part.colour = rightArmColour_;
+        break;
+      case JointId::LeftLeg:
+        part.colour = leftLegColour_;
+        break;
+      case JointId::RightLeg:
+        part.colour = rightLegColour_;
+        break;
+    }
 
     part.position.x = feet_.x + local.x * cosine + local.z * sine;
     part.position.y = feet_.y + local.y;

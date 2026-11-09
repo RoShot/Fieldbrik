@@ -74,6 +74,31 @@ App::App(HINSTANCE instance, int showCommand, const std::wstring& placePath)
 App::~App() = default;
 
 bool App::Initialise() {
+  // Pressing Play on the site opens this exe through the fieldbrik:// scheme.
+  // Registering it every run keeps a moved or updated client pointing at itself.
+  RegisterJoinScheme();
+
+  if (IsJoinUrl(placePath_)) {
+    std::wstring error;
+    if (!ParseJoinUrl(placePath_, join_, error)) {
+      ShowError(error.c_str());
+      failureCode_ = 6;
+      return false;
+    }
+
+    std::wstring temp;
+    if (!DownloadPlace(join_.placeUrl, temp, error)) {
+      const std::wstring message = L"The place could not be opened:\n\n" + error;
+      ShowError(message.c_str());
+      failureCode_ = 6;
+      return false;
+    }
+
+    join_.tempPath = temp;
+    placePath_ = temp;
+    joined_ = true;
+  }
+
   if (!window_.Create(instance_, kStartWidth, kStartHeight, L"FieldBrik Player",
                       showCommand_)) {
     ShowError(L"The client could not create its window.");
@@ -158,6 +183,18 @@ bool App::Initialise() {
   RECT client{};
   GetClientRect(window_.Handle(), &client);
   hud_.Resize(client.right, client.bottom);
+
+  // Join's identity: the account name in the player list, the site's palette on
+  // the body, and the face it chose on the head.
+  if (joined_) {
+    if (!join_.name.empty()) hud_.SetPlayerName(join_.name);
+    if (join_.hasColours) {
+      avatar_.SetAppearance(join_.colours[0], join_.colours[1], join_.colours[2],
+                            join_.colours[3], join_.colours[4],
+                            join_.colours[5]);
+    }
+    if (!join_.face.empty()) renderer_.SetFace(join_.face);
+  }
 
   player_.Spawn(world_.SpawnPoint(), world_.Parts());
   renderedFeet_ = player_.Position();

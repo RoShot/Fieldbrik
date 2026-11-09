@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.21)
 # Built by .github/workflows/player-build.yml on every push that touches this
 # folder, and by hand with the commands in README.md.
 
-project(FieldBrikPlayer VERSION 0.20 LANGUAGES CXX)
+project(FieldBrikPlayer VERSION 0.21 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,6 +24,13 @@ set(PLAYER_ASSET_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../public/avatar/assets")
 
 file(REAL_PATH "${PLAYER_ASSET_DIR}/head.obj" HEAD_MESH_PATH)
 file(REAL_PATH "${PLAYER_ASSET_DIR}/face.png" FACE_TEXTURE_PATH)
+file(REAL_PATH "${PLAYER_ASSET_DIR}/chuckle.png" FACE_CHUCKLE_PATH)
+file(REAL_PATH "${PLAYER_ASSET_DIR}/silly.png" FACE_SILLY_PATH)
+file(REAL_PATH "${PLAYER_ASSET_DIR}/durr.png" FACE_DURR_PATH)
+file(REAL_PATH "${PLAYER_ASSET_DIR}/oo.png" FACE_OO_PATH)
+file(REAL_PATH "${PLAYER_ASSET_DIR}/glee.png" FACE_GLEE_PATH)
+file(REAL_PATH "${PLAYER_ASSET_DIR}/notamused.png" FACE_NOTAMUSED_PATH)
+file(REAL_PATH "${PLAYER_ASSET_DIR}/meh.png" FACE_MEH_PATH)
 
 if(NOT EXISTS "${HEAD_MESH_PATH}" OR NOT EXISTS "${FACE_TEXTURE_PATH}")
   message(FATAL_ERROR
@@ -186,6 +193,7 @@ configure_file(Tools/assets.rc.in "${CMAKE_CURRENT_BINARY_DIR}/assets.rc" @ONLY)
 
 add_executable(FieldBrikPlayer WIN32
   Source/Application/main.cpp
+  Source/Application/Join.cpp
   Source/Application/App.cpp
   Source/Window/Window.cpp
   Source/Window/Cursors.cpp
@@ -223,7 +231,8 @@ target_compile_definitions(FieldBrikPlayer PRIVATE
 # d3d11 is the renderer, dxgi creates the swap chain behind it, d3dcompiler
 # compiles the shader source at startup, windowscodecs is WIC decoding the face,
 # ole32 is the COM apartment WIC runs in.
-target_link_libraries(FieldBrikPlayer PRIVATE d3d11 dxgi d3dcompiler windowscodecs ole32)
+target_link_libraries(FieldBrikPlayer PRIVATE d3d11 dxgi d3dcompiler windowscodecs
+  ole32 winhttp)
 
 if(MSVC)
   target_compile_options(FieldBrikPlayer PRIVATE /W4 /permissive-)

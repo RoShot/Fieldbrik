@@ -5,7 +5,7 @@ is finished, what is left, how to build and release, and which traps have alread
 cost time. It exists so a new chat can start with this file instead of re-deriving
 the project.
 
-Last updated: 9 November 2026, after the Player 0.20 release.
+Last updated: 9 November 2026, after the Player 0.21 release (Join).
 
 ---
 
@@ -21,7 +21,7 @@ Three parts, one repository:
 | Part | Path | Stack | Current version |
 |---|---|---|---|
 | Website | `server/`, `views/`, `public/`, `db/` | Node + Express, EJS, Cloudflare Workers + D1 | live at fieldbrik.com |
-| Client | `player/` | C++20, Direct3D 11, Win32, static CRT | Player **0.20** |
+| Client | `player/` | C++20, Direct3D 11, Win32, static CRT | Player **0.21** |
 | Editor | `studio/` | C++20, Direct3D 11, Win32, static CRT | Studio **0.9.2** |
 
 Hard rules that come from the project itself:
@@ -56,11 +56,16 @@ Hard rules that come from the project itself:
 - **13 D1 migrations** in `db/migrations`, plus `db/schema.sql` and `db/seed.sql`.
 - Deployed to Cloudflare Workers; the site is live at **fieldbrik.com**.
 
+- **Play/Join** (0.21): a place page's Play button opens the client through a
+  `fieldbrik://play` link carrying the place file URL, account name, user id, the
+  six avatar colours and the face id. A guest sees Sign in to play. Single-player:
+  the link is trusted, with no server proof, presence or visit counting.
+
 ### Website — not done
 
-- **No Play/Join button.** `views/pages/game.ejs` says so explicitly: the place file
-  is real, playing needs the client, and there is no launch route yet.
 - **Visit counts are not counted** (the page says "Not counted yet").
+- Join is single-player and trusts the launch link: no server proof, no presence
+  list, no multiplayer.
 - No in-game admin panel or in-game banner/news injection (deliberately deferred;
   the user does not want a news line in the client until the client is finished).
 - Studio cannot create a place listing; it can only publish into an existing place.
@@ -83,9 +88,10 @@ locally; push and let the workflow run. Migrations run as part of the deploy.
 
 ## 3. Client (Player) — done
 
-Player **0.20**, built from `player/`, exe at `player/build/Release/FieldBrikPlayer.exe`,
-released as `player-v0.20`. The HUD is the 0.15 one again, with the health meter and
-a 444x55 backpack strip on it.
+Player **0.21**, built from `player/`, exe at `player/build/Release/FieldBrikPlayer.exe`,
+released as `player-v0.21`. The HUD is the 0.15 one, with the health meter and a
+444x55 backpack strip on it. Join works: the website's Play button opens a place
+with the account's name, colours and face.
 
 - Direct3D 11 renderer, Win32 window, no external libraries.
 - Loads XML places: `.fbrx` (Studio) and `.rbxl`, plus the built-in place. A path on
@@ -131,7 +137,9 @@ Ordered by visual impact:
 6. **Audio: blocked.** There is no audio subsystem and **no sound files** in
    `player/content`. Jump, footstep, collision and ambient sounds must be supplied
    or recreated before this can be built.
-7. **Join/launch**: the client cannot yet be handed a place by the website.
+7. **Join/multiplayer**: Join is done and single-player. The website hands over a
+   place with the account's name, colours and face; there is no multiplayer,
+   presence or server-side identity yet.
 
 Do **not** add: a hamburger menu (the three-line icon exists; no menu behind it), a
 Customize button, or a news line. Health bar, hotbar, Tools and Edit are wanted and

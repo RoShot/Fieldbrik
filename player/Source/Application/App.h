@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "Application/Join.h"
 #include "Camera/Camera.h"
 #include "Hud/Hud.h"
 #include "Characters/Avatar.h"
@@ -57,6 +58,10 @@ class App {
   int showCommand_;
   std::wstring placePath_;
   int failureCode_ = 1;
+
+  // Set when the place came from a website launch link rather than a file.
+  JoinInfo join_;
+  bool joined_ = false;
 
   Window window_;
   Renderer renderer_;

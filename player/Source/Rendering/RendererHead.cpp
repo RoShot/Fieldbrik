@@ -119,6 +119,26 @@ bool Renderer::LoadHeadAssets() {
     return fail(error);
   }
 
+  // The other seven faces, so a joined account keeps the one it chose on the
+  // site. A face that failed to load is simply absent; the smile stands in.
+  faceTextures_[0] = faceTexture_;
+
+  const int extraFaces[] = {
+      kFaceChuckleResource,  kFaceSillyResource, kFaceDurrResource,
+      kFaceOoResource,       kFaceGleeResource,  kFaceNotAmusedResource,
+      kFaceMehResource,
+  };
+
+  for (int index = 0; index < 7; ++index) {
+    std::vector<unsigned char> faceBytes;
+    std::wstring faceError;
+    if (!ReadEmbedded(extraFaces[index], faceBytes, faceError)) continue;
+    if (!CreateTextureFromPng(device_.Get(), faceBytes.data(), faceBytes.size(),
+                              faceTextures_[index + 1].GetAddressOf(), faceError)) {
+      faceTextures_[index + 1].Reset();
+    }
+  }
+
   std::vector<Vertex> vertices;
   std::vector<unsigned int> indices;
   BuildFaceQuad(vertices, indices);
@@ -159,13 +179,16 @@ void Renderer::DrawHead(const Part& part, const XMFLOAT4& colour) {
   SetObject(matrix, colour, false);
   headModel_.Draw(context_.Get());
 
-  if (!faceQuad_.Valid() || !faceTexture_) return;
+  ID3D11ShaderResourceView* face = faceTextures_[faceIndex_]
+                                       ? faceTextures_[faceIndex_].Get()
+                                       : faceTexture_.Get();
+  if (!faceQuad_.Valid() || !face) return;
 
   // The face is the head's own geometry with a picture on it: same transform, a
   // textured draw, and alpha test rather than blending, so the head stays solid
   // behind the transparent parts of the image.
   const XMFLOAT4 white(1.0f, 1.0f, 1.0f, 1.0f);
-  ID3D11ShaderResourceView* textures[] = {faceTexture_.Get()};
+  ID3D11ShaderResourceView* textures[] = {face};
   context_->PSSetShaderResources(0, 1, textures);
 
   SetObject(matrix, white, true);
@@ -173,6 +196,20 @@ void Renderer::DrawHead(const Part& part, const XMFLOAT4& colour) {
 
   ID3D11ShaderResourceView* plain[] = {whiteTexture_.Get()};
   context_->PSSetShaderResources(0, 1, plain);
+}
+
+void Renderer::SetFace(const std::string& faceId) {
+  static const char* const kFaces[] = {
+      "classic-smile", "chuckle", "silly", "durr",
+      "oo",            "glee",    "notamused", "meh",
+  };
+
+  for (int index = 0; index < 8; ++index) {
+    if (faceId == kFaces[index]) {
+      faceIndex_ = index;
+      return;
+    }
+  }
 }
 
 }  // namespace fieldbrik

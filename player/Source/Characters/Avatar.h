@@ -65,6 +65,15 @@ class Avatar {
   // Feet position in the world and a facing angle in degrees, where 0 faces +Z.
   void SetPose(const DirectX::XMFLOAT3& feetPosition, float facingDegrees);
 
+  // The six colours the site stores, in its order: head, torso, left arm, right
+  // arm, left leg, right leg. Join passes the account's own palette here.
+  void SetAppearance(const DirectX::XMFLOAT3& head,
+                     const DirectX::XMFLOAT3& torso,
+                     const DirectX::XMFLOAT3& leftArm,
+                     const DirectX::XMFLOAT3& rightArm,
+                     const DirectX::XMFLOAT3& leftLeg,
+                     const DirectX::XMFLOAT3& rightLeg);
+
   // Puts the whole body back at rest, dropping whatever pose was being held. The
   // client calls this when the window comes back to the foreground: an arm still
   // up from a landing that happened while the client was in the background is not
@@ -99,6 +108,14 @@ class Avatar {
 
   DirectX::XMFLOAT3 feet_{0.0f, 0.0f, 0.0f};
   float facing_ = 0.0f;
+
+  // The palette, defaulting to the 2005 colours in Avatar.cpp.
+  DirectX::XMFLOAT3 headColour_{0.96f, 0.80f, 0.19f};
+  DirectX::XMFLOAT3 torsoColour_{0.06f, 0.41f, 0.67f};
+  DirectX::XMFLOAT3 leftArmColour_{0.96f, 0.80f, 0.19f};
+  DirectX::XMFLOAT3 rightArmColour_{0.96f, 0.80f, 0.19f};
+  DirectX::XMFLOAT3 leftLegColour_{0.64f, 0.74f, 0.28f};
+  DirectX::XMFLOAT3 rightLegColour_{0.64f, 0.74f, 0.28f};
 
   // Elapsed seconds, which is the `time` the script feeds into its sine.
   float time_ = 0.0f;

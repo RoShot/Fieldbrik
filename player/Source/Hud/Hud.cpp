@@ -242,6 +242,16 @@ void Hud::Resize(int width, int height) {
   Layout();
 }
 
+void Hud::SetPlayerName(const std::wstring& name) {
+  const std::wstring wanted = name.empty() ? L"You" : name;
+  if (wanted == playerName_) return;
+
+  playerName_ = wanted;
+
+  Label label;
+  if (MakeLabel(wanted.c_str(), 12, false, label)) you_ = label;
+}
+
 void Hud::Layout() {
   const float width = static_cast<float>(width_);
   const float height = static_cast<float>(height_);

@@ -33,7 +33,12 @@
           <p><strong>Place file ready.</strong> Version <%= placeFile.version %>, marked
              <span class="fb-muted"><%= placeFile.filename %></span>.</p>
           <p>
-            <a class="fb-btn fb-btn--primary" href="/games/<%= place.slug %>/file">Download place file</a>
+            <% if (typeof joinUrl !== 'undefined' && joinUrl) { %>
+              <a class="fb-btn fb-btn--primary" href="<%= joinUrl %>">Play</a>
+            <% } else { %>
+              <a class="fb-btn fb-btn--primary" href="/login">Sign in to play</a>
+            <% } %>
+            <a class="fb-btn" href="/games/<%= place.slug %>/file">Download place file</a>
             <span class="fb-muted"><%= placeFile.formatLabel %>, <%= (placeFile.size / 1024).toFixed(1) %> KB</span>
           </p>
         </div>
@@ -82,9 +87,10 @@
       </section>
 
       <div class="fb-notice">
-        <p><strong><%= placeFile ? 'The place file is real. The Play button is not here yet.' : 'This listing is ready for a file.' %></strong></p>
-        <p><% if (placeFile) { %>Downloading gives you the exact XML Studio published. Playing it needs the FieldBrik
-           client, which is still being built; that is why there is no Play button and no visit count yet.<% } else { %>Publishing a .fbrx from Studio, or uploading one here, stores it as version 1 and makes
+        <p><strong><%= placeFile ? 'Press Play to open this place in the FieldBrik client.' : 'This listing is ready for a file.' %></strong></p>
+        <p><% if (placeFile) { %>Play hands the place to the client along with your account name, user id and
+           avatar. If Windows asks what to open it with, choose FieldBrik Player: the client registers
+           the link the first time it runs. The exact XML Studio published can still be downloaded below.<% } else { %>Publishing a .fbrx from Studio, or uploading one here, stores it as version 1 and makes
            it downloadable. Publishing again keeps the older version on the place's record rather
            than overwriting it.<% } %></p>
       </div>

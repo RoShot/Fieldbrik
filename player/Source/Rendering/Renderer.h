@@ -59,6 +59,11 @@ class Renderer {
   // else on the body wears one.
   void DrawAvatarStuds(const std::vector<Part>& parts, const Camera& camera);
 
+  // Chooses which of the era's faces the avatar wears, by the id the site
+  // stores: "classic-smile", "chuckle", "silly", "durr", "oo", "glee",
+  // "notamused" or "meh". An unknown id leaves the current face alone.
+  void SetFace(const std::string& faceId);
+
   // The sun, the moon and the flare, drawn over the sky and behind the world as
   // additive billboards: the sun where the art is brightest, the moon opposite,
   // and the flare mirrored across the screen while the sun is in view.
@@ -198,6 +203,12 @@ class Renderer {
   // The face image, and a single white texel bound whenever a draw is not
   // textured so the pipeline is never left with a hole in it.
   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> faceTexture_;
+
+  // The eight faces, in the site's order, with the smile first. Missing ones are
+  // left empty and the smile stands in.
+  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> faceTextures_[8];
+  int faceIndex_ = 0;
+
   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> whiteTexture_;
 
   // Point filtering, clamped: the face is 128 pixels of line art and is meant to

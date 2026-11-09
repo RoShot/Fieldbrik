@@ -26,6 +26,7 @@ const places = require('../services/places');
 const placeFiles = require('../services/placeFiles');
 const placeThumbnails = require('../services/placeThumbnails');
 const people = require('../services/people');
+const avatarRepository = require('../services/avatarRepository');
 const notices = require('../services/notices');
 const permissions = require('../services/permissions');
 
@@ -302,6 +303,33 @@ router.get('/games/:slug', (req, res, next) => {
       placeFiles.latest(req.db, place.id),
     ]);
 
+    // Join: the launch link the Play button uses. The identity in it is the one
+    // the site already knows, because the client has no sign-in of its own yet.
+    // A guest gets no link and is asked to sign in instead.
+    let joinUrl = null;
+    if (placeFile && req.viewer && req.db) {
+      const avatar = await avatarRepository.get(req.db, req.viewer.id);
+      const origin = `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
+      const placeUrl = `${origin}/games/${encodeURIComponent(place.slug)}/file`;
+      const colours = [
+        avatar.head,
+        avatar.torso,
+        avatar.leftArm,
+        avatar.rightArm,
+        avatar.leftLeg,
+        avatar.rightLeg,
+      ]
+        .map((value) => String(value).replace('#', ''))
+        .join(',');
+
+      joinUrl =
+        `fieldbrik://play?place=${encodeURIComponent(placeUrl)}` +
+        `&name=${encodeURIComponent(req.viewer.username || 'Player')}` +
+        `&id=${encodeURIComponent(req.viewer.id)}` +
+        `&face=${encodeURIComponent(avatar.face)}` +
+        `&colours=${colours}`;
+    }
+
     return res.render(
       'pages/game',
       pageContext(req, {
@@ -309,6 +337,7 @@ router.get('/games/:slug', (req, res, next) => {
         place,
         creator,
         placeFile,
+        joinUrl,
         isOwner,
         notice: noticeFor(req.query),
       })
