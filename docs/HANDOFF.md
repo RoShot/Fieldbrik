@@ -5,7 +5,7 @@ is finished, what is left, how to build and release, and which traps have alread
 cost time. It exists so a new chat can start with this file instead of re-deriving
 the project.
 
-Last updated: 9 November 2026, after client commit `819c098`.
+Last updated: 9 November 2026, after client commit `341f4c6`.
 
 ---
 
@@ -114,13 +114,14 @@ Player **0.16**, built from `player/`, exe at `player/build/Release/FieldBrikPla
 
 Ordered by visual impact:
 
-1. **Avatar geometry**: studs on the undersides of the hands and feet, face position
+1. **Avatar geometry**: hand and foot studs are **done** (`341f4c6`: a small
+   cylinder parented to each limb, following the swing). Still open: face position
    and face image edit, shirts, t-shirts, pants and hats. The face image is drawn by
    the renderer on the front of the head; the body parts are in
    `player/Source/Characters/Avatar.cpp`.
-2. **Animations**: walk cycle timing to match 2008 footage exactly; the jump pose
-   currently sends the arms backwards and they should come forwards on landing
-   (`Avatar::MoveJump`, sign of the shoulder targets); landing hang feel.
+2. **Animations**: the jump pose's arms now sweep down the front instead of the back
+   (`341f4c6`, mirrored shoulder targets in `Avatar::MoveJump`). Still open: walk
+   cycle timing to match 2008 footage, and landing hang feel.
 3. **Collision quirks**: remaining step-up and push-out edge cases.
 4. **World look**: studs on top faces, brick inner bevels, era ambient and
    directional light with no modern shadow maps, sky gradient and clouds, fog.
